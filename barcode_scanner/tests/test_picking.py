@@ -1,0 +1,393 @@
+from unittest.mock import patch
+
+from markupsafe import Markup
+
+from odoo.exceptions import UserError
+from odoo.tests.common import TransactionCase
+
+
+class TestBarcodeScannerInternalTransfer(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company = cls.env.company
+        cls.stock_location = cls.env.ref("stock.stock_location_stock")
+        cls.customer_location = cls.env.ref("stock.stock_location_customers")
+        cls.internal_picking_type = cls.env["stock.picking.type"].search(
+            [
+                ("code", "=", "internal"),
+                ("company_id", "=", cls.company.id),
+            ],
+            limit=1,
+        )
+        cls.destination_location = cls.env["stock.location"].create(
+            {
+                "name": "Barcode Scanner Buffer",
+                "usage": "internal",
+                "location_id": cls.stock_location.location_id.id,
+                "company_id": cls.company.id,
+            }
+        )
+        cls.tracked_product = cls.env["product.product"].create(
+            {
+                "name": "Tracked Internal Product",
+                "is_storable": True,
+                "tracking": "lot",
+            }
+        )
+        cls.untracked_product = cls.env["product.product"].create(
+            {
+                "name": "Untracked Internal Product",
+                "is_storable": True,
+            }
+        )
+        cls.lot = cls.env["stock.lot"].create(
+            {
+                "name": "LOT-INT-001",
+                "product_id": cls.tracked_product.id,
+                "company_id": cls.company.id,
+            }
+        )
+        cls.env["stock.quant"]._update_available_quantity(
+            cls.tracked_product,
+            cls.stock_location,
+            5,
+            lot_id=cls.lot,
+        )
+        cls.env["stock.quant"]._update_available_quantity(
+            cls.untracked_product,
+            cls.stock_location,
+            8,
+        )
+
+    def test_action_barcode_scanner_check_availability_returns_line_status(self):
+        result = self.env["stock.picking"].action_barcode_scanner_check_availability(
+            self.stock_location.id,
+            self.destination_location.id,
+            [
+                {
+                    "product_id": self.tracked_product.id,
+                    "qty": 2,
+                    "lot_id": self.lot.id,
+                },
+                {
+                    "product_id": self.untracked_product.id,
+                    "qty": 10,
+                    "lot_id": False,
+                },
+            ],
+        )
+
+        self.assertFalse(result["available"])
+        self.assertEqual(len(result["lines"]), 2)
+        tracked_line = next(
+            line
+            for line in result["lines"]
+            if line["product_id"] == self.tracked_product.id
+        )
+        self.assertTrue(tracked_line["available"])
+        untracked_line = next(
+            line
+            for line in result["lines"]
+            if line["product_id"] == self.untracked_product.id
+        )
+        self.assertFalse(untracked_line["available"])
+
+    def test_action_barcode_scanner_internal_transfer_creates_and_validates_picking(self):
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            self.stock_location.id,
+            self.destination_location.id,
+            False,
+            [
+                {
+                    "product_id": self.tracked_product.id,
+                    "qty": 2,
+                    "lot_id": self.lot.id,
+                },
+                {
+                    "product_id": self.untracked_product.id,
+                    "qty": 3,
+                    "lot_id": False,
+                },
+            ],
+        )
+
+        picking = self.env["stock.picking"].browse(result["picking_id"])
+        self.assertTrue(picking.exists())
+        self.assertEqual(picking.state, "done")
+        self.assertEqual(picking.picking_type_id.code, "internal")
+        tracked_move_line = picking.move_line_ids.filtered(
+            lambda line: line.product_id == self.tracked_product
+        )
+        self.assertEqual(tracked_move_line.lot_id, self.lot)
+        self.assertEqual(tracked_move_line.quantity, 2)
+        self.assertTrue(tracked_move_line.picked)
+        self.assertEqual(
+            self.env["stock.quant"]._get_available_quantity(
+                self.tracked_product,
+                self.stock_location,
+                lot_id=self.lot,
+                strict=False,
+            ),
+            3,
+        )
+        self.assertEqual(
+            self.env["stock.quant"]._get_available_quantity(
+                self.tracked_product,
+                self.destination_location,
+                lot_id=self.lot,
+                strict=False,
+            ),
+            2,
+        )
+
+    def test_action_barcode_scanner_internal_transfer_requires_lot_for_tracked_product(
+        self,
+    ):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [
+                    {
+                        "product_id": self.tracked_product.id,
+                        "qty": 1,
+                        "lot_id": False,
+                    }
+                ],
+            )
+
+    def test_action_barcode_scanner_internal_transfer_blocks_insufficient_stock(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [
+                    {
+                        "product_id": self.untracked_product.id,
+                        "qty": 999,
+                        "lot_id": False,
+                    }
+                ],
+            )
+
+
+class TestStockMoveQtyProgress(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company = cls.env.company
+        cls.warehouse = cls.env.ref("stock.warehouse0")
+        cls.stock_location = cls.env.ref("stock.stock_location_stock")
+        cls.customer_location = cls.env.ref("stock.stock_location_customers")
+        cls.picking_type_out = cls.env.ref("stock.picking_type_out")
+        cls.product = cls.env["product.product"].create(
+            {
+                "name": "Test Product",
+                "is_storable": True,
+            }
+        )
+        cls.env["stock.quant"]._update_available_quantity(
+            cls.product, cls.stock_location, 100
+        )
+
+    def _create_assigned_picking(self, qty):
+        picking = self.env["stock.picking"].create(
+            {
+                "picking_type_id": self.picking_type_out.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        move = self.env["stock.move"].create(
+            {
+                "name": self.product.display_name,
+                "product_id": self.product.id,
+                "product_uom_qty": qty,
+                "product_uom": self.product.uom_id.id,
+                "picking_id": picking.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        picking.action_confirm()
+        picking.action_assign()
+        return picking, move
+
+    def test_reset_qty_progress(self):
+        picking, move = self._create_assigned_picking(10)
+        move_line = move.move_line_ids[0]
+        if "qty_picked" in move_line._fields:
+            move_line.qty_picked = 5
+        else:
+            move_line.quantity = 5
+        move._compute_qty_progress()
+        self.assertGreater(move.qty_done_total, 0)
+        move._reset_qty_progress()
+        self.assertEqual(move.qty_done_total, 0)
+        self.assertEqual(move.qty_remaining, 0)
+        self.assertFalse(move.is_fully_picked)
+
+    def test_qty_remaining_computation(self):
+        picking, move = self._create_assigned_picking(10)
+        move_line = move.move_line_ids[0]
+        if "qty_picked" in move_line._fields:
+            move_line.qty_picked = 3
+        else:
+            move_line.quantity = 3
+        move._compute_qty_progress()
+        self.assertEqual(move.qty_done_total, 3)
+        self.assertEqual(move.qty_remaining, 7)
+
+    def test_is_fully_picked_when_qty_remaining_zero_or_less(self):
+        picking, move = self._create_assigned_picking(10)
+        move_line = move.move_line_ids[0]
+        if "qty_picked" in move_line._fields:
+            move_line.qty_picked = 10
+        else:
+            move_line.quantity = 10
+        move._compute_qty_progress()
+        self.assertTrue(move.is_fully_picked)
+        self.assertEqual(move.qty_remaining, 0)
+
+    def test_is_fully_picked_false_when_partial(self):
+        picking, move = self._create_assigned_picking(10)
+        move_line = move.move_line_ids[0]
+        if "qty_picked" in move_line._fields:
+            move_line.qty_picked = 4
+        else:
+            move_line.quantity = 4
+        move._compute_qty_progress()
+        self.assertFalse(move.is_fully_picked)
+        self.assertEqual(move.qty_remaining, 6)
+
+
+class TestStockMoveLine(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.stock_location = cls.env.ref("stock.stock_location_stock")
+        cls.customer_location = cls.env.ref("stock.stock_location_customers")
+        cls.product_serial = cls.env["product.product"].create(
+            {
+                "name": "Serial Product",
+                "is_storable": True,
+                "tracking": "serial",
+            }
+        )
+
+    def test_serial_quantity_constraint(self):
+        with self.assertRaises(UserError):
+            self.env["stock.move.line"].create(
+                {
+                    "product_id": self.product_serial.id,
+                    "location_id": self.stock_location.id,
+                    "location_dest_id": self.customer_location.id,
+                    "company_id": self.env.company.id,
+                    "quantity": 2,
+                    "product_uom_id": self.product_serial.uom_id.id,
+                }
+            )
+
+
+class TestBarcodeScannerPicking(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company = cls.env.company
+        cls.stock_location = cls.env.ref("stock.stock_location_stock")
+        cls.customer_location = cls.env.ref("stock.stock_location_customers")
+        cls.picking_type_out = cls.env.ref("stock.picking_type_out")
+        cls.product = cls.env["product.product"].create(
+            {
+                "name": "Test Product Picking",
+                "is_storable": True,
+            }
+        )
+        cls.employee = cls.env["hr.employee"].create(
+            {
+                "name": "Test Employee",
+            }
+        )
+
+    def test_responsible_id_exists_and_writable(self):
+        picking = self.env["stock.picking"].create(
+            {
+                "picking_type_id": self.picking_type_out.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        self.assertIn("responsible_id", picking._fields)
+        picking.responsible_id = self.employee
+        self.assertEqual(picking.responsible_id, self.employee)
+
+
+class TestBarcodeScannerScrap(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company = cls.env.company
+        cls.stock_location = cls.env.ref("stock.stock_location_stock")
+
+        cls.non_tracked_product = cls.env["product.product"].create(
+            {
+                "name": "Non-Tracked Scrap Product",
+                "is_storable": True,
+            }
+        )
+        cls.serial_tracked_product = cls.env["product.product"].create(
+            {
+                "name": "Serial Tracked Scrap Product",
+                "is_storable": True,
+                "tracking": "serial",
+            }
+        )
+        cls.serial_lot = cls.env["stock.lot"].create(
+            {
+                "name": "SERIAL-SCRAP-TEST",
+                "product_id": cls.serial_tracked_product.id,
+                "company_id": cls.company.id,
+            }
+        )
+        cls.env["stock.quant"]._update_available_quantity(
+            cls.non_tracked_product,
+            cls.stock_location,
+            10,
+        )
+        cls.env["stock.quant"]._update_available_quantity(
+            cls.serial_tracked_product,
+            cls.stock_location,
+            3,
+            lot_id=cls.serial_lot,
+        )
+
+    def test_scrap_without_lot_for_non_tracked_product(self):
+        result = self.env["stock.scrap"].action_scrap_from_barcode_scanner(
+            self.stock_location.id,
+            [
+                {
+                    "product_id": self.non_tracked_product.id,
+                    "qty": 2,
+                    "lot_id": False,
+                }
+            ],
+            reason="Test scrap without lot",
+        )
+        self.assertTrue(result)
+
+    def test_scrap_with_serial_product_requires_qty_one(self):
+        with self.assertRaises(UserError):
+            self.env["stock.scrap"].action_scrap_from_barcode_scanner(
+                self.stock_location.id,
+                [
+                    {
+                        "product_id": self.serial_tracked_product.id,
+                        "qty": 2,
+                        "lot_id": self.serial_lot.id,
+                    }
+                ],
+                reason="Test serial scrap qty enforcement",
+            )
