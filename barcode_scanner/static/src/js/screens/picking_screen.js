@@ -36,7 +36,6 @@ export class PickingScreen extends Component {
             isValidating: false,
             isSaving: false,
             pickingTypeCode: null,
-            image_ids: [],
             responsible_id: null,
             responsible_name: "",
             highlightedMoveId: null,
@@ -229,7 +228,6 @@ export class PickingScreen extends Component {
             this.state.responsible_name = picking.responsible_id[1];
         }
         this.state.pickingTypeCode = snapshot.pickingTypeCode;
-        this.state.image_ids = picking.image_ids || [];
         this.state.moves = await this.buildMovesWithLots(snapshot.moves || []);
         this.state.picking = {...picking};
         this.state.moveLines = [...(snapshot.moveLines || [])];
