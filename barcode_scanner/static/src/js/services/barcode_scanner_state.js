@@ -85,7 +85,6 @@ export class BarcodeScannerState extends Reactive {
                     "location_id",
                     "location_dest_id",
                     "state",
-                    "responsible_id",
                     "picking_type_id",
                 ]
             );

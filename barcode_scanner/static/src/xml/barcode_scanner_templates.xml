@@ -237,9 +237,7 @@
                         <PickingInfoTab
                             picking="state.picking"
                             pickingTypeCode="state.pickingTypeCode"
-                            responsible_name="state.responsible_name"
                             progressLabel="progressLabel"
-                            onOpenEmployeeSelector="openEmployeeSelector"
                         />
                     </t>
                     <t t-if="state.activeTab === 'todo'">
@@ -1253,16 +1251,6 @@
                             <input type="datetime-local" name="scheduled_date" class="ilx-kw-select" t-model="props.picking.scheduled_date" />
                             <i class="fa fa-chevron-down ilx-kw-chevron-right" />
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="ilx-kw-grid-2 mt-3">
-                <div class="ilx-kw-card ilx-kw-card--interactive" t-on-click="props.onOpenEmployeeSelector">
-                    <span class="ilx-kw-eyebrow">RESPONSIBLE</span>
-                    <div class="ilx-kw-info-row mt-2">
-                        <div class="ilx-kw-avatar-small ilx-kw-bg-pink-light"><i class="fa fa-user ilx-kw-text-pink" /></div>
-                        <strong class="ilx-kw-value-bold"><t t-esc="props.responsible_name || 'Select...'" /></strong>
                     </div>
                 </div>
             </div>

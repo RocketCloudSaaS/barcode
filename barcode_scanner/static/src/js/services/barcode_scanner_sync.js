@@ -21,7 +21,6 @@ function serializePickingValues(values) {
         scheduled_date: values.scheduled_date
             ? values.scheduled_date.replace("T", " ") + ":00"
             : false,
-        responsible_id: values.responsible_id || false,
     };
 }
 

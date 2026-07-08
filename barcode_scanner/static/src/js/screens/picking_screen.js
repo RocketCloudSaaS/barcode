@@ -6,6 +6,9 @@ import {useService} from "@web/core/utils/hooks";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {PickingInfoTab} from "@barcode_scanner/js/components/picking_info_tab";
+import {PickingMoveList} from "@barcode_scanner/js/components/picking_move_list";
+import {PickingDoneList} from "@barcode_scanner/js/components/picking_done_list";
 
 export class PickingScreen extends Component {
     setup() {
@@ -20,8 +23,6 @@ export class PickingScreen extends Component {
         this.deleteMoveLine = this.deleteMoveLine.bind(this);
         this.openMoveWizard = this.openMoveWizard.bind(this);
         this.onBarcodeScanned = this.onBarcodeScanned.bind(this);
-        this.openEmployeeSelector = this.openEmployeeSelector.bind(this);
-
         useBarcodeHandler({
             onScan: (barcode, parsedData, payload) => {
                 this.onBarcodeScanned(barcode, parsedData, payload);
@@ -36,8 +37,6 @@ export class PickingScreen extends Component {
             isValidating: false,
             isSaving: false,
             pickingTypeCode: null,
-            responsible_id: null,
-            responsible_name: "",
             highlightedMoveId: null,
             lastScan: {
                 barcode: "",
@@ -62,12 +61,6 @@ export class PickingScreen extends Component {
             if (!currentListParams && nextListParams) {
                 this.store.navigate("picking_list", nextListParams);
                 return;
-            }
-
-            if (nextProps.selectedEmployee) {
-                const emp = nextProps.selectedEmployee;
-                this.state.responsible_id = emp.id;
-                this.state.responsible_name = emp.name;
             }
 
             const currentId = this.props.pickingId || this.props.params?.pickingId;
@@ -223,10 +216,6 @@ export class PickingScreen extends Component {
         }
         const snapshot = this.barcodeScannerState.getSnapshot();
         const picking = snapshot.picking || {};
-        if (picking.responsible_id) {
-            this.state.responsible_id = picking.responsible_id[0];
-            this.state.responsible_name = picking.responsible_id[1];
-        }
         this.state.pickingTypeCode = snapshot.pickingTypeCode;
         this.state.moves = await this.buildMovesWithLots(snapshot.moves || []);
         this.state.picking = {...picking};
@@ -235,11 +224,6 @@ export class PickingScreen extends Component {
             this.state.picking.scheduled_date = picking.scheduled_date
                 .replace(" ", "T")
                 .slice(0, 16);
-        }
-        if (this.props.selectedEmployee) {
-            const emp = this.props.selectedEmployee;
-            this.state.responsible_id = emp.id;
-            this.state.responsible_name = emp.name;
         }
     }
 
@@ -262,7 +246,6 @@ export class PickingScreen extends Component {
             await this.barcodeScannerSync.stagePicking(
                 {
                     scheduled_date: this.state.picking.scheduled_date || false,
-                    responsible_id: this.state.responsible_id || false,
                 },
                 {immediate: true}
             );
@@ -374,14 +357,6 @@ export class PickingScreen extends Component {
                     });
                 }
             },
-        });
-    }
-
-    openEmployeeSelector() {
-        this.store.navigate("employee_selector", {
-            returnRoute: "picking",
-            returnParams: {},
-            pickingId: this.state.picking.id,
         });
     }
 
@@ -543,3 +518,4 @@ export class PickingScreen extends Component {
 }
 
 PickingScreen.template = "barcode_scanner.PickingScreen";
+PickingScreen.components = {PickingInfoTab, PickingMoveList, PickingDoneList};
