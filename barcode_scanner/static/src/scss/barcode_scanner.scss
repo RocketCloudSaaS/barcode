@@ -2752,7 +2752,7 @@
     inset: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .ilx-emp-v2-header {
@@ -2788,6 +2788,8 @@
     max-width: 600px;
     margin: 0 auto;
     width: 100%;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .ilx-emp-v2-search-box {
@@ -2874,28 +2876,6 @@
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--ilx-primary);
-}
-
-.ilx-emp-v2-status-dot {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--ilx-surface-container-lowest);
-}
-
-.ilx-emp-v2-status-dot.status-available {
-    background: var(--ilx-success);
-}
-
-.ilx-emp-v2-status-dot.status-busy {
-    background: var(--ilx-error);
-}
-
-.ilx-emp-v2-status-dot.status-away {
-    background: var(--ilx-warning);
 }
 
 .ilx-emp-v2-info {

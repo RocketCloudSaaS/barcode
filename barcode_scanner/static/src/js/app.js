@@ -10,7 +10,6 @@ import "@barcode_scanner/js/services/feedback_service";
 import "@barcode_scanner/js/services/barcode_scanner_state";
 import "@barcode_scanner/js/services/barcode_scanner_sync";
 
-import {EmployeeSelectorScreen} from "@barcode_scanner/js/screens/employee_selector_screen";
 import {InternalTransferScreen} from "@barcode_scanner/js/screens/internal_transfer_screen";
 import {LocationSelectorScreen} from "@barcode_scanner/js/screens/location_selector_screen";
 import {MainScreen} from "@barcode_scanner/js/screens/main_screen";
@@ -19,6 +18,7 @@ import {PickingListScreen} from "@barcode_scanner/js/screens/picking_list_screen
 import {PickingScreen} from "@barcode_scanner/js/screens/picking_screen";
 import {ProductSelectorScreen} from "@barcode_scanner/js/screens/product_selector_screen";
 import {QuickInfoScreen} from "@barcode_scanner/js/screens/quick_info";
+import {UserSelectorScreen} from "@barcode_scanner/js/screens/user_selector_screen";
 import {WarehouseOps} from "@barcode_scanner/js/screens/warehouse_ops";
 
 export class BarcodeScannerApp extends Component {
@@ -46,9 +46,6 @@ export class BarcodeScannerApp extends Component {
         this.router.registerRoute("warehouse_ops", {component: WarehouseOps});
         this.router.registerRoute("picking_list", {component: PickingListScreen});
         this.router.registerRoute("picking", {component: PickingScreen});
-        this.router.registerRoute("employee_selector", {
-            component: EmployeeSelectorScreen,
-        });
         this.router.registerRoute("move_wizard", {component: MoveWizardScreen});
         this.router.registerRoute("internal_transfer", {
             component: InternalTransferScreen,
@@ -58,6 +55,9 @@ export class BarcodeScannerApp extends Component {
         });
         this.router.registerRoute("product_selector", {
             component: ProductSelectorScreen,
+        });
+        this.router.registerRoute("user_selector", {
+            component: UserSelectorScreen,
         });
         this.router.registerRoute("quick_info", {
             component: QuickInfoScreen,
@@ -76,23 +76,7 @@ export class BarcodeScannerApp extends Component {
                     pickingId: params.pickingId,
                     listParams: params.listParams || null,
                     reloadToken: params.reloadToken || null,
-                    selectedEmployee: params.selectedEmployee || null,
                 };
-            case "employee_selector": {
-                let pickingId = null;
-                let modeParams = params;
-                if (typeof params === "number") {
-                    pickingId = params;
-                    modeParams = {};
-                } else if (params && typeof params === "object") {
-                    pickingId = params.pickingId || null;
-                }
-                return {
-                    ...baseProps,
-                    pickingId: pickingId,
-                    params: modeParams,
-                };
-            }
             default:
                 return {
                     ...baseProps,

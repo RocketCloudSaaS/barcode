@@ -495,7 +495,7 @@
         </div>
     </t>
 
-    <t t-name="barcode_scanner.EmployeeSelectorScreen">
+    <t t-name="barcode_scanner.UserSelectorScreen">
         <div class="ilx-emp-v2-screen">
             <header class="ilx-emp-v2-header">
                 <button class="ilx-emp-v2-back-btn" t-on-click="goBack">
@@ -511,100 +511,51 @@
                     <input
                         type="text"
                         class="ilx-emp-v2-search-input"
-                        placeholder="Search by name, role or department..."
+                        placeholder="Search by name or login..."
                         t-model="state.search"
                     />
                 </div>
 
-                <t t-if="!state.search and recentEmployees.length > 0">
-                    <h2 class="ilx-emp-v2-section-title">RECENT</h2>
-                    <div class="ilx-emp-v2-recent-list">
-                        <t t-foreach="recentEmployees" t-as="remp" t-key="remp.id">
-                            <div
-                                class="ilx-emp-v2-recent-item"
-                                t-on-click="() => this.selectEmployee(remp)"
-                            >
-                                <div class="ilx-emp-v2-recent-avatar-wrapper">
-                                    <t t-if="remp.image_128">
-                                        <img
-                                            t-att-src="'data:image/png;base64,' + remp.image_128"
-                                            class="ilx-emp-v2-recent-avatar"
-                                        />
-                                    </t>
-                                    <t t-else="">
-                                        <div
-                                            class="ilx-emp-v2-recent-avatar placeholder-bg"
-                                        >
-                                            <t
-                                                t-esc="remp.name.charAt(0).toUpperCase()"
-                                            />
-                                        </div>
-                                    </t>
-                                    <div
-                                        t-attf-class="ilx-emp-v2-status-dot status-{{this.getEmployeeStatus(remp)}}"
-                                    />
-                                </div>
-                                <span class="ilx-emp-v2-recent-name"><t
-                                        t-esc="this.formatRecentName(remp.name)"
-                                    /></span>
-                            </div>
-                        </t>
-                    </div>
-                </t>
-
-                <h2 class="ilx-emp-v2-section-title">AVAILABLE PERSONNEL</h2>
+                <h2 class="ilx-emp-v2-section-title">AVAILABLE USERS</h2>
 
                 <div class="ilx-emp-v2-list">
                     <t t-if="state.loading">
-                        <div class="text-center p-4">Loading personnel...</div>
+                        <div class="text-center p-4">Loading users...</div>
                     </t>
                     <t t-else="">
-                        <t t-foreach="filteredEmployees" t-as="emp" t-key="emp.id">
+                        <t t-foreach="filteredUsers" t-as="user" t-key="user.id">
                             <div
-                                t-att-class="state.selectedEmployee?.id === emp.id ? 'ilx-emp-v2-card selected' : 'ilx-emp-v2-card'"
-                                t-on-click="() => this.selectEmployee(emp)"
+                                t-att-class="state.selectedUser?.id === user.id ? 'ilx-emp-v2-card selected' : 'ilx-emp-v2-card'"
+                                t-on-click="() => this.selectUser(user)"
                             >
                                 <div class="ilx-emp-v2-avatar-wrapper">
                                     <div class="ilx-emp-v2-avatar">
-                                        <t t-if="emp.image_128">
+                                        <t t-if="user.image_128">
                                             <img
-                                                t-att-src="'data:image/png;base64,' + emp.image_128"
+                                                t-att-src="'data:image/png;base64,' + user.image_128"
                                             />
                                         </t>
                                         <t t-else="">
                                             <div class="ilx-emp-v2-avatar-placeholder">
                                                 <t
-                                                    t-esc="emp.name.charAt(0).toUpperCase()"
+                                                    t-esc="user.name.charAt(0).toUpperCase()"
                                                 />
                                             </div>
                                         </t>
                                     </div>
-                                    <div
-                                        t-attf-class="ilx-emp-v2-status-dot status-{{this.getEmployeeStatus(emp)}}"
-                                    />
                                 </div>
 
                                 <div class="ilx-emp-v2-info">
                                     <span class="ilx-emp-v2-name"><t
-                                            t-esc="emp.name"
+                                            t-esc="user.name"
                                         /></span>
                                     <span class="ilx-emp-v2-role">
-                                        <t t-esc="emp.job_title || 'Employee'" />
-                                        <t t-if="emp.department_id">
-                                            <span class="ilx-emp-v2-dot-sep">•</span>
-                                            <t
-                                                t-esc="emp.department_id[1].toUpperCase()"
-                                            />
-                                        </t>
+                                        <t t-esc="user.login" />
                                     </span>
                                 </div>
 
                                 <div class="ilx-emp-v2-status">
-                                    <t t-if="emp.name === 'Sarah Jenkins'"><span
-                                            class="ilx-emp-v2-badge-busy"
-                                        >IN MEETING</span></t>
-
-                                    <t t-if="state.selectedEmployee?.id === emp.id">
+                                    <t t-if="state.selectedUser?.id === user.id">
                                         <i
                                             class="fa fa-check-circle ilx-emp-v2-icon-selected"
                                         />
@@ -618,10 +569,10 @@
                             </div>
                         </t>
                         <div
-                            t-if="filteredEmployees.length === 0"
+                            t-if="filteredUsers.length === 0"
                             class="text-center p-4 ilx-empty-text"
                         >
-                            No personnel found.
+                            No users found.
                         </div>
                     </t>
                 </div>
@@ -629,7 +580,7 @@
 
             <footer class="ilx-emp-v2-footer">
                 <button
-                    t-att-class="!state.selectedEmployee ? 'ilx-emp-v2-confirm-btn disabled' : 'ilx-emp-v2-confirm-btn'"
+                    t-att-class="!state.selectedUser ? 'ilx-emp-v2-confirm-btn disabled' : 'ilx-emp-v2-confirm-btn'"
                     t-on-click="confirmSelection"
                 >
                     Confirm Responsible
@@ -854,7 +805,7 @@
                         <div class="ilx-tx-v2-icon"><i class="fa fa-user-o" /></div>
                         <div class="ilx-tx-v2-text">
                             <t t-if="state.responsible"><t t-esc="state.responsible.name" /></t>
-                            <t t-else="">Select employee</t>
+                            <t t-else="">Select responsible</t>
                         </div>
                         <div class="ilx-tx-v2-chevron"><i class="fa fa-chevron-down" /></div>
                     </div>

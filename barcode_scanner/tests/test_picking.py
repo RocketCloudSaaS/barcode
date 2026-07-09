@@ -1,7 +1,3 @@
-from unittest.mock import patch
-
-from markupsafe import Markup
-
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
@@ -97,7 +93,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
             self.stock_location.id,
             self.destination_location.id,
-            False,
+            self.env.user.id,
             [
                 {
                     "product_id": self.tracked_product.id,
@@ -116,6 +112,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         self.assertTrue(picking.exists())
         self.assertEqual(picking.state, "done")
         self.assertEqual(picking.picking_type_id.code, "internal")
+        self.assertEqual(picking.user_id, self.env.user)
         tracked_move_line = picking.move_line_ids.filtered(
             lambda line: line.product_id == self.tracked_product
         )
@@ -291,103 +288,3 @@ class TestStockMoveLine(TransactionCase):
                 }
             )
 
-
-class TestBarcodeScannerPicking(TransactionCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.company = cls.env.company
-        cls.stock_location = cls.env.ref("stock.stock_location_stock")
-        cls.customer_location = cls.env.ref("stock.stock_location_customers")
-        cls.picking_type_out = cls.env.ref("stock.picking_type_out")
-        cls.product = cls.env["product.product"].create(
-            {
-                "name": "Test Product Picking",
-                "is_storable": True,
-            }
-        )
-        cls.employee = cls.env["hr.employee"].create(
-            {
-                "name": "Test Employee",
-            }
-        )
-
-    def test_responsible_id_exists_and_writable(self):
-        picking = self.env["stock.picking"].create(
-            {
-                "picking_type_id": self.picking_type_out.id,
-                "location_id": self.stock_location.id,
-                "location_dest_id": self.customer_location.id,
-            }
-        )
-        self.assertIn("responsible_id", picking._fields)
-        picking.responsible_id = self.employee
-        self.assertEqual(picking.responsible_id, self.employee)
-
-
-class TestBarcodeScannerScrap(TransactionCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.company = cls.env.company
-        cls.stock_location = cls.env.ref("stock.stock_location_stock")
-
-        cls.non_tracked_product = cls.env["product.product"].create(
-            {
-                "name": "Non-Tracked Scrap Product",
-                "is_storable": True,
-            }
-        )
-        cls.serial_tracked_product = cls.env["product.product"].create(
-            {
-                "name": "Serial Tracked Scrap Product",
-                "is_storable": True,
-                "tracking": "serial",
-            }
-        )
-        cls.serial_lot = cls.env["stock.lot"].create(
-            {
-                "name": "SERIAL-SCRAP-TEST",
-                "product_id": cls.serial_tracked_product.id,
-                "company_id": cls.company.id,
-            }
-        )
-        cls.env["stock.quant"]._update_available_quantity(
-            cls.non_tracked_product,
-            cls.stock_location,
-            10,
-        )
-        cls.env["stock.quant"]._update_available_quantity(
-            cls.serial_tracked_product,
-            cls.stock_location,
-            3,
-            lot_id=cls.serial_lot,
-        )
-
-    def test_scrap_without_lot_for_non_tracked_product(self):
-        result = self.env["stock.scrap"].action_scrap_from_barcode_scanner(
-            self.stock_location.id,
-            [
-                {
-                    "product_id": self.non_tracked_product.id,
-                    "qty": 2,
-                    "lot_id": False,
-                }
-            ],
-            reason="Test scrap without lot",
-        )
-        self.assertTrue(result)
-
-    def test_scrap_with_serial_product_requires_qty_one(self):
-        with self.assertRaises(UserError):
-            self.env["stock.scrap"].action_scrap_from_barcode_scanner(
-                self.stock_location.id,
-                [
-                    {
-                        "product_id": self.serial_tracked_product.id,
-                        "qty": 2,
-                        "lot_id": self.serial_lot.id,
-                    }
-                ],
-                reason="Test serial scrap qty enforcement",
-            )

@@ -19,7 +19,7 @@ export class InternalTransferScreen extends Component {
         this.state = useState({
             origin_location: params.origin_location || null,
             destination_location: params.destination_location || null,
-            responsible: params.employee || null,
+            responsible: params.responsible || null,
             lines: initialLines,
             picking_id: null,
             isCheckingAvailability: false,
@@ -39,7 +39,7 @@ export class InternalTransferScreen extends Component {
                 nextParams.origin_location?.id !== this.state.origin_location?.id;
             this.state.origin_location = nextParams.origin_location || null;
             this.state.destination_location = nextParams.destination_location || null;
-            this.state.responsible = nextParams.employee || null;
+            this.state.responsible = nextParams.responsible || null;
             const nextLines = JSON.parse(JSON.stringify(nextParams.lines || []));
             for (const line of nextLines) {
                 if (!line.lots) {
@@ -201,7 +201,7 @@ export class InternalTransferScreen extends Component {
             type: "origin_location",
             origin_location: this.state.origin_location,
             destination_location: this.state.destination_location,
-            employee: this.state.responsible,
+            responsible: this.state.responsible,
             lines: this.state.lines,
         });
     }
@@ -212,19 +212,21 @@ export class InternalTransferScreen extends Component {
             type: "destination_location",
             origin_location: this.state.origin_location,
             destination_location: this.state.destination_location,
-            employee: this.state.responsible,
+            responsible: this.state.responsible,
             lines: this.state.lines,
         });
     }
 
     selectResponsible() {
-        this.props.navigate("employee_selector", {
+        this.props.navigate("user_selector", {
             returnRoute: "internal_transfer",
             returnParams: {
                 origin_location: this.state.origin_location,
                 destination_location: this.state.destination_location,
-                employee: this.state.responsible,
+                responsible: this.state.responsible,
+                lines: this.state.lines,
             },
+            responsible: this.state.responsible,
         });
     }
 
@@ -232,7 +234,7 @@ export class InternalTransferScreen extends Component {
         this.props.navigate("product_selector", {
             origin_location: this.state.origin_location,
             destination_location: this.state.destination_location,
-            employee: this.state.responsible,
+            responsible: this.state.responsible,
             lines: this.state.lines,
         });
     }

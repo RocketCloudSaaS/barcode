@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import _, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
 
@@ -6,8 +6,6 @@ from odoo.tools.float_utils import float_compare
 class StockPicking(models.Model):
     _inherit = "stock.picking"
     _description = "Stock Picking"
-
-    responsible_id = fields.Many2one("hr.employee", string="Inventory Responsible")
 
     @api.model
     def _barcode_scanner_get_internal_picking_type(
@@ -68,7 +66,9 @@ class StockPicking(models.Model):
         if origin_location == destination_location:
             raise UserError(_("Origin and destination locations must be different."))
 
-        responsible = self.env["hr.employee"].browse(responsible_id).exists()
+        responsible = self.env["res.users"]
+        if responsible_id:
+            responsible = self.env["res.users"].browse(responsible_id).exists()
         prepared_lines = []
         for line in lines:
             product = (
@@ -241,7 +241,7 @@ class StockPicking(models.Model):
                 "location_id": origin_location.id,
                 "location_dest_id": destination_location.id,
                 "move_type": "direct",
-                "responsible_id": responsible.id if responsible else False,
+                "user_id": responsible.id if responsible else False,
                 "origin": _("Barcode Scanner Internal Transfer"),
             }
         )
