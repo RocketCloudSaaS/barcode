@@ -86,6 +86,8 @@ export class BarcodeScannerState extends Reactive {
                     "location_dest_id",
                     "state",
                     "picking_type_id",
+                    "user_id",
+                    "note",
                 ]
             );
             const [type] = await this.orm.read(
