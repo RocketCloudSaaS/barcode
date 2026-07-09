@@ -16,7 +16,7 @@ class TestBarcodeScannerEAN13(TransactionCase):
                 "barcode_nomenclature_id": cls.nomenclature.id,
                 "type": "alias",
                 "encoding": "ean13",
-                "pattern": "..............",
+                "pattern": ".............",
                 "alias": "product.product",
             }
         )
@@ -33,7 +33,7 @@ class TestBarcodeScannerEAN13(TransactionCase):
             [("id", "=", self.nomenclature.id)]
         ).parse_barcode("5901234123457")
         self.assertTrue(result)
-        self.assertEqual(result["alias"], "product.product")
+        self.assertEqual(result["code"], "product.product")
 
     def test_ean13_resolve_product(self):
         product = self.env["product.product"].search(
