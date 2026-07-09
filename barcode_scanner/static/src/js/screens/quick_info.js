@@ -12,6 +12,8 @@ export class QuickInfoScreen extends Component {
         this.state = useState({
             barcode: "",
             result: null,
+            resultType: null,
+            resultDetails: null,
         });
 
         useBarcodeHandler({
@@ -20,14 +22,43 @@ export class QuickInfoScreen extends Component {
             },
         });
 
-        onWillStart(() => {
+        onWillStart(async () => {
             if (this.props.params && this.props.params.mode) {
                 this.state.mode = this.props.params.mode;
+            }
+            if (this.props.params && this.props.params.result) {
+                await this.loadResult(this.props.params.result, this.props.params.result_type);
             }
         });
     }
 
+    async loadResult(result, resultType) {
+        this.state.result = result;
+        this.state.resultType = resultType;
+        if (resultType === "product") {
+            const products = await this.inventory.searchRead(
+                "product.product",
+                [["id", "=", result.id]],
+                ["name", "default_code", "barcode", "standard_price", "list_price", "tracking", "type", "image_128"]
+            );
+            this.state.resultDetails = products.length ? products[0] : null;
+        } else if (resultType === "location") {
+            const locations = await this.inventory.searchRead(
+                "stock.location",
+                [["id", "=", result.id]],
+                ["display_name", "barcode", "usage"]
+            );
+            this.state.resultDetails = locations.length ? locations[0] : null;
+        }
+    }
+
     goBack() {
+        if (this.state.resultDetails) {
+            this.state.result = null;
+            this.state.resultDetails = null;
+            this.state.resultType = null;
+            return;
+        }
         this.store.navigate("main");
     }
 

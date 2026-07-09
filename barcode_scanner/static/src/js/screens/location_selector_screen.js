@@ -69,6 +69,14 @@ export class LocationSelectorScreen extends Component {
         const location = this.state.selectedLocation;
         if (!location) return;
 
+        if (this.props.params.mode === "quick_info_location") {
+            this.store.navigate("quick_info", {
+                result: location,
+                result_type: "location",
+            });
+            return;
+        }
+
         this.store.navigate("internal_transfer", {
             ...this.props.params,
             [this.props.params.type]: location,
@@ -80,6 +88,10 @@ export class LocationSelectorScreen extends Component {
     }
 
     goBack() {
+        if (this.props.params.mode === "quick_info_location") {
+            this.store.navigate("quick_info");
+            return;
+        }
         this.store.navigate("internal_transfer", {
             ...this.props.params,
         });

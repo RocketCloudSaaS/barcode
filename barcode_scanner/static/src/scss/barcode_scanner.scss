@@ -2574,6 +2574,36 @@
     box-shadow: var(--ilx-shadow);
 }
 
+.ilx-kw-cta-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1rem;
+    border-radius: var(--ilx-radius-xl);
+}
+
+.ilx-kw-cta-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.ilx-kw-cta-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ilx-kw-cta-text strong {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.ilx-kw-cta-text span {
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
 .ilx-kw-info-row {
     display: flex;
     align-items: center;
@@ -2607,6 +2637,11 @@
     color: #e65100;
 }
 
+.ilx-kw-bg-brown {
+    background: #efebe9;
+    color: #4e342e;
+}
+
 .ilx-kw-bg-purple-light {
     background: #f3e5f5;
     color: #7b1fa2;
@@ -2617,6 +2652,7 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    flex: 1;
 }
 
 .ilx-kw-eyebrow {

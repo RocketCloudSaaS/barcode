@@ -89,6 +89,14 @@ export class ProductSelectorScreen extends Component {
         const product = this.state.selectedProduct;
         if (!product) return;
 
+        if (this.props.params.mode === "quick_info_product") {
+            this.store.navigate("quick_info", {
+                result: product,
+                result_type: "product",
+            });
+            return;
+        }
+
         const lines = this.props.params.lines || [];
         const existing = lines.find((l) => l.product_id === product.id);
         const lots = await this.inventory.searchRead(
@@ -121,6 +129,10 @@ export class ProductSelectorScreen extends Component {
     }
 
     goBack() {
+        if (this.props.params.mode === "quick_info_product") {
+            this.store.navigate("quick_info");
+            return;
+        }
         this.store.navigate("internal_transfer", this.props.params);
     }
 }

@@ -1043,11 +1043,11 @@
             </t>
         </t>
         <t t-else="">
-            <div class="ilx-kw-cta-banner mt-3" style="background: #e8f5e9; border: 1px solid #c8e6c9;">
-                <i class="fa fa-check-circle ilx-kw-cta-icon" style="color: #4caf50; opacity: 1;" />
+            <div class="ilx-kw-cta-banner" style="background: var(--ilx-success-bg);">
+                <i class="fa fa-check-circle ilx-kw-cta-icon" style="color: var(--ilx-success);" />
                 <div class="ilx-kw-cta-text">
-                    <strong style="color: #2e7d32;">All operations completed</strong>
-                    <span style="color: #388e3c;">There are no pending products for this picking.</span>
+                    <strong style="color: var(--ilx-success);">All operations completed</strong>
+                    <span style="color: var(--ilx-on-surface-variant);">There are no pending products for this picking.</span>
                 </div>
             </div>
         </t>
@@ -1087,11 +1087,11 @@
             </t>
         </t>
         <t t-else="">
-            <div class="ilx-kw-cta-banner mt-3" style="background: var(--kw-surface-low); border: 1px solid var(--kw-surface-low);">
-                <i class="fa fa-inbox ilx-kw-cta-icon" style="color: var(--kw-on-surface-variant); opacity: 1;" />
+            <div class="ilx-kw-cta-banner" style="background: var(--ilx-surface-container-low);">
+                <i class="fa fa-inbox ilx-kw-cta-icon" style="color: var(--ilx-on-surface-variant);" />
                 <div class="ilx-kw-cta-text">
-                    <strong style="color: var(--kw-on-surface);">No confirmed scans yet</strong>
-                    <span style="color: var(--kw-on-surface-variant);">Process products from the To Do tab to build the done log here.</span>
+                    <strong style="color: var(--ilx-on-surface);">No confirmed scans yet</strong>
+                    <span style="color: var(--ilx-on-surface-variant);">Process products from the To Do tab to build the done log here.</span>
                 </div>
             </div>
         </t>
@@ -1121,52 +1121,121 @@
                 <div style="width: 48px;" />
             </header>
 
-            <div class="ilx-v2-main ilx-qi-v2-scan-view">
-                <h2 class="ilx-qi-v2-scan-title">Quick Information EAN13</h2>
-                <p class="ilx-qi-v2-scan-subtitle">Scan a product or location barcode</p>
-
-                <div class="ilx-qi-v2-cards" style="width: 100%;">
-                    <div class="ilx-qi-v2-card" t-on-click="openProductSelector" style="align-items: center; text-align: center;">
-                        <div class="ilx-qi-v2-card-icon" style="background: #6A4C73; color: white; width: 64px; height: 64px; border-radius: 16px; margin-bottom: 0.5rem; position: relative; z-index: 2;">
-                            <i class="fa fa-archive" />
+            <t t-if="state.resultDetails">
+                <div class="ilx-v2-main" style="padding: 0;">
+                    <div class="ilx-kw-tab-content" style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="ilx-kw-card">
+                            <div class="ilx-kw-info-row">
+                                <div class="ilx-kw-icon-box" t-att-class="state.resultType === 'product' ? 'ilx-kw-bg-orange' : 'ilx-kw-bg-brown'" style="width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+                                    <i t-att-class="'fa ' + (state.resultType === 'product' ? 'fa-archive' : 'fa-map-marker')" />
+                                </div>
+                                <div class="ilx-kw-info-text">
+                                    <span class="ilx-kw-eyebrow"><t t-esc="state.resultType === 'product' ? 'PRODUCT' : 'LOCATION'" /></span>
+                                    <strong class="ilx-kw-title"><t t-esc="state.resultDetails.display_name || state.resultDetails.name" /></strong>
+                                </div>
+                            </div>
+                            <t t-if="state.resultType === 'product'">
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-barcode" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">Barcode</span>
+                                        <span class="ilx-kw-value"><t t-esc="state.resultDetails.barcode || '—'" /></span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-tag" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">SKU</span>
+                                        <span class="ilx-kw-value"><t t-esc="state.resultDetails.default_code || '—'" /></span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-dollar" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">Cost / Sale Price</span>
+                                        <span class="ilx-kw-value">$<t t-esc="state.resultDetails.standard_price" /> / $<t t-esc="state.resultDetails.list_price" /></span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-cube" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">Tracking / Type</span>
+                                        <span class="ilx-kw-value">
+                                            <t t-set="trackingLabels" t-value="{'serial': 'By Serial', 'lot': 'By Lots', 'none': 'No Tracking'}" />
+                                            <t t-set="typeLabels" t-value="{'product': 'Storable Product', 'consu': 'Consumable', 'service': 'Service'}" />
+                                            <t t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking" /> · <t t-esc="typeLabels[state.resultDetails.type] || state.resultDetails.type" />
+                                        </span>
+                                    </div>
+                                </div>
+                            </t>
+                            <t t-if="state.resultType === 'location'">
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-barcode" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">Barcode</span>
+                                        <span class="ilx-kw-value"><t t-esc="state.resultDetails.barcode || '—'" /></span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-flag" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">Usage</span>
+                                        <span class="ilx-kw-value"><t t-esc="state.resultDetails.usage || '—'" /></span>
+                                    </div>
+                                </div>
+                            </t>
                         </div>
-                        <i class="fa fa-archive" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #51275E; position: relative; z-index: 2;">Product</h3>
-                    </div>
-                    <div class="ilx-qi-v2-card" t-on-click="openLocationSelector" style="align-items: center; text-align: center;">
-                        <div class="ilx-qi-v2-card-icon" style="background: #8D6E2E; color: white; width: 64px; height: 64px; border-radius: 16px; margin-bottom: 0.5rem; position: relative; z-index: 2;">
-                            <i class="fa fa-map-marker" />
-                        </div>
-                        <i class="fa fa-map-marker" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #8D6E2E; position: relative; z-index: 2;">Location</h3>
                     </div>
                 </div>
+            </t>
+            <t t-else="">
+                <div class="ilx-v2-main ilx-qi-v2-scan-view">
+                    <h2 class="ilx-qi-v2-scan-title">Quick Information EAN13</h2>
+                    <p class="ilx-qi-v2-scan-subtitle">Scan a product or location barcode</p>
 
-                <div class="ilx-qi-v2-gs1-input-wrapper">
-                    <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" />
-                    <div class="ilx-qi-v2-numpad mt-2">
-                        <div class="ilx-qi-v2-pad-grid">
-                            <button t-on-click="() => this.addDigit('1')">1</button>
-                            <button t-on-click="() => this.addDigit('2')">2</button>
-                            <button t-on-click="() => this.addDigit('3')">3</button>
-                            <button t-on-click="() => this.addDigit('4')">4</button>
-                            <button t-on-click="() => this.addDigit('5')">5</button>
-                            <button t-on-click="() => this.addDigit('6')">6</button>
-                            <button t-on-click="() => this.addDigit('7')">7</button>
-                            <button t-on-click="() => this.addDigit('8')">8</button>
-                            <button t-on-click="() => this.addDigit('9')">9</button>
-                            <button t-on-click="() => this.addDigit('.')">.</button>
-                            <button t-on-click="() => this.addDigit('0')">0</button>
-                            <button class="ilx-qi-v2-pad-delete" t-on-click="deleteDigit">⌫</button>
+                    <div class="ilx-qi-v2-cards" style="width: 100%;">
+                        <div class="ilx-qi-v2-card" t-on-click="openProductSelector" style="align-items: center; text-align: center;">
+                            <div class="ilx-qi-v2-card-icon" style="background: #6A4C73; color: white; width: 64px; height: 64px; border-radius: 16px; margin-bottom: 0.5rem; position: relative; z-index: 2;">
+                                <i class="fa fa-archive" />
+                            </div>
+                            <i class="fa fa-archive" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
+                            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #51275E; position: relative; z-index: 2;">Product</h3>
+                        </div>
+                        <div class="ilx-qi-v2-card" t-on-click="openLocationSelector" style="align-items: center; text-align: center;">
+                            <div class="ilx-qi-v2-card-icon" style="background: #8D6E2E; color: white; width: 64px; height: 64px; border-radius: 16px; margin-bottom: 0.5rem; position: relative; z-index: 2;">
+                                <i class="fa fa-map-marker" />
+                            </div>
+                            <i class="fa fa-map-marker" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
+                            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #8D6E2E; position: relative; z-index: 2;">Location</h3>
+                        </div>
+                    </div>
+
+                    <div class="ilx-qi-v2-gs1-input-wrapper">
+                        <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" />
+                        <div class="ilx-qi-v2-numpad mt-2">
+                            <div class="ilx-qi-v2-pad-grid">
+                                <button t-on-click="() => this.addDigit('1')">1</button>
+                                <button t-on-click="() => this.addDigit('2')">2</button>
+                                <button t-on-click="() => this.addDigit('3')">3</button>
+                                <button t-on-click="() => this.addDigit('4')">4</button>
+                                <button t-on-click="() => this.addDigit('5')">5</button>
+                                <button t-on-click="() => this.addDigit('6')">6</button>
+                                <button t-on-click="() => this.addDigit('7')">7</button>
+                                <button t-on-click="() => this.addDigit('8')">8</button>
+                                <button t-on-click="() => this.addDigit('9')">9</button>
+                                <button t-on-click="() => this.addDigit('.')">.</button>
+                                <button t-on-click="() => this.addDigit('0')">0</button>
+                                <button class="ilx-qi-v2-pad-delete" t-on-click="deleteDigit">⌫</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <footer class="ilx-v2-footer">
-                <button class="ilx-v2-btn-primary" t-on-click="searchBarcode">
-                    <i class="fa fa-search me-2" /> Search Barcode
-                </button>
-            </footer>
+                <footer class="ilx-v2-footer">
+                    <button class="ilx-v2-btn-primary" t-on-click="searchBarcode">
+                        <i class="fa fa-search me-2" /> Search Barcode
+                    </button>
+                </footer>
+            </t>
         </div>
     </t>
 
