@@ -294,6 +294,7 @@ export class PickingScreen extends Component {
             await this.barcodeScannerSync.stagePicking(
                 {
                     scheduled_date: this.state.picking.scheduled_date || false,
+                    note: this.state.picking.note || false,
                 },
                 {immediate: true}
             );

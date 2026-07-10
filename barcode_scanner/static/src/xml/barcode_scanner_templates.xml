@@ -1282,11 +1282,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="ilx-kw-info-row mt-3" t-if="noteMarkup">
+                <div class="ilx-kw-info-row mt-3">
                     <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-sticky-note-o" /></div>
                     <div class="ilx-kw-info-text w-100">
                         <span class="ilx-kw-eyebrow">Notes</span>
-                        <div class="ilx-kw-value ilx-kw-note" t-out="noteMarkup" />
+                        <div class="ilx-kw-select-wrapper mt-1">
+                            <textarea
+                                class="ilx-kw-select"
+                                rows="2"
+                                placeholder="Add notes..."
+                                t-att-value="notePlainText"
+                                t-on-input="onNoteInput"
+                                style="resize: vertical; min-height: 40px; font-family: inherit;"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
