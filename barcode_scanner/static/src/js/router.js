@@ -78,20 +78,24 @@ export class BarcodeRouter extends Reactive {
         this.routeParams = params;
     }
 
-    goBack() {
+    goBack(overrides) {
         const previous = this.history.pop();
         if (previous) {
             this.currentRoute = previous.route;
-            this.routeParams = previous.params;
+            this.routeParams = overrides || previous.params;
             const historyState = this._sanitizeHistoryState({
                 routeName: previous.route.name,
-                params: previous.params,
+                params: this.routeParams,
             });
             history.replaceState(historyState, "", browser.location.href);
         } else {
             this.currentRoute = this.routes.main || null;
-            this.routeParams = {};
-            history.replaceState({}, "", browser.location.href);
+            this.routeParams = overrides || {};
+            const historyState = this._sanitizeHistoryState({
+                routeName: (this.routes.main || {}).name || "main",
+                params: this.routeParams,
+            });
+            history.replaceState(historyState, "", browser.location.href);
         }
     }
 

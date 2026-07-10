@@ -90,7 +90,7 @@ export class ProductSelectorScreen extends Component {
         if (!product) return;
 
         if (this.props.params.mode === "quick_info_product") {
-            this.store.navigate("quick_info", {
+            this.store.goBack({
                 result: product,
                 result_type: "product",
             });
@@ -118,7 +118,7 @@ export class ProductSelectorScreen extends Component {
                 default_code: product.default_code || "",
             });
         }
-        this.store.navigate("internal_transfer", {
+        this.store.goBack({
             ...this.props.params,
             lines: lines,
         });
@@ -129,11 +129,7 @@ export class ProductSelectorScreen extends Component {
     }
 
     goBack() {
-        if (this.props.params.mode === "quick_info_product") {
-            this.store.navigate("quick_info");
-            return;
-        }
-        this.store.navigate("internal_transfer", this.props.params);
+        this.store.goBack();
     }
 }
 

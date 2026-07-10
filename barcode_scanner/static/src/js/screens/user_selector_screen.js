@@ -81,18 +81,14 @@ export class UserSelectorScreen extends Component {
         if (!user) {
             return;
         }
-        this.store.navigate(
-            this._returnRoute,
-            {
-                ...this._returnParams,
-                responsible: {id: user.id, name: user.name},
-            },
-            {replace: true}
-        );
+        this.store.goBack({
+            ...this._returnParams,
+            responsible: {id: user.id, name: user.name},
+        });
     }
 
     goBack() {
-        this.store.navigate(this._returnRoute, {...this._returnParams}, {replace: true});
+        this.store.goBack();
     }
 }
 

@@ -8,6 +8,7 @@ import {useService} from "@web/core/utils/hooks";
 export class InternalTransferScreen extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
+        this.store = useService("barcodeStore");
         this.notification = useService("notification");
         const params = this.props.params || {};
         const initialLines = JSON.parse(JSON.stringify(params.lines || []));
@@ -90,6 +91,10 @@ export class InternalTransferScreen extends Component {
             return;
         }
         if (!parsedData || !parsedData.value) {
+            if (barcode) {
+                await this.handleEAN13(barcode);
+                return;
+            }
             this.notification.add("Barcode not recognized.", {type: "warning"});
             return;
         }
@@ -366,7 +371,7 @@ export class InternalTransferScreen extends Component {
                 `Internal transfer ${result.picking_name} validated successfully.`,
                 {type: "success"}
             );
-            this.goBack();
+            this.store.goBack();
         } catch (error) {
             const message =
                 error?.data?.message || error?.message || "Internal transfer failed.";
@@ -382,7 +387,7 @@ export class InternalTransferScreen extends Component {
     }
 
     goBack() {
-        this.props.navigate("main");
+        this.store.goBack();
     }
 }
 InternalTransferScreen.template = "barcode_scanner.InternalTransferScreen";
