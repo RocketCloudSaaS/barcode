@@ -2493,6 +2493,13 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ilx-kw-picking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(28, 27, 31, 0.1);
 }
 
 .ilx-kw-picking-card-top {

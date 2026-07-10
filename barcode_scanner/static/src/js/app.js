@@ -76,6 +76,7 @@ export class BarcodeScannerApp extends Component {
                     pickingId: params.pickingId,
                     listParams: params.listParams || null,
                     reloadToken: params.reloadToken || null,
+                    params: params,
                 };
             default:
                 return {

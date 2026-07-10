@@ -29,6 +29,8 @@ export class PickingScreen extends Component {
             },
         });
 
+        this.selectResponsible = this.selectResponsible.bind(this);
+
         this.state = useState({
             picking: null,
             moves: [],
@@ -51,7 +53,21 @@ export class PickingScreen extends Component {
         });
 
         onWillStart(async () => {
+            const responsible = this.props.params?.responsible;
+            if (responsible && responsible.id && this.pickingId) {
+                await this.inventory.write(
+                    "stock.picking",
+                    [this.pickingId],
+                    {user_id: responsible.id}
+                );
+            }
             await this.loadData({force: true});
+            if (responsible && responsible.id) {
+                this.state.activeTab = "info";
+                this.inventory.notify(`Responsible set to ${responsible.name}`, {
+                    type: "success",
+                });
+            }
         });
 
         onWillUpdateProps(async (nextProps) => {
@@ -69,6 +85,28 @@ export class PickingScreen extends Component {
                 this.props.reloadToken || this.props.params?.reloadToken;
             const nextReloadToken =
                 nextProps.reloadToken || nextProps.params?.reloadToken;
+
+            const nextResponsible = nextProps.params?.responsible;
+            if (nextResponsible && nextResponsible.id && nextId) {
+                try {
+                    await this.inventory.write(
+                        "stock.picking",
+                        [nextId],
+                        {user_id: nextResponsible.id}
+                    );
+                    await this.loadData({force: true});
+                    this.state.activeTab = "info";
+                    this.inventory.notify(`Responsible set to ${nextResponsible.name}`, {
+                        type: "success",
+                    });
+                } catch (error) {
+                    this.inventory.notify("Error updating responsible: " + error, {
+                        type: "danger",
+                    });
+                }
+                return;
+            }
+
             if (currentId !== nextId || currentReloadToken !== nextReloadToken) {
                 await this.loadData({force: true});
             }
@@ -237,6 +275,16 @@ export class PickingScreen extends Component {
             return;
         }
         this.store.goBack?.();
+    }
+
+    selectResponsible() {
+        this.store.navigate("user_selector", {
+            returnRoute: "picking",
+            returnParams: {
+                pickingId: this.pickingId,
+                listParams: this.listParams,
+            },
+        });
     }
 
     async savePicking() {
