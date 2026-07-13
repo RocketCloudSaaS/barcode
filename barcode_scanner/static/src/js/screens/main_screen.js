@@ -38,20 +38,26 @@ export class MainScreen extends Component {
         const products = await this.inventory.searchRead(
             "product.product",
             [["barcode", "=", productCode]],
-            ["id"]
+            ["id", "display_name"]
         );
         if (products.length) {
-            this.store.navigate("product_info", {productId: products[0].id});
+            this.store.navigate("quick_info", {
+                result: products[0],
+                result_type: "product",
+            });
             return;
         }
 
         const locations = await this.inventory.searchRead(
             "stock.location",
             [["barcode", "=", barcode]],
-            ["id"]
+            ["id", "display_name"]
         );
         if (locations.length) {
-            this.store.navigate("location_info", {locationId: locations[0].id});
+            this.store.navigate("quick_info", {
+                result: locations[0],
+                result_type: "location",
+            });
             return;
         }
 

@@ -177,7 +177,7 @@ export class PickingListScreen extends Component {
     }
 
     goBack() {
-        this.store.navigate("warehouse_ops");
+        this.store.goBack();
     }
 
     get filteredPickings() {

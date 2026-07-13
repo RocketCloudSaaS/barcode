@@ -5,6 +5,7 @@ import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 
 export class MoveWizardScreen extends Component {
     setup() {
@@ -126,6 +127,10 @@ export class MoveWizardScreen extends Component {
 
     get isTracked() {
         return this.state.tracking !== "none";
+    }
+
+    get hasLotGroup() {
+        return user.hasGroup("stock.group_stock_production_lot");
     }
 
     get isSerial() {
@@ -340,17 +345,24 @@ export class MoveWizardScreen extends Component {
             onlyAvailable: !this.isIncoming,
             excludeExpired: false,
         });
-        if (!this.state.useExistingLots && this.isIncoming) {
-            const assignedLotIds = new Set(
-                moveLines.map((line) => line.lot_id?.[0]).filter(Boolean)
-            );
-            lots = lots.filter((lot) => assignedLotIds.has(lot.id));
+
+        if (!this.state.useExistingLots) {
+            lots = [];
         }
+
         const defaultLotId = this.selectedLotIdNumber;
         if (defaultLotId && !lots.some((lot) => lot.id === defaultLotId)) {
             const defaultLot = this.barcodeScannerState.lotsById[defaultLotId];
             if (defaultLot) {
                 lots = [defaultLot, ...lots];
+            }
+        }
+
+        if (this.isTracked && this.isIncoming) {
+            if (this.state.useCreateLots && !this.state.useExistingLots) {
+                this.state.mode = "create_lot";
+            } else if (this.state.useExistingLots && !this.state.useCreateLots) {
+                this.state.mode = "pick";
             }
         }
 
@@ -419,6 +431,7 @@ export class MoveWizardScreen extends Component {
         }
         if (
             this.state.tracking !== "none" &&
+            (this.canUseExistingLot || this.canCreateLot) &&
             !this.selectedLotIdNumber &&
             this.state.mode !== "create_lot"
         ) {

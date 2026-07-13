@@ -53,59 +53,37 @@ export class PickingScreen extends Component {
         });
 
         onWillStart(async () => {
-            const responsible = this.props.params?.responsible;
-            if (responsible && responsible.id && this.pickingId) {
-                await this.inventory.write(
-                    "stock.picking",
-                    [this.pickingId],
-                    {user_id: responsible.id}
-                );
-            }
-            await this.loadData({force: true});
-            if (responsible && responsible.id) {
-                this.state.activeTab = "info";
-                this.inventory.notify(`Responsible set to ${responsible.name}`, {
-                    type: "success",
+            try {
+                const responsible = this.props.params?.responsible;
+                if (responsible && responsible.id && this.pickingId) {
+                    await this.inventory.write(
+                        "stock.picking",
+                        [this.pickingId],
+                        {user_id: responsible.id}
+                    );
+                }
+                await this.loadData({force: true});
+                if (responsible && responsible.id) {
+                    this.state.activeTab = "info";
+                    this.inventory.notify(
+                        `Responsible set to ${responsible.name}`,
+                        {type: "success"}
+                    );
+                }
+            } catch (error) {
+                this.inventory.notify("Error loading picking: " + error, {
+                    type: "danger",
                 });
             }
         });
 
         onWillUpdateProps(async (nextProps) => {
-            const currentListParams =
-                this.props.listParams || this.props.params?.listParams;
-            const nextListParams = nextProps.listParams || nextProps.params?.listParams;
-            if (!currentListParams && nextListParams) {
-                this.store.navigate("picking_list", nextListParams);
-                return;
-            }
-
             const currentId = this.props.pickingId || this.props.params?.pickingId;
             const nextId = nextProps.pickingId || nextProps.params?.pickingId;
             const currentReloadToken =
                 this.props.reloadToken || this.props.params?.reloadToken;
             const nextReloadToken =
                 nextProps.reloadToken || nextProps.params?.reloadToken;
-
-            const nextResponsible = nextProps.params?.responsible;
-            if (nextResponsible && nextResponsible.id && nextId) {
-                try {
-                    await this.inventory.write(
-                        "stock.picking",
-                        [nextId],
-                        {user_id: nextResponsible.id}
-                    );
-                    await this.loadData({force: true});
-                    this.state.activeTab = "info";
-                    this.inventory.notify(`Responsible set to ${nextResponsible.name}`, {
-                        type: "success",
-                    });
-                } catch (error) {
-                    this.inventory.notify("Error updating responsible: " + error, {
-                        type: "danger",
-                    });
-                }
-                return;
-            }
 
             if (currentId !== nextId || currentReloadToken !== nextReloadToken) {
                 await this.loadData({force: true});
@@ -270,11 +248,7 @@ export class PickingScreen extends Component {
     }
 
     goBack() {
-        if (this.listParams) {
-            this.store.navigate("picking_list", this.listParams);
-            return;
-        }
-        this.store.goBack?.();
+        this.store.goBack();
     }
 
     selectResponsible() {
@@ -340,12 +314,20 @@ export class PickingScreen extends Component {
             if (action && action.type === "ir.actions.act_window") {
                 await this.action.doAction(action, {
                     onClose: async () => {
-                        this.goBack();
+                        if (this.listParams) {
+                            this.store.navigate("picking_list", this.listParams);
+                        } else {
+                            this.goBack();
+                        }
                     },
                 });
             } else {
                 await this.loadData();
-                this.goBack();
+                if (this.listParams) {
+                    this.store.navigate("picking_list", this.listParams);
+                } else {
+                    this.goBack();
+                }
             }
         } catch (error) {
             this.inventory.notify("Validation failed: " + error.message, {
@@ -542,6 +524,45 @@ export class PickingScreen extends Component {
             });
             return;
         }
+
+        const productId = candidateMove.product_id?.[0];
+        const tracking = this.barcodeScannerState.indexes.trackingByProductId[productId];
+        if (tracking === "none") {
+            const existingLine = this.state.moveLines.find(
+                (line) =>
+                    line.move_id?.[0] === candidateMove.id &&
+                    line.product_id?.[0] === productId &&
+                    (line.qty_picked || 0) > 0
+            );
+            if (existingLine) {
+                const newQty = (existingLine.qty_picked || 0) + 1;
+                await this.barcodeScannerSync.confirmMove({
+                    moveId: candidateMove.id,
+                    pickingId: this.state.picking.id,
+                    productId,
+                    qtyPicked: newQty,
+                    lotId: false,
+                    lotName: false,
+                    locationId: candidateMove.location_id?.[0] || false,
+                    locationDestId: candidateMove.location_dest_id?.[0] || false,
+                });
+                this.setLastScanContext({
+                    barcode,
+                    source: payload?.source || "hardware",
+                    tone: "success",
+                    message: _t("Quantity incremented to %(qty)s.", {qty: newQty}),
+                    move: candidateMove,
+                    quantity: newQty,
+                });
+                this.feedback.success({
+                    notify: true,
+                    message: _t("Quantity incremented to %(qty)s.", {qty: newQty}),
+                });
+                await this._reloadMoves();
+                return;
+            }
+        }
+
         await this.handleEAN13(barcode, candidateMove);
         if (payload?.source === "camera" && candidateMove) {
             this.feedback.success();

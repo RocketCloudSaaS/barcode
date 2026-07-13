@@ -614,6 +614,9 @@
                             <div>
                                 <span class="ilx-mw-v2-eyebrow">TASK STATUS</span>
                                 <h3 class="ilx-mw-v2-task-title">Move Operation</h3>
+                                <div style="font-size: 0.875rem; color: var(--ilx-on-surface-variant, #6b7280); margin-top: 2px;">
+                                    <i class="fa fa-cube" /> <t t-esc="state.move?.product_id?.[1]" />
+                                </div>
                             </div>
                             <div class="ilx-mw-v2-badge-todo">
                                 <i class="fa fa-clipboard" /> TO DO
@@ -633,80 +636,63 @@
                         </div>
                     </div>
 
-                    <div
-                        t-if="canUseExistingLot and canCreateLot"
-                        class="ilx-mw-v2-segmented"
-                    >
-                        <button
-                            t-att-class="state.mode === 'pick' ? 'ilx-mw-v2-segment-btn active' : 'ilx-mw-v2-segment-btn'"
-                            t-on-click="() => setMode('pick')"
+                    <t t-if="hasLotGroup and isTracked and (canUseExistingLot or canCreateLot)">
+                        <div
+                            t-if="canUseExistingLot and canCreateLot"
+                            class="ilx-mw-v2-segmented"
                         >
-                            Pick Existing Lot
-                        </button>
-                        <button
-                            t-att-class="state.mode === 'create_lot' ? 'ilx-mw-v2-segment-btn active' : 'ilx-mw-v2-segment-btn'"
-                            t-on-click="() => setMode('create_lot')"
-                        >
-                            Create New Lot
-                        </button>
-                    </div>
-
-                    <div class="ilx-v2-field-group" t-if="isTracked">
-                        <label class="ilx-v2-label"><t t-esc="lotFieldLabel" /></label>
-                        <t t-if="canUseExistingLot and state.mode === 'pick'">
-                            <div class="ilx-mw-v2-input-box">
-                                <i class="fa fa-barcode ilx-mw-v2-input-icon" />
-                                <select
-                                    name="lot_id"
-                                    class="ilx-mw-v2-input"
-                                    t-on-change="onLotChange"
-                                >
-                                    <option
-                                        value=""
-                                        t-att-selected="!selectedLotIdNumber"
-                                    >Select lot</option>
-                                    <t t-foreach="realLots" t-as="lot" t-key="lot.id">
-                                        <option
-                                            t-att-value="lot.id"
-                                            t-att-selected="lot.id === selectedLotIdNumber"
-                                        >
-                                            <t t-esc="lot.name" />
-                                        </option>
-                                    </t>
-                                </select>
-                            </div>
-                        </t>
-                        <t t-if="canCreateLot and state.mode === 'create_lot'">
-                            <div class="ilx-mw-v2-input-box mb-2">
-                                <i class="fa fa-barcode ilx-mw-v2-input-icon" />
-                                <input
-                                    name="new_lot_name"
-                                    class="ilx-mw-v2-input"
-                                    t-model="state.newLotName"
-                                    placeholder="Enter lot/serial"
-                                />
-                            </div>
-                        </t>
-                        <t t-if="!canUseExistingLot and !canCreateLot">
-                            <div
-                                class="ilx-mw-v2-input-box bg-transparent border-0 p-0"
+                            <button
+                                t-att-class="state.mode === 'pick' ? 'ilx-mw-v2-segment-btn active' : 'ilx-mw-v2-segment-btn'"
+                                t-on-click="() => setMode('pick')"
                             >
-                                <i class="fa fa-info-circle text-muted me-2" />
-                                <span class="ilx-empty-text-sm">
-                                    Lot tracking disabled for this operation type.
-                                </span>
-                            </div>
-                        </t>
-                    </div>
-                    <div class="ilx-v2-field-group" t-if="!isTracked">
-                        <label class="ilx-v2-label"><t t-esc="lotFieldLabel" /></label>
-                        <div class="ilx-mw-v2-input-box bg-transparent border-0 p-0">
-                            <i class="fa fa-check-circle text-success me-2" />
-                            <span class="ilx-empty-text-sm">
-                                No lot or serial required for this product.
-                            </span>
+                                Pick Existing Lot
+                            </button>
+                            <button
+                                t-att-class="state.mode === 'create_lot' ? 'ilx-mw-v2-segment-btn active' : 'ilx-mw-v2-segment-btn'"
+                                t-on-click="() => setMode('create_lot')"
+                            >
+                                Create New Lot
+                            </button>
                         </div>
-                    </div>
+
+                        <div class="ilx-v2-field-group">
+                            <label class="ilx-v2-label"><t t-esc="lotFieldLabel" /></label>
+                            <t t-if="canUseExistingLot and state.mode === 'pick'">
+                                <div class="ilx-mw-v2-input-box">
+                                    <i class="fa fa-barcode ilx-mw-v2-input-icon" />
+                                    <select
+                                        name="lot_id"
+                                        class="ilx-mw-v2-input"
+                                        t-on-change="onLotChange"
+                                    >
+                                        <option
+                                            value=""
+                                            t-att-selected="!selectedLotIdNumber"
+                                        >Select lot</option>
+                                        <t t-foreach="realLots" t-as="lot" t-key="lot.id">
+                                            <option
+                                                t-att-value="lot.id"
+                                                t-att-selected="lot.id === selectedLotIdNumber"
+                                            >
+                                                <t t-esc="lot.name" />
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                            </t>
+                            <t t-if="canCreateLot and state.mode === 'create_lot'">
+                                <div class="ilx-mw-v2-input-box mb-2">
+                                    <i class="fa fa-barcode ilx-mw-v2-input-icon" />
+                                    <input
+                                        name="new_lot_name"
+                                        class="ilx-mw-v2-input"
+                                        t-model="state.newLotName"
+                                        placeholder="Enter lot/serial"
+                                    />
+                                </div>
+                            </t>
+                        </div>
+                    </t>
 
                     <div class="ilx-v2-field-group">
                         <label class="ilx-v2-label">Quantity Picked</label>

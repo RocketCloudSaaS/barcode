@@ -81,7 +81,7 @@ export class WarehouseOps extends Component {
     }
 
     goBack() {
-        this.store.navigate("main");
+        this.store.goBack();
     }
 
     selectWarehouse(ev) {

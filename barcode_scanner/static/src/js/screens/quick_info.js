@@ -59,7 +59,7 @@ export class QuickInfoScreen extends Component {
             this.state.resultType = null;
             return;
         }
-        this.store.navigate("main");
+        this.store.goBack();
     }
 
     openProductSelector() {
@@ -91,33 +91,44 @@ export class QuickInfoScreen extends Component {
     }
 
     async searchBarcode() {
-        if (!this.state.barcode) {
+        const barcode = this.state.barcode;
+        if (!barcode) {
             this.inventory.notify("Enter a barcode.", {type: "warning"});
             return;
         }
+        await this.lookupAndShow(barcode);
+    }
+
+    async onBarcodeScanned(barcode, parsedData) {
+        const scanValue = parsedData?.value || barcode;
+        if (!scanValue) {
+            this.inventory.notify("Barcode not recognized.", {type: "warning"});
+            return;
+        }
+        this.state.barcode = "";
+        await this.lookupAndShow(scanValue);
+    }
+
+    async lookupAndShow(barcode) {
         try {
             const products = await this.inventory.searchRead(
                 "product.product",
-                [["barcode", "=", this.state.barcode]],
-                ["name"]
+                [["barcode", "=", barcode]],
+                ["display_name"]
             );
             if (products.length) {
-                this.inventory.notify("Product found: " + products[0].name, {
-                    type: "success",
-                });
                 this.state.barcode = "";
+                await this.loadResult(products[0], "product");
                 return;
             }
             const locations = await this.inventory.searchRead(
                 "stock.location",
-                [["barcode", "=", this.state.barcode]],
+                [["barcode", "=", barcode]],
                 ["display_name"]
             );
             if (locations.length) {
-                this.inventory.notify("Location found: " + locations[0].display_name, {
-                    type: "success",
-                });
                 this.state.barcode = "";
+                await this.loadResult(locations[0], "location");
                 return;
             }
             this.inventory.notify("Barcode not found.", {type: "danger"});
@@ -125,42 +136,6 @@ export class QuickInfoScreen extends Component {
             console.error(error);
             this.inventory.notify("Search failed.", {type: "danger"});
         }
-    }
-
-    async onBarcodeScanned(barcode, parsedData) {
-        if (!parsedData || !parsedData.value) {
-            this.inventory.notify("Barcode not recognized.", {type: "warning"});
-            return;
-        }
-        await this.handleEAN13(parsedData.value);
-    }
-
-    async handleEAN13(barcode) {
-        const products = await this.inventory.searchRead(
-            "product.product",
-            [["barcode", "=", barcode]],
-            ["display_name"]
-        );
-        if (products.length) {
-            this.store.navigate("product_selector", {
-                mode: "quick_info_product",
-                return_mode: this.state.mode,
-            });
-            return;
-        }
-        const locations = await this.inventory.searchRead(
-            "stock.location",
-            [["barcode", "=", barcode]],
-            ["display_name"]
-        );
-        if (locations.length) {
-            this.store.navigate("location_selector", {
-                mode: "quick_info_location",
-                return_mode: this.state.mode,
-            });
-            return;
-        }
-        this.inventory.notify("Barcode not found", {type: "warning"});
     }
 }
 
