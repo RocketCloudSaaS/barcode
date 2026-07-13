@@ -314,20 +314,11 @@ export class PickingScreen extends Component {
             if (action && action.type === "ir.actions.act_window") {
                 await this.action.doAction(action, {
                     onClose: async () => {
-                        if (this.listParams) {
-                            this.store.navigate("picking_list", this.listParams);
-                        } else {
-                            this.goBack();
-                        }
+                        await this.loadData({force: true});
                     },
                 });
             } else {
-                await this.loadData();
-                if (this.listParams) {
-                    this.store.navigate("picking_list", this.listParams);
-                } else {
-                    this.goBack();
-                }
+                await this.loadData({force: true});
             }
         } catch (error) {
             this.inventory.notify("Validation failed: " + error.message, {
