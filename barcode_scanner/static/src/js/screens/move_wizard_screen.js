@@ -358,6 +358,10 @@ export class MoveWizardScreen extends Component {
             }
         }
 
+        this.state.move = move;
+        this.state.moveLines = moveLines;
+        this.state.tracking = product.tracking;
+
         if (this.isTracked && this.isIncoming) {
             if (this.state.useCreateLots && !this.state.useExistingLots) {
                 this.state.mode = "create_lot";
@@ -365,10 +369,6 @@ export class MoveWizardScreen extends Component {
                 this.state.mode = "pick";
             }
         }
-
-        this.state.move = move;
-        this.state.moveLines = moveLines;
-        this.state.tracking = product.tracking;
         this.state.lots = lots || [];
         this.state.loading = false;
     }
