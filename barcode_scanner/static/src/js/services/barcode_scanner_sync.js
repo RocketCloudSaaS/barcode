@@ -146,9 +146,7 @@ export class BarcodeScannerSync {
                     [
                         "name",
                         "product_id",
-                        "expiration_date",
                         "product_qty",
-                        "removal_date",
                     ]
                 );
                 this.state.replaceTemporaryLot(operation.tempId, lot);

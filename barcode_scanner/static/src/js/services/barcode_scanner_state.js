@@ -162,9 +162,7 @@ export class BarcodeScannerState extends Reactive {
                 ? await this.orm.read("stock.lot", lotIds, [
                       "name",
                       "product_id",
-                      "expiration_date",
                       "product_qty",
-                      "removal_date",
                   ])
                 : [];
 
@@ -175,9 +173,7 @@ export class BarcodeScannerState extends Reactive {
                     [
                         "name",
                         "product_id",
-                        "expiration_date",
                         "product_qty",
-                        "removal_date",
                     ]
                 );
                 const existingLotIds = new Set(lots.map((l) => l.id));
@@ -447,9 +443,7 @@ export class BarcodeScannerState extends Reactive {
             id: tempId,
             name,
             product_id: [productId, this.productsById[productId]?.display_name || ""],
-            expiration_date: expirationDate || false,
             product_qty: 0,
-            removal_date: false,
         };
         this.lotsById = {
             ...this.lotsById,
@@ -463,7 +457,6 @@ export class BarcodeScannerState extends Reactive {
             values: {
                 name,
                 product_id: productId,
-                expiration_date: expirationDate || false,
             },
         });
         return lot;
