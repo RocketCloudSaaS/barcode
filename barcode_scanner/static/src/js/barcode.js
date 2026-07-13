@@ -30,8 +30,15 @@ export const barcodeService = {
 
         function onKeyDown(ev) {
             const target = ev.target;
-            if (isEditable(target) && !target.dataset.enableBarcode) {
+            const barcodeAllowed =
+                target.dataset && target.dataset.enableBarcode;
+
+            if (isEditable(target) && !barcodeAllowed) {
                 return;
+            }
+
+            if (barcodeAllowed) {
+                ev.stopPropagation();
             }
 
             const now = Date.now();

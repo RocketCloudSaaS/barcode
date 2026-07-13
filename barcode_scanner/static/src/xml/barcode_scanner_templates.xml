@@ -688,6 +688,7 @@
                                         class="ilx-mw-v2-input"
                                         t-model="state.newLotName"
                                         placeholder="Enter lot/serial"
+                                        data-enable-barcode="true"
                                     />
                                 </div>
                             </t>
@@ -716,6 +717,7 @@
                                 t-att-max="quantityInputMax"
                                 t-att-aria-label="'Quantity'"
                                 t-on-change="(ev) => this.setQty(ev.target.value)"
+                                data-enable-barcode="true"
                             />
                             <button
                                 class="ilx-mw-v2-qty-btn"

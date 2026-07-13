@@ -61,21 +61,18 @@ export class MoveWizardScreen extends Component {
     }
 
     async onBarcodeScanned(barcode, parsedData) {
-        if (!parsedData) return;
+        const scanValue = parsedData?.value || barcode;
+        if (!scanValue) return;
 
-        if (parsedData.value) {
-            const product = this.barcodeScannerState.getProductByBarcode(
-                parsedData.value
-            );
-            if (product) {
-                if (product.id === this.state.move?.product_id?.[0]) {
-                    this.adjustQty(1);
-                    this.feedback.success();
-                } else {
-                    this.onProductScanned(product);
-                }
-                return;
+        const product = this.barcodeScannerState.getProductByBarcode(scanValue);
+        if (product) {
+            if (product.id === this.state.move?.product_id?.[0]) {
+                this.adjustQty(1);
+                this.feedback.success();
+            } else {
+                this.onProductScanned(product);
             }
+            return;
         }
     }
 
