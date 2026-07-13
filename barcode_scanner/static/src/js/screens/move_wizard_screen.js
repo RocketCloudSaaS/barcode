@@ -130,7 +130,7 @@ export class MoveWizardScreen extends Component {
     }
 
     get hasLotGroup() {
-        return user.hasGroup("stock.group_stock_production_lot");
+        return user.hasGroup("stock.group_production_lot");
     }
 
     get isSerial() {
