@@ -68,10 +68,13 @@ export class MoveWizardScreen extends Component {
                 parsedData.value
             );
             if (product) {
-                this.onProductScanned(product);
-                if (product.id !== this.state.move?.product_id?.[0]) {
-                    return;
+                if (product.id === this.state.move?.product_id?.[0]) {
+                    this.adjustQty(1);
+                    this.feedback.success();
+                } else {
+                    this.onProductScanned(product);
                 }
+                return;
             }
         }
     }
