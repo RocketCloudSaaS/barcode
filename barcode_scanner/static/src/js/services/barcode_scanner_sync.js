@@ -140,14 +140,14 @@ export class BarcodeScannerSync {
             case "lot_create": {
                 const lotIds = await this.orm.create("stock.lot", [operation.values]);
                 const lotId = Array.isArray(lotIds) ? lotIds[0] : lotIds;
+                const readFields = ["name", "product_id", "product_qty"];
+                if (this.state.hasProductExpiry) {
+                    readFields.push("expiration_date", "removal_date");
+                }
                 const [lot] = await this.orm.read(
                     "stock.lot",
                     [lotId],
-                    [
-                        "name",
-                        "product_id",
-                        "product_qty",
-                    ]
+                    readFields
                 );
                 this.state.replaceTemporaryLot(operation.tempId, lot);
                 this.updateQueuedLotReferences(queue, operation.tempId, lot);

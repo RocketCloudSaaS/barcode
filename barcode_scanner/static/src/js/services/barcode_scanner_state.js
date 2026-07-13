@@ -158,23 +158,27 @@ export class BarcodeScannerState extends Reactive {
             this.useExistingLots = type.use_existing_lots;
             this.useCreateLots = type.use_create_lots;
 
+            const expiryModule = await this.orm.searchRead(
+                "ir.module.module",
+                [["name", "=", "product_expiry"], ["state", "=", "installed"]],
+                ["id"]
+            );
+            this.hasProductExpiry = expiryModule.length > 0;
+
+            const lotBaseFields = ["name", "product_id", "product_qty"];
+            if (this.hasProductExpiry) {
+                lotBaseFields.push("expiration_date", "removal_date");
+            }
+
             const lots = lotIds.length
-                ? await this.orm.read("stock.lot", lotIds, [
-                      "name",
-                      "product_id",
-                      "product_qty",
-                  ])
+                ? await this.orm.read("stock.lot", lotIds, lotBaseFields)
                 : [];
 
             if (incomingNeedsAllLots) {
                 const allLots = await this.orm.searchRead(
                     "stock.lot",
                     [["product_id", "in", trackedProductIds]],
-                    [
-                        "name",
-                        "product_id",
-                        "product_qty",
-                    ]
+                    lotBaseFields
                 );
                 const existingLotIds = new Set(lots.map((l) => l.id));
                 for (const lot of allLots) {
@@ -445,6 +449,9 @@ export class BarcodeScannerState extends Reactive {
             product_id: [productId, this.productsById[productId]?.display_name || ""],
             product_qty: 0,
         };
+        if (this.hasProductExpiry && expirationDate) {
+            lot.expiration_date = expirationDate;
+        }
         this.lotsById = {
             ...this.lotsById,
             [tempId]: lot,
@@ -457,6 +464,7 @@ export class BarcodeScannerState extends Reactive {
             values: {
                 name,
                 product_id: productId,
+                ...(this.hasProductExpiry && expirationDate ? {expiration_date: expirationDate} : {}),
             },
         });
         return lot;
