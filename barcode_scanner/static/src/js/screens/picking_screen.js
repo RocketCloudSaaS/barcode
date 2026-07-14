@@ -311,12 +311,15 @@ export class PickingScreen extends Component {
                 [this.state.picking.id],
                 {context: {active_ids: [this.state.picking.id]}}
             );
-            if (action && action.type === "ir.actions.act_window") {
+            if (action && action.type === "ir.actions.act_window" && action.res_model === "stock.backorder.confirmation") {
                 await this.action.doAction(action, {
-                    onClose: async () => {
-                        await this.loadData({force: true});
+                    onClose: () => {
+                        this.store.navigate("picking_list", this.listParams || {});
                     },
                 });
+            } else if (action && action.type === "ir.actions.act_window") {
+                await this.action.doAction(action);
+                await this.loadData({force: true});
             } else {
                 await this.loadData({force: true});
             }
