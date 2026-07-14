@@ -3543,14 +3543,38 @@
 
 .ilx-qi-v2-gs1-input {
     width: 100%;
-    padding: 1rem;
+    max-width: 260px;
+    padding: 0.65rem 1rem;
     border: 1px solid var(--ilx-outline-variant);
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
-    font-size: 1.1rem;
-    color: var(--ilx-on-surface-variant);
-    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    color: var(--ilx-on-surface);
+    background: var(--ilx-surface);
     outline: none;
+    margin: 0 auto;
+}
+
+.ilx-qi-v2-gs1-input:focus {
+    border-color: var(--ilx-primary);
+}
+
+.ilx-qi-v2-barcode-btn {
+    width: 100%;
+    max-width: 260px;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: #2E7D32;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 4px auto 0;
 }
 
 .ilx-qi-v2-gs1-input::placeholder {

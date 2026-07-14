@@ -1257,17 +1257,19 @@
                             <i class="fa fa-map-marker" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
                             <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #8D6E2E; position: relative; z-index: 2;">Location</h3>
                         </div>
-                    </div>
-
-                    <div class="ilx-qi-v2-gs1-input-wrapper">
-                        <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" data-enable-barcode="true" />
+                        <div class="ilx-qi-v2-card" style="align-items: center; text-align: center; cursor: default;">
+                            <div class="ilx-qi-v2-card-icon" style="background: #2E7D32; color: white; width: 64px; height: 64px; border-radius: 16px; margin-bottom: 0.5rem; position: relative; z-index: 2;">
+                                <i class="fa fa-barcode" />
+                            </div>
+                            <i class="fa fa-barcode" style="position: absolute; right: 1rem; top: 1rem; font-size: 5rem; color: #f4f4f4; z-index: 1;" />
+                            <h3 style="margin: 0 0 0.75rem 0; font-size: 1.25rem; font-weight: 800; color: #2E7D32; position: relative; z-index: 2;">Manual Barcode</h3>
+                            <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" data-enable-barcode="true" style="position: relative; z-index: 2;" />
+                            <button class="ilx-qi-v2-barcode-btn" t-on-click="searchBarcode" style="position: relative; z-index: 2;">
+                                <i class="fa fa-search me-2" /> Search Barcode
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <footer class="ilx-v2-footer">
-                    <button class="ilx-v2-btn-primary" t-on-click="searchBarcode">
-                        <i class="fa fa-search me-2" /> Search Barcode
-                    </button>
-                </footer>
             </t>
         </div>
     </t>
