@@ -5,7 +5,7 @@
     "summary": "Core barcode scanning application for warehouse operations",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["szalatyzuzanna"],
+    "maintainers": ["antoniodavid", "szalatyzuzanna"],
     "license": "LGPL-3",
     "depends": [
         "barcodes",

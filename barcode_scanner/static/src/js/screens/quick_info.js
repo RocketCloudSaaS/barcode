@@ -14,7 +14,10 @@ export class QuickInfoScreen extends Component {
             result: null,
             resultType: null,
             resultDetails: null,
+            locationStock: [],
+            stockPage: 0,
         });
+        this.stockPageSize = 15;
 
         useBarcodeHandler({
             onScan: async (barcode, parsedData) => {
@@ -35,6 +38,8 @@ export class QuickInfoScreen extends Component {
     async loadResult(result, resultType) {
         this.state.result = result;
         this.state.resultType = resultType;
+        this.state.locationStock = [];
+        this.state.stockPage = 0;
         if (resultType === "product") {
             const products = await this.inventory.searchRead(
                 "product.product",
@@ -49,6 +54,21 @@ export class QuickInfoScreen extends Component {
                 ["display_name", "barcode", "usage"]
             );
             this.state.resultDetails = locations.length ? locations[0] : null;
+            if (this.state.resultDetails) {
+                const quants = await this.inventory.readGroup(
+                    "stock.quant",
+                    [["location_id", "=", result.id]],
+                    ["product_id", "quantity"],
+                    ["product_id"]
+                );
+                this.state.locationStock = quants
+                    .filter((q) => q.quantity > 0)
+                    .map((q) => ({
+                        productId: q.product_id[0],
+                        productName: q.product_id[1],
+                        quantity: q.quantity,
+                    }));
+            }
         }
     }
 
@@ -57,6 +77,8 @@ export class QuickInfoScreen extends Component {
             this.state.result = null;
             this.state.resultDetails = null;
             this.state.resultType = null;
+            this.state.locationStock = [];
+            this.state.stockPage = 0;
             return;
         }
         this.store.goBack();
@@ -76,12 +98,25 @@ export class QuickInfoScreen extends Component {
         });
     }
 
-    addDigit(digit) {
-        this.state.barcode += digit;
+    get paginatedStock() {
+        const start = this.state.stockPage * this.stockPageSize;
+        return this.state.locationStock.slice(start, start + this.stockPageSize);
     }
 
-    deleteDigit() {
-        this.state.barcode = this.state.barcode.slice(0, -1);
+    get stockTotalPages() {
+        return Math.ceil(this.state.locationStock.length / this.stockPageSize);
+    }
+
+    nextStockPage() {
+        if (this.state.stockPage < this.stockTotalPages - 1) {
+            this.state.stockPage++;
+        }
+    }
+
+    prevStockPage() {
+        if (this.state.stockPage > 0) {
+            this.state.stockPage--;
+        }
     }
 
     onInputKeydown(ev) {
