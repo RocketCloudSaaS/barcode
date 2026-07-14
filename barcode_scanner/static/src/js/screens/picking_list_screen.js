@@ -539,10 +539,12 @@ export class PickingListScreen extends Component {
     removeFilter(filter) {
         this.state.activeFilters = this.state.activeFilters.filter((f) => f !== filter);
         this.state.filterValues[filter] = FILTER_DEFAULTS[filter];
+        this.computeGroups();
     }
 
     setFilterValue(filter, value) {
         this.state.filterValues[filter] = value;
+        this.computeGroups();
     }
 
     getFilterDisplayValue(filter) {
@@ -579,6 +581,7 @@ export class PickingListScreen extends Component {
         this.state.search = "";
         this.state.activeFilters = [];
         this.state.filterValues = {state: "all", date: null};
+        this.computeGroups();
     }
 
     countGroupEntries(groupNode) {
