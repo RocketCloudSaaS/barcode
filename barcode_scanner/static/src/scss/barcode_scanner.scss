@@ -2368,6 +2368,44 @@
     color: var(--ilx-on-surface-variant);
 }
 
+.ilx-kw-chip-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.ilx-kw-filter-value-select {
+    height: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--ilx-outline-variant);
+    background: var(--ilx-surface);
+    color: var(--ilx-on-surface);
+    font-size: 0.75rem;
+    padding: 0 8px;
+    cursor: pointer;
+}
+
+.ilx-kw-chip-toggle {
+    height: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--ilx-outline-variant);
+    background: var(--ilx-surface);
+    color: var(--ilx-on-surface);
+    font-size: 0.75rem;
+    padding: 0 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.ilx-kw-select-chip {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
 .ilx-kw-tabs {
     display: flex;
     gap: 0.5rem;
@@ -2537,8 +2575,8 @@
 }
 
 .ilx-kw-status-tag--ready {
-    background: var(--ilx-tertiary-container);
-    color: var(--ilx-on-tertiary-container);
+    background: var(--ilx-success-bg);
+    color: var(--ilx-success);
 }
 
 .ilx-kw-picking-chevron {

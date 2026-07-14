@@ -435,12 +435,31 @@
                     </div>
 
                     <div class="ilx-kw-filter-chips">
-                        <button
-                            t-att-class="state.filterReady ? 'ilx-kw-chip ilx-kw-chip--active' : 'ilx-kw-chip ilx-kw-chip--default'"
-                            t-on-click="toggleReadyFilter"
-                        >
-                            Ready <i class="fa fa-times" t-if="state.filterReady" />
-                        </button>
+                        <t t-foreach="state.activeFilters" t-as="filter" t-key="filter">
+                            <div class="ilx-kw-chip ilx-kw-chip--active">
+                                <span class="ilx-kw-chip-label">
+                                    <t t-esc="filterLabels[filter]"/>: <t t-esc="getFilterDisplayValue(filter)"/>
+                                </span>
+                                <t t-if="filter === 'state'">
+                                    <select class="ilx-kw-filter-value-select"
+                                            t-on-change="(ev) => this.setFilterValue('state', ev.target.value)">
+                                        <option value="all">All</option>
+                                        <t t-foreach="Object.entries(state.stateLabels)" t-as="entry" t-key="entry[0]">
+                                            <option t-att-value="entry[0]"><t t-esc="entry[1]"/></option>
+                                        </t>
+                                    </select>
+                                </t>
+                                <t t-if="filter === 'date'">
+                                    <select class="ilx-kw-filter-value-select"
+                                            t-on-change="(ev) => this.setFilterValue('date', ev.target.value || null)">
+                                        <option value="">All</option>
+                                        <option value="today">Today</option>
+                                        <option value="tomorrow">Tomorrow</option>
+                                    </select>
+                                </t>
+                                <i class="fa fa-times" t-on-click="() => this.removeFilter(filter)"/>
+                            </div>
+                        </t>
                         <t t-foreach="state.groupByLevels" t-as="group" t-key="group">
                             <button
                                 class="ilx-kw-chip ilx-kw-chip--active"
@@ -451,6 +470,17 @@
                                 /> <i class="fa fa-times" />
                             </button>
                         </t>
+                        <select
+                            name="filter"
+                            class="ilx-kw-chip ilx-kw-chip--default ilx-kw-select-chip"
+                            t-if="availableFilterOptions.length"
+                            t-on-change="addFilter"
+                        >
+                            <option value="">+ Add Filter...</option>
+                            <t t-foreach="availableFilterOptions" t-as="opt" t-key="opt">
+                                <option t-att-value="opt"><t t-esc="filterLabels[opt]"/></option>
+                            </t>
+                        </select>
                         <select
                             name="group_by"
                             class="ilx-kw-chip ilx-kw-chip--default ilx-kw-select-chip"
@@ -1113,7 +1143,7 @@
             <t t-if="state.resultDetails">
                 <div class="ilx-v2-main" style="padding: 0;">
                     <div class="ilx-kw-tab-content" style="flex: 1; display: flex; flex-direction: column;">
-                        <div class="ilx-kw-card">
+                        <div class="ilx-kw-card" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
                             <div class="ilx-kw-info-row">
                                 <div class="ilx-kw-icon-box" t-att-class="state.resultType === 'product' ? 'ilx-kw-bg-orange' : 'ilx-kw-bg-brown'" style="width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
                                     <i t-att-class="'fa ' + (state.resultType === 'product' ? 'fa-archive' : 'fa-map-marker')" />
@@ -1169,9 +1199,39 @@
                                     <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-flag" /></div>
                                     <div class="ilx-kw-info-text">
                                         <span class="ilx-kw-eyebrow">Usage</span>
-                                        <span class="ilx-kw-value"><t t-esc="state.resultDetails.usage || '—'" /></span>
+                                        <span class="ilx-kw-value">
+                                            <t t-set="usageLabels" t-value="{'customer': 'Customer', 'internal': 'Internal', 'supplier': 'Vendor', 'transit': 'Transit', 'view': 'View', 'inventory': 'Inventory Adjustment', 'production': 'Manufacturing', 'loss': 'Inventory Loss'}" />
+                                            <t t-esc="usageLabels[state.resultDetails.usage] || state.resultDetails.usage" />
+                                        </span>
                                     </div>
                                 </div>
+                                <t t-if="state.locationStock.length">
+                                    <div class="ilx-kw-info-row mt-3" style="align-items: flex-start;">
+                                        <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i class="fa fa-cubes" /></div>
+                                        <div class="ilx-kw-info-text" style="flex: 1;">
+                                            <span class="ilx-kw-eyebrow">Current Stock (<t t-esc="state.locationStock.length" />)</span>
+                                            <div style="margin-top: 4px;">
+                                                <t t-foreach="paginatedStock" t-as="item" t-key="item.productId">
+                                                    <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                                        <span class="ilx-kw-value" style="font-size: 0.85rem;"><t t-esc="item.productName" /></span>
+                                                        <span class="ilx-kw-value" style="font-weight: 600; font-size: 0.85rem;"><t t-esc="item.quantity" /></span>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                            <t t-if="stockTotalPages > 1">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                                    <button class="btn btn-sm btn-secondary" t-on-click="prevStockPage" t-att-disabled="state.stockPage === 0">
+                                                        <i class="fa fa-chevron-left" />
+                                                    </button>
+                                                    <span style="font-size: 0.8rem; color: #666;"><t t-esc="state.stockPage + 1" /> / <t t-esc="stockTotalPages" /></span>
+                                                    <button class="btn btn-sm btn-secondary" t-on-click="nextStockPage" t-att-disabled="state.stockPage >= stockTotalPages - 1">
+                                                        <i class="fa fa-chevron-right" />
+                                                    </button>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </t>
                             </t>
                         </div>
                     </div>
@@ -1200,23 +1260,7 @@
                     </div>
 
                     <div class="ilx-qi-v2-gs1-input-wrapper">
-                        <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" />
-                        <div class="ilx-qi-v2-numpad mt-2">
-                            <div class="ilx-qi-v2-pad-grid">
-                                <button t-on-click="() => this.addDigit('1')">1</button>
-                                <button t-on-click="() => this.addDigit('2')">2</button>
-                                <button t-on-click="() => this.addDigit('3')">3</button>
-                                <button t-on-click="() => this.addDigit('4')">4</button>
-                                <button t-on-click="() => this.addDigit('5')">5</button>
-                                <button t-on-click="() => this.addDigit('6')">6</button>
-                                <button t-on-click="() => this.addDigit('7')">7</button>
-                                <button t-on-click="() => this.addDigit('8')">8</button>
-                                <button t-on-click="() => this.addDigit('9')">9</button>
-                                <button t-on-click="() => this.addDigit('.')">.</button>
-                                <button t-on-click="() => this.addDigit('0')">0</button>
-                                <button class="ilx-qi-v2-pad-delete" t-on-click="deleteDigit">⌫</button>
-                            </div>
-                        </div>
+                        <input class="ilx-qi-v2-gs1-input" placeholder="Enter barcode" t-model="state.barcode" t-on-keydown="onInputKeydown" data-enable-barcode="true" />
                     </div>
                 </div>
                 <footer class="ilx-v2-footer">

@@ -8,6 +8,9 @@ import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {scanBarcode} from "@web/core/barcode/barcode_dialog";
 
 const GROUP_ORDER = ["date", "state"];
+const FILTER_ORDER = ["state", "date"];
+const FILTER_DEFAULTS = {state: "all", date: null};
+const FILTER_LABELS = {state: _t("Status"), date: _t("Date")};
 
 const EMPTY_MOVE_STATS = {
     skuCount: 0,
@@ -36,14 +39,14 @@ export class PickingListScreen extends Component {
             collapsedGroups: {},
             search: "",
             stateLabels: {},
-            filterState: "all",
-            filterDate: null,
-            filterReady: false,
+            activeFilters: [],
+            filterValues: {state: "all", date: null},
         });
         this.groupLabels = {
             state: _t("Status"),
             date: _t("Date"),
         };
+        this.filterLabels = FILTER_LABELS;
 
         useBarcodeHandler({
             onScan: (barcode) => this.onBarcodeScanned(barcode),
@@ -76,9 +79,9 @@ export class PickingListScreen extends Component {
                 this.state.pickings,
                 this.state.groupByLevels,
                 this.state.search,
-                this.state.filterState,
-                this.state.filterReady,
-                this.state.filterDate,
+                this.state.activeFilters,
+                this.state.filterValues.state,
+                this.state.filterValues.date,
             ]
         );
     }
@@ -424,28 +427,37 @@ export class PickingListScreen extends Component {
         return this.getPickingSearchText(picking).includes(search);
     }
 
-    matchesDateFilter(picking) {
-        if (!this.state.filterDate) {
+    matchesDateFilter(picking, dateFilter) {
+        if (!dateFilter) {
             return true;
         }
         const pickingDate = this.parseScheduledDate(picking.scheduled_date);
-        return pickingDate ? this.isSameDay(pickingDate, this.state.filterDate) : false;
+        if (!pickingDate) {
+            return false;
+        }
+        const today = new Date();
+        if (dateFilter === "today") {
+            return this.isSameDay(pickingDate, today);
+        }
+        if (dateFilter === "tomorrow") {
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            return this.isSameDay(pickingDate, tomorrow);
+        }
+        return true;
     }
 
     getMatchingPickings(query = "") {
         const search = this.normalizeSearchValue(query);
         return this.state.pickings.filter((picking) => {
-            if (
-                this.state.filterState !== "all" &&
-                picking.state !== this.state.filterState
-            ) {
-                return false;
-            }
-            if (!this.matchesDateFilter(picking)) {
-                return false;
-            }
-            if (this.state.filterReady && !this.isReadyPicking(picking)) {
-                return false;
+            for (const filter of this.state.activeFilters) {
+                const value = this.state.filterValues[filter];
+                if (filter === "state" && value !== "all" && picking.state !== value) {
+                    return false;
+                }
+                if (filter === "date" && value && !this.matchesDateFilter(picking, value)) {
+                    return false;
+                }
             }
             return this.matchesSearch(picking, search);
         });
@@ -514,19 +526,59 @@ export class PickingListScreen extends Component {
         });
     }
 
-    toggleReadyFilter() {
-        this.state.filterReady = !this.state.filterReady;
+    addFilter(ev) {
+        const value = ev.target.value;
+        if (!value || this.state.activeFilters.includes(value)) {
+            return;
+        }
+        this.state.activeFilters = [...this.state.activeFilters, value];
+        this.state.filterValues[value] = FILTER_DEFAULTS[value];
+        ev.target.value = "";
     }
 
-    updateFilterDate(ev) {
-        this.state.filterDate = ev.target.value ? new Date(ev.target.value) : null;
+    removeFilter(filter) {
+        this.state.activeFilters = this.state.activeFilters.filter((f) => f !== filter);
+        this.state.filterValues[filter] = FILTER_DEFAULTS[filter];
+    }
+
+    setFilterValue(filter, value) {
+        this.state.filterValues[filter] = value;
+    }
+
+    getFilterDisplayValue(filter) {
+        const value = this.state.filterValues[filter];
+        if (filter === "state") {
+            if (value === "all") {
+                return _t("All");
+            }
+            return this.state.stateLabels[value] || value;
+        }
+        if (filter === "ready") {
+            return value ? _t("Yes") : _t("No");
+        }
+        if (filter === "date") {
+            if (!value) {
+                return _t("All");
+            }
+            if (value === "today") {
+                return _t("Today");
+            }
+            if (value === "tomorrow") {
+                return _t("Tomorrow");
+            }
+            return value;
+        }
+        return "";
+    }
+
+    get availableFilterOptions() {
+        return FILTER_ORDER.filter((f) => !this.state.activeFilters.includes(f));
     }
 
     clearFilters() {
         this.state.search = "";
-        this.state.filterState = "all";
-        this.state.filterDate = null;
-        this.state.filterReady = false;
+        this.state.activeFilters = [];
+        this.state.filterValues = {state: "all", date: null};
     }
 
     countGroupEntries(groupNode) {
@@ -555,20 +607,6 @@ export class PickingListScreen extends Component {
     getGroupSummary(groupNode) {
         const count = this.countGroupEntries(groupNode);
         return `${count} ${count === 1 ? _t("picking") : _t("pickings")}`;
-    }
-
-    onClickTomorrow() {
-        this.state.filterTomorrow = !this.state.filterTomorrow;
-        if (this.state.filterToday) {
-            this.state.filterToday = false;
-        }
-    }
-
-    onClickToday() {
-        this.state.filterToday = !this.state.filterToday;
-        if (this.state.filterTomorrow) {
-            this.state.filterTomorrow = false;
-        }
     }
 }
 PickingListScreen.template = "barcode_scanner.PickingListScreen";
