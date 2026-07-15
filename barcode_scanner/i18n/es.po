@@ -327,6 +327,24 @@ msgstr "Totalmente preparado"
 
 #. module: barcode_scanner
 #. odoo-javascript
+#: code:addons/barcode_scanner/static/src/js/screens/main_screen.js:0
+msgid "Good afternoon"
+msgstr "Buenas tardes"
+
+#. module: barcode_scanner
+#. odoo-javascript
+#: code:addons/barcode_scanner/static/src/js/screens/main_screen.js:0
+msgid "Good evening"
+msgstr "Buenas noches"
+
+#. module: barcode_scanner
+#. odoo-javascript
+#: code:addons/barcode_scanner/static/src/js/screens/main_screen.js:0
+msgid "Good morning"
+msgstr "Buenos días"
+
+#. module: barcode_scanner
+#. odoo-javascript
 #: code:addons/barcode_scanner/static/src/js/screens/picking_list_screen.js:0
 msgid "Group"
 msgstr "Grupo"

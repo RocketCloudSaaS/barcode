@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import {Component, useState} from "@odoo/owl";
+import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {user} from "@web/core/user";
 import {imageUrl} from "@web/core/utils/urls";
@@ -72,9 +73,9 @@ export class MainScreen extends Component {
             timeZone: tz,
         }).format(new Date());
         const h = parseInt(hour, 10);
-        if (h < 12) return "Good morning";
-        if (h < 18) return "Good afternoon";
-        return "Good evening";
+        if (h < 12) return _t("Good morning");
+        if (h < 18) return _t("Good afternoon");
+        return _t("Good evening");
     }
 
     get userName() {
