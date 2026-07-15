@@ -2384,6 +2384,17 @@
     cursor: pointer;
 }
 
+.ilx-kw-filter-date-input {
+    height: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--ilx-outline-variant);
+    background: var(--ilx-surface);
+    color: var(--ilx-on-surface);
+    font-size: 0.75rem;
+    padding: 0 8px;
+    cursor: pointer;
+}
+
 .ilx-kw-chip-toggle {
     height: 24px;
     border-radius: 12px;

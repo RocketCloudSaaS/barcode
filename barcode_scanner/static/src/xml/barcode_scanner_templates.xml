@@ -455,7 +455,17 @@
                                         <option value="">All</option>
                                         <option value="today">Today</option>
                                         <option value="tomorrow">Tomorrow</option>
+                                        <option value="custom"
+                                            t-att-selected="state.filterValues.date and state.filterValues.date.startsWith('custom:')"
+                                        >Custom...</option>
                                     </select>
+                                    <t t-if="state.filterValues.date and state.filterValues.date.startsWith('custom:')">
+                                        <input type="date"
+                                            class="ilx-kw-filter-date-input"
+                                            t-att-value="state.filterValues.date ? state.filterValues.date.substring(7) : ''"
+                                            t-on-change="(ev) => this.setCustomDate(ev.target.value)"
+                                        />
+                                    </t>
                                 </t>
                                 <i class="fa fa-times" t-on-click="() => this.removeFilter(filter)"/>
                             </div>

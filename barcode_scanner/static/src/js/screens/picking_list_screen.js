@@ -444,6 +444,19 @@ export class PickingListScreen extends Component {
             tomorrow.setDate(today.getDate() + 1);
             return this.isSameDay(pickingDate, tomorrow);
         }
+        if (dateFilter.startsWith("custom:")) {
+            const customDateStr = dateFilter.substring(7);
+            if (!customDateStr) {
+                return true;
+            }
+            const parts = customDateStr.split("-");
+            const customDate = new Date(
+                parseInt(parts[0], 10),
+                parseInt(parts[1], 10) - 1,
+                parseInt(parts[2], 10)
+            );
+            return this.isSameDay(pickingDate, customDate);
+        }
         return true;
     }
 
@@ -543,7 +556,20 @@ export class PickingListScreen extends Component {
     }
 
     setFilterValue(filter, value) {
-        this.state.filterValues[filter] = value;
+        if (filter === "date" && value === "custom") {
+            this.state.filterValues.date = "custom:";
+        } else {
+            this.state.filterValues[filter] = value;
+        }
+        this.computeGroups();
+    }
+
+    setCustomDate(dateStr) {
+        if (dateStr) {
+            this.state.filterValues.date = "custom:" + dateStr;
+        } else {
+            this.state.filterValues.date = null;
+        }
         this.computeGroups();
     }
 
@@ -567,6 +593,23 @@ export class PickingListScreen extends Component {
             }
             if (value === "tomorrow") {
                 return _t("Tomorrow");
+            }
+            if (value.startsWith("custom:")) {
+                const dateStr = value.substring(7);
+                if (!dateStr) {
+                    return _t("Select date");
+                }
+                const parts = dateStr.split("-");
+                const d = new Date(
+                    parseInt(parts[0], 10),
+                    parseInt(parts[1], 10) - 1,
+                    parseInt(parts[2], 10)
+                );
+                return d.toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                });
             }
             return value;
         }
