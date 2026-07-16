@@ -44,7 +44,7 @@ export class QuickInfoScreen extends Component {
             const products = await this.inventory.searchRead(
                 "product.product",
                 [["id", "=", result.id]],
-                ["name", "default_code", "barcode", "standard_price", "list_price", "tracking", "type", "image_128"]
+                ["name", "default_code", "barcode", "standard_price", "list_price", "tracking", "type", "is_storable", "image_128"]
             );
             this.state.resultDetails = products.length ? products[0] : null;
         } else if (resultType === "location") {

@@ -1191,8 +1191,8 @@
                                         <span class="ilx-kw-eyebrow">Tracking / Type</span>
                                         <span class="ilx-kw-value">
                                             <t t-set="trackingLabels" t-value="{'serial': 'By Serial', 'lot': 'By Lots', 'none': 'No Tracking'}" />
-                                            <t t-set="typeLabels" t-value="{'product': 'Storable Product', 'consu': 'Consumable', 'service': 'Service'}" />
-                                            <t t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking" /> · <t t-esc="typeLabels[state.resultDetails.type] || state.resultDetails.type" />
+                                            <t t-set="typeLabel" t-value="state.resultDetails.is_storable ? 'Storable Product' : (state.resultDetails.type === 'service' ? 'Service' : state.resultDetails.type === 'combo' ? 'Combo' : 'Consumable')" />
+                                            <t t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking" /> · <t t-esc="typeLabel" />
                                         </span>
                                     </div>
                                 </div>
