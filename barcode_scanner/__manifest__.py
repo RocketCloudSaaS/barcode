@@ -6,7 +6,7 @@
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
     "maintainers": ["antoniodavid", "szalatyzuzanna"],
-    "license": "LGPL-3",
+    "license": "AGPL-3",
     "depends": [
         "barcodes",
         "web",
