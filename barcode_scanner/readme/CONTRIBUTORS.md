@@ -1,0 +1,2 @@
+- [Zuzanna Szalaty](https://github.com/szalatyzuzanna)
+- [RocketCloudSaaS](https://github.com/RocketCloudSaaS)

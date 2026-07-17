@@ -154,4 +154,6 @@ export const barcodeScannerFeedbackService = {
     },
 };
 
-registry.category("services").add("barcodeScannerFeedback", barcodeScannerFeedbackService);
+registry
+    .category("services")
+    .add("barcodeScannerFeedback", barcodeScannerFeedbackService);

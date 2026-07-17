@@ -56,19 +56,16 @@ export class PickingScreen extends Component {
             try {
                 const responsible = this.props.params?.responsible;
                 if (responsible && responsible.id && this.pickingId) {
-                    await this.inventory.write(
-                        "stock.picking",
-                        [this.pickingId],
-                        {user_id: responsible.id}
-                    );
+                    await this.inventory.write("stock.picking", [this.pickingId], {
+                        user_id: responsible.id,
+                    });
                 }
                 await this.loadData({force: true});
                 if (responsible && responsible.id) {
                     this.state.activeTab = "info";
-                    this.inventory.notify(
-                        `Responsible set to ${responsible.name}`,
-                        {type: "success"}
-                    );
+                    this.inventory.notify(`Responsible set to ${responsible.name}`, {
+                        type: "success",
+                    });
                 }
             } catch (error) {
                 this.inventory.notify("Error loading picking: " + error, {
@@ -311,17 +308,27 @@ export class PickingScreen extends Component {
                 [this.state.picking.id],
                 {context: {active_ids: [this.state.picking.id]}}
             );
-            if (action && action.type === "ir.actions.act_window" && action.res_model === "stock.backorder.confirmation") {
+            if (
+                action &&
+                action.type === "ir.actions.act_window" &&
+                action.res_model === "stock.backorder.confirmation"
+            ) {
                 await this.action.doAction(action, {
                     onClose: () => {
-                        this.store.navigate("picking_list", this.listParams || {}, {clearHistory: true});
+                        this.store.navigate("picking_list", this.listParams || {}, {
+                            clearHistory: true,
+                        });
                     },
                 });
             } else if (action && action.type === "ir.actions.act_window") {
                 await this.action.doAction(action);
-                this.store.navigate("picking_list", this.listParams || {}, {clearHistory: true});
+                this.store.navigate("picking_list", this.listParams || {}, {
+                    clearHistory: true,
+                });
             } else {
-                this.store.navigate("picking_list", this.listParams || {}, {clearHistory: true});
+                this.store.navigate("picking_list", this.listParams || {}, {
+                    clearHistory: true,
+                });
             }
         } catch (error) {
             this.inventory.notify("Validation failed: " + error.message, {
@@ -520,7 +527,8 @@ export class PickingScreen extends Component {
         }
 
         const productId = candidateMove.product_id?.[0];
-        const tracking = this.barcodeScannerState.indexes.trackingByProductId[productId];
+        const tracking =
+            this.barcodeScannerState.indexes.trackingByProductId[productId];
         if (tracking === "none") {
             const existingLine = this.state.moveLines.find(
                 (line) =>

@@ -160,7 +160,10 @@ export class BarcodeScannerState extends Reactive {
 
             const expiryModule = await this.orm.searchRead(
                 "ir.module.module",
-                [["name", "=", "product_expiry"], ["state", "=", "installed"]],
+                [
+                    ["name", "=", "product_expiry"],
+                    ["state", "=", "installed"],
+                ],
                 ["id"]
             );
             this.hasProductExpiry = expiryModule.length > 0;
@@ -464,7 +467,9 @@ export class BarcodeScannerState extends Reactive {
             values: {
                 name,
                 product_id: productId,
-                ...(this.hasProductExpiry && expirationDate ? {expiration_date: expirationDate} : {}),
+                ...(this.hasProductExpiry && expirationDate
+                    ? {expiration_date: expirationDate}
+                    : {}),
             },
         });
         return lot;

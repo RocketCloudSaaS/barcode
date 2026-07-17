@@ -94,12 +94,7 @@ export class PickingListScreen extends Component {
             ["picking_type_id.code", "=", type],
             ["state", "not in", ["done", "cancel"]],
         ];
-        const fields = [
-            "name",
-            "partner_id",
-            "scheduled_date",
-            "state",
-        ];
+        const fields = ["name", "partner_id", "scheduled_date", "state"];
         const result = await this.inventory.searchRead(
             "stock.picking",
             domain,
@@ -468,7 +463,11 @@ export class PickingListScreen extends Component {
                 if (filter === "state" && value !== "all" && picking.state !== value) {
                     return false;
                 }
-                if (filter === "date" && value && !this.matchesDateFilter(picking, value)) {
+                if (
+                    filter === "date" &&
+                    value &&
+                    !this.matchesDateFilter(picking, value)
+                ) {
                     return false;
                 }
             }

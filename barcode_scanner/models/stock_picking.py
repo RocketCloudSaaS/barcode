@@ -1,8 +1,8 @@
+import logging
+
 from odoo import _, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
-
-import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -211,7 +211,9 @@ class StockPicking(models.Model):
             quants = quant_model.search(domain)
             if quants:
                 self.env.cr.execute(
-                    "SELECT id FROM stock_quant WHERE id IN %s FOR NO KEY UPDATE SKIP LOCKED",
+                    "SELECT id FROM stock_quant "
+                    "WHERE id IN %s "
+                    "FOR NO KEY UPDATE SKIP LOCKED",
                     [tuple(quants.ids)],
                 )
                 locked = [row[0] for row in self.env.cr.fetchall()]
@@ -247,9 +249,7 @@ class StockPicking(models.Model):
             lines,
         )
 
-        self._barcode_scanner_lock_quants_for_transfer(
-            origin_location, prepared_lines
-        )
+        self._barcode_scanner_lock_quants_for_transfer(origin_location, prepared_lines)
 
         availability = self._barcode_scanner_collect_internal_transfer_availability(
             origin_location,
@@ -317,9 +317,7 @@ class StockPicking(models.Model):
             )
         )
         post_confirm_missing = [
-            line
-            for line in post_confirm_availability["lines"]
-            if not line["available"]
+            line for line in post_confirm_availability["lines"] if not line["available"]
         ]
         if post_confirm_missing:
             picking.sudo().action_cancel()

@@ -91,7 +91,9 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         )
         self.assertFalse(untracked_line["available"])
 
-    def test_action_barcode_scanner_internal_transfer_creates_and_validates_picking(self):
+    def test_action_barcode_scanner_internal_transfer_creates_and_validates_picking(
+        self
+    ):
         result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
             self.stock_location.id,
             self.destination_location.id,
@@ -172,11 +174,13 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
                 ],
             )
 
-    def test_action_barcode_scanner_internal_transfer_cancels_when_stock_gone_after_confirm(
+    def test_internal_transfer_cancels_when_stock_gone_after_confirm(
         self,
     ):
         StockPicking = type(self.env["stock.picking"])
-        original_collect = StockPicking._barcode_scanner_collect_internal_transfer_availability
+        original_collect = (
+            StockPicking._barcode_scanner_collect_internal_transfer_availability
+        )
         call_count = [0]
 
         def patched_collect(self, origin_location, prepared_lines):
@@ -348,4 +352,3 @@ class TestStockMoveLine(TransactionCase):
                     "product_uom_id": self.product_serial.uom_id.id,
                 }
             )
-

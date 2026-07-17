@@ -30,8 +30,7 @@ export const barcodeService = {
 
         function onKeyDown(ev) {
             const target = ev.target;
-            const barcodeAllowed =
-                target.dataset && target.dataset.enableBarcode;
+            const barcodeAllowed = target.dataset && target.dataset.enableBarcode;
 
             if (isEditable(target) && !barcodeAllowed) {
                 return;

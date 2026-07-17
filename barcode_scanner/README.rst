@@ -2,9 +2,9 @@
    :target: https://odoo-community.org/get-involved?utm_source=readme
    :alt: Odoo Community Association
 
-================
+===============
 Barcode Scanner
-================
+===============
 
 .. 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -17,46 +17,32 @@ Barcode Scanner
 .. |badge1| image:: https://img.shields.io/badge/maturity-Beta-yellow.png
     :target: https://odoo-community.org/page/development-status
     :alt: Beta
-.. |badge2| image:: https://img.shields.io/badge/licence-LGPL--3-blue.png
+.. |badge2| image:: https://img.shields.io/badge/license-LGPL--3-blue.png
     :target: http://www.gnu.org/licenses/lgpl-3.0-standalone.html
     :alt: License: LGPL-3
-.. |badge3| image:: https://img.shields.io/badge/github-RocketCloudSaaS%2Fbarcode-lightgray.png?logo=github
-    :target: https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_scanner
-    :alt: RocketCloudSaaS/barcode
-.. |badge4| image:: https://img.shields.io/badge/weblate-Translate%20me-F47D42.png
-    :target: https://translation.odoo-community.org/projects/barcode-18-0/barcode-18-0-barcode_scanner
-    :alt: Translate me on Weblate
+.. |badge3| image:: https://img.shields.io/badge/github-binhex--cloud%2Fbarcode-lightgray.png?logo=github
+    :target: https://github.com/binhex-cloud/barcode/tree/18.0/barcode_scanner
+    :alt: binhex-cloud/barcode
 
-|badge1| |badge2| |badge3| |badge4|
+|badge1| |badge2| |badge3|
 
 This module provides a full-screen barcode scanning application for
 warehouse operations in Odoo.
 
 It covers the following operations:
 
-* Receipts (incoming shipments)
-* Deliveries (outgoing shipments)
-* Internal transfers
-* Quick product and location information
+- Receipts (incoming shipments)
+- Deliveries (outgoing shipments)
+- Internal transfers
+- Quick product and location information
 
-Only EAN13 barcodes are supported. Real-time validation and audio/vibration
-feedback is provided on each scan.
+Only EAN13 barcodes are supported. Real-time validation and
+audio/vibration feedback is provided on each scan.
 
 **Table of contents**
 
 .. contents::
    :local:
-
-Installation
-============
-
-This module depends on the following modules:
-
-* ``barcodes``
-* ``web``
-* ``stock``
-* ``stock_move_line_qty_picked``
-* ``hr``
 
 Usage
 =====
@@ -65,33 +51,38 @@ Scan EAN13 barcodes to quickly process warehouse operations.
 
 Receipts
 --------
-From the main menu, select **Warehouse Operations**, then choose **Receipts**
-to validate incoming goods. Scan product barcodes to register quantities.
+
+From the main menu, select **Warehouse Operations**, then choose
+**Receipts** to validate incoming goods. Scan product barcodes to
+register quantities.
 
 Deliveries
 ----------
-From **Warehouse Operations**, select **Delivery Orders** to pick and ship
-items. Scan product barcodes to confirm each item.
+
+From **Warehouse Operations**, select **Delivery Orders** to pick and
+ship items. Scan product barcodes to confirm each item.
 
 Internal Transfers
 ------------------
-Use the **Internal Transfer** screen from the main menu to move stock between
-locations. Select the origin and destination locations, then scan or search
-products to add transfer lines.
+
+Use the **Internal Transfer** screen from the main menu to move stock
+between locations. Select the origin and destination locations, then
+scan or search products to add transfer lines.
 
 Quick Info
 ----------
-Select **Quick Info** from the main menu, then scan any product or location
-barcode to view information. Alternatively, search by barcode or browse the
-product and location lists.
+
+Select **Quick Info** from the main menu, then scan any product or
+location barcode to view information. Alternatively, search by barcode
+or browse the product and location lists.
 
 Bug Tracker
 ===========
 
-Bugs are tracked on `GitHub Issues <https://github.com/RocketCloudSaaS/barcode/issues>`_.
+Bugs are tracked on `GitHub Issues <https://github.com/binhex-cloud/barcode/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
-`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_scanner%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/binhex-cloud/barcode/issues/new?body=module:%20barcode_scanner%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -102,33 +93,27 @@ Authors
 -------
 
 * Binhex
-* Odoo Community Association (OCA)
 
 Contributors
 ------------
 
-* `Zuzanna Szalaty <https://github.com/szalatyzuzanna>`_
-* `RocketCloudSaaS <https://github.com/RocketCloudSaaS>`_
+- `Zuzanna Szalaty <https://github.com/szalatyzuzanna>`__
+- `RocketCloudSaaS <https://github.com/RocketCloudSaaS>`__
 
 Maintainers
 -----------
 
-This module is maintained by the OCA.
-
-.. image:: https://odoo-community.org/logo.png
-   :alt: Odoo Community Association
-   :target: https://odoo-community.org
-
-OCA, or the Odoo Community Association, is a nonprofit organization whose
-mission is to support the collaborative development of Odoo features and
-promote its widespread use.
-
+.. |maintainer-antoniodavid| image:: https://github.com/antoniodavid.png?size=40px
+    :target: https://github.com/antoniodavid
+    :alt: antoniodavid
 .. |maintainer-szalatyzuzanna| image:: https://github.com/szalatyzuzanna.png?size=40px
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
-|maintainer-szalatyzuzanna|
+Current maintainers:
 
-This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode>`_ project on GitHub.
+|maintainer-antoniodavid| |maintainer-szalatyzuzanna| 
 
-You are welcome to contribute. To learn how please visit https://odoo-community.org/page/contribute.
+This module is part of the `binhex-cloud/barcode <https://github.com/binhex-cloud/barcode/tree/18.0/barcode_scanner>`_ project on GitHub.
+
+You are welcome to contribute.

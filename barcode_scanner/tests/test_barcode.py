@@ -29,9 +29,11 @@ class TestBarcodeScannerEAN13(TransactionCase):
         )
 
     def test_ean13_decode_returns_product(self):
-        result = self.env["barcode.nomenclature"].search(
-            [("id", "=", self.nomenclature.id)]
-        ).parse_barcode("5901234123457")
+        result = (
+            self.env["barcode.nomenclature"]
+            .search([("id", "=", self.nomenclature.id)])
+            .parse_barcode("5901234123457")
+        )
         self.assertTrue(result)
         self.assertEqual(result["code"], "product.product")
 
@@ -52,9 +54,6 @@ class TestBarcodeScannerEAN13(TransactionCase):
         barcode = "5901234123457"
         digits = [int(d) for d in barcode[:-1]]
         check = int(barcode[-1])
-        total = sum(
-            d * 3 if i % 2 == 0 else d
-            for i, d in enumerate(digits)
-        )
+        total = sum(d * 3 if i % 2 == 0 else d for i, d in enumerate(digits))
         expected_check = (10 - (total % 10)) % 10
         self.assertEqual(check, expected_check)

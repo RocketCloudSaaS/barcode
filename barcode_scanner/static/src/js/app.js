@@ -29,11 +29,7 @@ export class BarcodeScannerApp extends Component {
         this.dialog = useService("dialog");
         this.router = useState(useService("barcodeRouter"));
         this.scanner = useState({
-            enabledRoutes: new Set([
-                "picking_list",
-                "picking",
-                "internal_transfer",
-            ]),
+            enabledRoutes: new Set(["picking_list", "picking", "internal_transfer"]),
         });
         this._registerRoutes();
         if (!this.router.currentRoute) {
