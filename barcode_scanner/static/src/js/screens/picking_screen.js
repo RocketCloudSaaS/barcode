@@ -319,9 +319,9 @@ export class PickingScreen extends Component {
                 });
             } else if (action && action.type === "ir.actions.act_window") {
                 await this.action.doAction(action);
-                await this.loadData({force: true});
+                this.store.navigate("picking_list", this.listParams || {});
             } else {
-                await this.loadData({force: true});
+                this.store.navigate("picking_list", this.listParams || {});
             }
         } catch (error) {
             this.inventory.notify("Validation failed: " + error.message, {
