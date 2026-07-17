@@ -871,7 +871,7 @@
                                         </select>
                                     </t>
                                     <t t-else="">
-                                        <t t-esc="line.lot_name || 'NO LOT'" />
+                                        <i class="fa fa-tag me-1" /> <t t-esc="line.lot_name || 'No lot'" />
                                     </t>
                                 </div>
                                 <div class="ilx-tx-v2-line-divider" />

@@ -1,11 +1,15 @@
-Aclaraciones de funcionamiento
-En el buscador de ubicaciones la búsqueda se realiza por nombre. Si se desea localizar una ubicación por su código de barras, hay que escanearlo o introducirlo manualmente en el campo de código de barras dentro de la información rápida de la ubicación.
-Tanto el buscador como el listado de ubicaciones muestran únicamente ubicaciones de tipo interno (las ubicaciones físicas propias del almacén).
-En el comportamiento estándar de Odoo, el cliente no es un dato obligatorio en los albaranes de salida: un albarán puede validarse sin cliente asignado.
-En el escáner, la pestaña "Done" no indica que el albarán esté validado. Esa pestaña solo muestra las líneas en las que ya se ha indicado una cantidad. El albarán queda validado únicamente al pulsar el botón VALIDATE.
+Operaciones de Almacén/Albarán de Entrega
+Se visualizan en estado Listo desde la funcionalidad del escaner WH/OUT/00004, WH/OUT/00002, WH/OUT/00003 y WH/OUT/00007 al igual que en el backend
+Pero si entramos en el detalle de cada uno se visualizan como Hecho, (WH/OUT/00004, WH/OUT/00002, WH/OUT/00003)
+El WH/OUT/00007 es el único que está en Listo
+Ese mismo comportamiento sucede en Operaciones de Almacén/Transferencias internas, tengo el WH/INT/00005(Listo) y si entro al detalle está en Hecho
+Duda: ¿Es normal que al entrar a Operaciones de Almacén /Transferencias Internas o Albaranes de Entrega solo se visualicen los registros en estado "Listo"? He notado que los que están en estado "Hecho" no se muestran
+Filtros
+Cuando voy hacer el filtro no me deja seleccionar una fecha o un estado, me los muestra todos
+
+- Solo se muestran albaranes en estado "Listo" porque el scanner filtra por defecto los que están Hecho o Cancelados. Es el mismo comportamiento que en el backend de Odoo, donde Operaciones > Almacén también oculta los terminados por defecto. La app es una herramienta de trabajo, solo muestra lo pendiente.
+- Lo que se ve como "Hecho" en el detalle no es el estado del albarán. El albarán sigue en "Listo". El tab "Done" del scanner muestra las líneas donde el usuario ya seteó una cantidad (qty_picked > 0), no el estado del picking. El picking se valida recién al presionar VALIDATE.
+- Los filtros sí funcionan pero el proceso es en dos pasos: primero seleccionar "+ Add Filter..." y elegir Status o Date, y luego en el chip que aparece cambiar el valor (por defecto viene en "All" que muestra todo).
 
 
-CORRECCIONES REALIZADAS
-Transferencia interna – selección de cantidad: al añadir un producto (ya fuera escaneando su código de barras o eligiéndolo desde el selector), siempre se añadía 1 unidad y no era posible cambiar la cantidad. Ahora se puede indicar cuántas unidades se quieren mover, ya sea con los botones +/- o escribiendo directamente la cantidad.
-Transferencia interna – botón CHECK: el botón CHECK indicaba que todo estaba disponible aunque no lo estuviera, porque solo comprobaba que existiera al menos 1 unidad en stock, sin tener en cuenta la cantidad que realmente se quería mover. Ahora, tras pulsar CHECK, se muestra el stock disponible de cada línea con un indicador visual: verde si hay stock suficiente y rojo si no lo hay.
-Transferencia interna – control de stock al validar: era posible mover más unidades de las existentes en stock, ya que Odoo no vuelve a comprobar la disponibilidad en el momento de validar y permite que el stock quede en negativo. Se ha añadido una comprobación adicional justo antes de confirmar el movimiento: si en ese momento el stock ya no es suficiente (por ejemplo, porque otro usuario lo consumió mientras tanto), la operación se cancela y se muestra un mensaje de error, evitando así descuadres de inventario.
+

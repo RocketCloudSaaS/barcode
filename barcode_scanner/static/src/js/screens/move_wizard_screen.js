@@ -484,7 +484,7 @@ export class MoveWizardScreen extends Component {
     }
 
     async goBack() {
-        if (this.state.mode === "create_lot") {
+        if (this.state.mode === "create_lot" && this.canUseExistingLot) {
             this.setMode("pick");
             return;
         }
