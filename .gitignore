@@ -84,5 +84,8 @@ docs/_build/
 *~
 *.swp
 
+# Generated files
+revision.txt
+
 # OCA rules
 !static/lib/

@@ -97,8 +97,8 @@ Authors
 Contributors
 ------------
 
+- `Antonio David <https://github.com/antoniodavid>`__
 - `Zuzanna Szalaty <https://github.com/szalatyzuzanna>`__
-- `RocketCloudSaaS <https://github.com/RocketCloudSaaS>`__
 
 Maintainers
 -----------
