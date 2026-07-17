@@ -6,15 +6,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-14 13:38+0000\n"
-"PO-Revision-Date: 2026-07-14 13:38+0000\n"
+"POT-Creation-Date: 2026-07-17 12:04+0000\n"
+"PO-Revision-Date: 2026-07-17 12:04+0000\n"
 "Last-Translator: \n"
-"Language-Team: Spanish\n"
-"Language: es\n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: \n"
 
 #. module: barcode_scanner
 #. odoo-python
@@ -40,7 +39,9 @@ msgstr "+ Añadir grupo..."
 msgid ""
 "A lot/serial number is required for product %(product)s before applying the "
 "inventory adjustment."
-msgstr "Se requiere un lote/número de serie para el producto %(product)s antes de aplicar el ajuste de inventario."
+msgstr ""
+"Se requiere un lote/número de serie para el producto %(product)s antes de "
+"aplicar el ajuste de inventario."
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -102,6 +103,12 @@ msgstr "Todos"
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "All operations completed"
 msgstr "Todas las operaciones completadas"
+
+#. module: barcode_scanner
+#. odoo-javascript
+#: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
+msgid "Available:"
+msgstr "Disponible:"
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -233,6 +240,12 @@ msgstr "Cree primero el lote y luego confirme el movimiento en un solo paso."
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "Current Stock ("
 msgstr "Stock actual ("
+
+#. module: barcode_scanner
+#. odoo-javascript
+#: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
+msgid "Custom..."
+msgstr "Personalizar..."
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -706,7 +719,9 @@ msgstr "Preparando la cola de trabajo orientada al escáner..."
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "Process products from the To Do tab to build the done log here."
-msgstr "Procese los productos desde la pestaña Por hacer para construir aquí el registro de hechos."
+msgstr ""
+"Procese los productos desde la pestaña Por hacer para construir aquí el "
+"registro de hechos."
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -720,7 +735,9 @@ msgstr "Producto"
 msgid ""
 "Product %(name)s is tracked by serial number and must be transferred one "
 "unit at a time."
-msgstr "El producto %(name)s tiene seguimiento por número de serie y debe transferirse de unidad en unidad."
+msgstr ""
+"El producto %(name)s tiene seguimiento por número de serie y debe "
+"transferirse de unidad en unidad."
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -864,7 +881,7 @@ msgstr "Responsable"
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "S"
-msgstr "S"
+msgstr ""
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -913,7 +930,9 @@ msgstr "El código de barras escaneado no forma parte del albarán actual."
 #: code:addons/barcode_scanner/static/src/js/screens/move_wizard_screen.js:0
 msgid ""
 "Scanned product doesn't match this move (%(expected)s expected, got %(got)s)"
-msgstr "El producto escaneado no coincide con este movimiento (se esperaba %(expected)s, se obtuvo %(got)s)"
+msgstr ""
+"El producto escaneado no coincide con este movimiento (se esperaba "
+"%(expected)s, se obtuvo %(got)s)"
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -983,6 +1002,12 @@ msgstr "Seleccionar responsable"
 
 #. module: barcode_scanner
 #. odoo-javascript
+#: code:addons/barcode_scanner/static/src/js/screens/picking_list_screen.js:0
+msgid "Select date"
+msgstr "Seleccionar fecha"
+
+#. module: barcode_scanner
+#. odoo-javascript
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "Select destination"
 msgstr "Seleccionar destino"
@@ -1033,13 +1058,17 @@ msgstr "Seguimiento por número de serie"
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/js/screens/move_wizard_screen.js:0
 msgid "Serial-tracked products can only process one unit."
-msgstr "Los productos con seguimiento por número de serie solo pueden procesar una unidad."
+msgstr ""
+"Los productos con seguimiento por número de serie solo pueden procesar una "
+"unidad."
 
 #. module: barcode_scanner
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/js/screens/move_wizard_screen.js:0
 msgid "Serial-tracked products must have a quantity of 1."
-msgstr "Los productos con seguimiento por número de serie deben tener una cantidad de 1."
+msgstr ""
+"Los productos con seguimiento por número de serie deben tener una cantidad "
+"de 1."
 
 #. module: barcode_scanner
 #. odoo-javascript
@@ -1074,6 +1103,16 @@ msgid "Stock Quant"
 msgstr "Cuantos"
 
 #. module: barcode_scanner
+#. odoo-python
+#: code:addons/barcode_scanner/models/stock_picking.py:0
+msgid ""
+"Stock became unavailable after reservation: %(details)s. The transfer has "
+"been cancelled."
+msgstr ""
+"El stock dejó de estar disponible tras la reserva: %(details)s. El traslado "
+"ha sido cancelado."
+
+#. module: barcode_scanner
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
 msgid "TASK STATUS"
@@ -1096,13 +1135,16 @@ msgstr "Toque para eliminar esta confirmación"
 #: code:addons/barcode_scanner/models/stock_move_line.py:0
 msgid ""
 "The quantity for product %(product)s (tracked by serial) cannot exceed 1."
-msgstr "La cantidad para el producto %(product)s (con seguimiento por serie) no puede superar 1."
+msgstr ""
+"La cantidad para el producto %(product)s (con seguimiento por serie) no "
+"puede superar 1."
 
 #. module: barcode_scanner
 #. odoo-python
 #: code:addons/barcode_scanner/models/stock_picking.py:0
 msgid "The selected Lot/Serial Number is invalid for product %(name)s."
-msgstr "El lote/número de serie seleccionado no es válido para el producto %(name)s."
+msgstr ""
+"El lote/número de serie seleccionado no es válido para el producto %(name)s."
 
 #. module: barcode_scanner
 #. odoo-python
@@ -1188,7 +1230,9 @@ msgstr "Uso"
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/js/screens/move_wizard_screen.js:0
 msgid "Use an existing lot or serial already available for this product."
-msgstr "Utilice un lote o número de serie existente ya disponible para este producto."
+msgstr ""
+"Utilice un lote o número de serie existente ya disponible para este "
+"producto."
 
 #. module: barcode_scanner
 #. odoo-javascript
