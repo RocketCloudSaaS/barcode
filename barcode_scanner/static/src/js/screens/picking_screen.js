@@ -314,14 +314,14 @@ export class PickingScreen extends Component {
             if (action && action.type === "ir.actions.act_window" && action.res_model === "stock.backorder.confirmation") {
                 await this.action.doAction(action, {
                     onClose: () => {
-                        this.store.navigate("picking_list", this.listParams || {});
+                        this.store.navigate("picking_list", this.listParams || {}, {replace: true});
                     },
                 });
             } else if (action && action.type === "ir.actions.act_window") {
                 await this.action.doAction(action);
-                this.store.navigate("picking_list", this.listParams || {});
+                this.store.navigate("picking_list", this.listParams || {}, {replace: true});
             } else {
-                this.store.navigate("picking_list", this.listParams || {});
+                this.store.navigate("picking_list", this.listParams || {}, {replace: true});
             }
         } catch (error) {
             this.inventory.notify("Validation failed: " + error.message, {
