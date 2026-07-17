@@ -1,2 +1,2 @@
-* [Antonio David](https://github.com/antoniodavid)
-* [Zuzanna Szalaty](https://github.com/szalatyzuzanna)
+* [Antonio David Ruban Espinal](https://github.com/antoniodavid)
+* [Zuzanna Elzbieta Szalaty Szalaty](https://github.com/szalatyzuzanna)

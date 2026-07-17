@@ -97,8 +97,9 @@ Authors
 Contributors
 ------------
 
-- `Antonio David <https://github.com/antoniodavid>`__
-- `Zuzanna Szalaty <https://github.com/szalatyzuzanna>`__
+- `Antonio David Ruban Espinal <https://github.com/antoniodavid>`__
+- `Zuzanna Elzbieta Szalaty
+  Szalaty <https://github.com/szalatyzuzanna>`__
 
 Maintainers
 -----------
