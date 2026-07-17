@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
@@ -169,6 +171,65 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
                     }
                 ],
             )
+
+    def test_action_barcode_scanner_internal_transfer_cancels_when_stock_gone_after_confirm(
+        self,
+    ):
+        StockPicking = type(self.env["stock.picking"])
+        original_collect = StockPicking._barcode_scanner_collect_internal_transfer_availability
+        call_count = [0]
+
+        def patched_collect(self, origin_location, prepared_lines):
+            call_count[0] += 1
+            if call_count[0] >= 2:
+                for line in prepared_lines:
+                    line["qty"] = 999999
+                result = original_collect(self, origin_location, prepared_lines)
+                for aline in result["lines"]:
+                    aline["available"] = False
+                result["available"] = False
+                return result
+            return original_collect(self, origin_location, prepared_lines)
+
+        with patch.object(
+            StockPicking,
+            "_barcode_scanner_collect_internal_transfer_availability",
+            patched_collect,
+        ):
+            with self.assertRaises(UserError) as ctx:
+                self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                    self.stock_location.id,
+                    self.destination_location.id,
+                    False,
+                    [
+                        {
+                            "product_id": self.untracked_product.id,
+                            "qty": 3,
+                            "lot_id": False,
+                        }
+                    ],
+                )
+            self.assertIn("cancelled", str(ctx.exception.args))
+
+    def test_action_barcode_scanner_internal_transfer_lock_quants(self):
+        self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            self.stock_location.id,
+            self.destination_location.id,
+            False,
+            [
+                {
+                    "product_id": self.untracked_product.id,
+                    "qty": 2,
+                    "lot_id": False,
+                }
+            ],
+        )
+        available = self.env["stock.quant"]._get_available_quantity(
+            self.untracked_product,
+            self.stock_location,
+            strict=False,
+        )
+        self.assertEqual(available, 6)
 
 
 class TestStockMoveQtyProgress(TransactionCase):
