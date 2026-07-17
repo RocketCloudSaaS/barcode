@@ -19,6 +19,26 @@ export class BarcodeRouter extends Reactive {
         this.routeParams = {};
         this.history = [];
         this.routes = {};
+        this._onPopState = this._onPopState.bind(this);
+        browser.addEventListener("popstate", this._onPopState);
+    }
+
+    destroy() {
+        browser.removeEventListener("popstate", this._onPopState);
+    }
+
+    _onPopState(ev) {
+        const state = ev.state;
+        if (!state || !state.routeName) {
+            return;
+        }
+        const route = this.routes[state.routeName];
+        if (!route) {
+            return;
+        }
+        this.history = [];
+        this.currentRoute = route;
+        this.routeParams = state.params || {};
     }
 
     registerRoute(name, config) {
@@ -57,7 +77,9 @@ export class BarcodeRouter extends Reactive {
             params = {...params, picking_id: pickingId};
         }
 
-        if (this.currentRoute && !options.replace) {
+        if (options.clearHistory) {
+            this.history = [];
+        } else if (this.currentRoute && !options.replace) {
             this.history.push({
                 route: this.currentRoute,
                 params: this.routeParams,
@@ -68,7 +90,7 @@ export class BarcodeRouter extends Reactive {
         }
 
         const historyState = this._sanitizeHistoryState({routeName, params});
-        if (options.replace) {
+        if (options.replace || options.clearHistory) {
             history.replaceState(historyState, "", browser.location.href);
         } else {
             history.pushState(historyState, "", browser.location.href);
