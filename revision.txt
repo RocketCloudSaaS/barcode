@@ -1,0 +1,65 @@
+Repository: barcode
+Repositorio destinado a proporcionar una base comunitaria para la captura, interpretación y uso de códigos de barras en Odoo Community.
+
+MVP
+barcode_scanner
+Infraestructura base de escaneo de códigos de barras. 
+
+API común para escaneo.
+Servicios OWL reutilizables.
+Eventos y componentes para aplicaciones de negocio.
+Integración con lectores físicos tipo keyboard wedge.
+Recepciones.
+Entregas.
+Transferencias internas.
+Validación de movimientos mediante escaneo.
+barcode_camera
+Captura de códigos de barras mediante la cámara del dispositivo.
+
+Uso de APIs nativas del navegador.
+Compatible con móviles y tablets.
+Integración con barcode_scanner.
+barcode_gs1
+Interpretación de estándares GS1.
+
+Decodificación de Application Identifiers (AI).
+Extracción de GTIN, lote, serie, caducidad, cantidad y otros datos GS1.
+API reutilizable para otros módulos.
+barcode_inventory
+Operaciones de inventario asistidas por escaneo.
+
+Conteos de inventario.
+Ajustes de existencias.
+Identificación de productos, lotes y series.
+
+barcode_purchase
+Recepción de compras mediante códigos de barras.
+
+Identificación rápida de productos recibidos.
+Registro asistido de recepciones.
+Compatibilidad con GS1.
+barcode_quality
+Controles de calidad asistidos por escaneo.
+
+Apertura de inspecciones mediante código.
+Identificación de productos, lotes y series.
+Integración con procesos de calidad.
+barcode_vendor_barcode
+Gestión de códigos de barras de proveedor.
+
+Referencias de proveedor.
+Múltiples códigos por producto.
+Compatibilidad con procesos de compra y recepción.
+Future Roadmap
+Posibles módulos futuros:
+
+barcode_mrp
+barcode_workorder
+barcode_sale
+barcode_pos
+barcode_package
+barcode_pallet
+barcode_traceability
+barcode_rfid
+barcode_nfc
+barcode_ocr

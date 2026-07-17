@@ -53,12 +53,12 @@ repos:
       # update the NOT INSTALLABLE ADDONS section above
       - id: oca-update-pre-commit-excluded-addons
       - id: oca-fix-manifest-website
-        args: ["https://github.com/binhex-cloud/barcode"]
+        args: ["https://github.com/RocketCloudSaaS/barcode"]
       - id: oca-gen-addon-readme
         args:
           - --addons-dir=.
           - --branch=18.0
-          - --org-name=binhex-cloud
+          - --org-name=RocketCloudSaaS
           - --repo-name=barcode
           - --if-source-changed
           - --keep-source-digest
