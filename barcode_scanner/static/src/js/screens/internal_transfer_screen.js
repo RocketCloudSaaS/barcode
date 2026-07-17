@@ -325,6 +325,20 @@ export class InternalTransferScreen extends Component {
                     this.state.responsible?.id || false,
                 ]
             );
+            const availabilityMap = {};
+            for (const aline of result.lines || []) {
+                const key = `${aline.product_id}_${aline.lot_id || ""}`;
+                availabilityMap[key] = aline;
+            }
+            for (const line of this.state.lines) {
+                const normalizedLotId = line.lot_id ? parseInt(line.lot_id, 10) : false;
+                const key = `${line.product_id}_${normalizedLotId || ""}`;
+                const match = availabilityMap[key];
+                if (match) {
+                    line.available_qty = match.available_qty;
+                    line.is_available = match.available;
+                }
+            }
             const unavailableLines = (result.lines || []).filter(
                 (line) => !line.available
             );

@@ -2,6 +2,10 @@ from odoo import _, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
 
+import logging
+
+_logger = logging.getLogger(__name__)
+
 
 class StockPicking(models.Model):
     _inherit = "stock.picking"
@@ -189,6 +193,41 @@ class StockPicking(models.Model):
         )
 
     @api.model
+    def _barcode_scanner_lock_quants_for_transfer(
+        self, origin_location, prepared_lines
+    ):
+        quant_model = self.env["stock.quant"]
+        locked_quant_ids = []
+        for line in prepared_lines:
+            product = line["product"]
+            lot = line["lot"]
+            domain = [
+                ("location_id", "=", origin_location.id),
+                ("product_id", "=", product.id),
+                ("quantity", ">", 0),
+            ]
+            if lot:
+                domain.append(("lot_id", "=", lot.id))
+            quants = quant_model.search(domain)
+            if quants:
+                self.env.cr.execute(
+                    "SELECT id FROM stock_quant WHERE id IN %s FOR NO KEY UPDATE SKIP LOCKED",
+                    [tuple(quants.ids)],
+                )
+                locked = [row[0] for row in self.env.cr.fetchall()]
+                locked_quant_ids.extend(locked)
+                if len(locked) < len(quants):
+                    skipped = len(quants) - len(locked)
+                    _logger.warning(
+                        "Barcode scanner: %d quants skipped due to row lock "
+                        "for product %s at location %s",
+                        skipped,
+                        product.display_name,
+                        origin_location.display_name,
+                    )
+        return locked_quant_ids
+
+    @api.model
     def action_barcode_scanner_internal_transfer(
         self,
         origin_location_id,
@@ -207,6 +246,11 @@ class StockPicking(models.Model):
             responsible_id,
             lines,
         )
+
+        self._barcode_scanner_lock_quants_for_transfer(
+            origin_location, prepared_lines
+        )
+
         availability = self._barcode_scanner_collect_internal_transfer_availability(
             origin_location,
             prepared_lines,
@@ -266,6 +310,35 @@ class StockPicking(models.Model):
             move_lines_by_move.append((move, line))
 
         picking.action_confirm()
+
+        post_confirm_availability = (
+            self._barcode_scanner_collect_internal_transfer_availability(
+                origin_location, prepared_lines
+            )
+        )
+        post_confirm_missing = [
+            line
+            for line in post_confirm_availability["lines"]
+            if not line["available"]
+        ]
+        if post_confirm_missing:
+            picking.sudo().action_cancel()
+            details = ", ".join(
+                _(
+                    "%(product)s (required: %(required)s, available: %(available)s)",
+                    product=line["product_name"],
+                    required=line["required_qty"],
+                    available=line["available_qty"],
+                )
+                for line in post_confirm_missing
+            )
+            raise UserError(
+                _(
+                    "Stock became unavailable after reservation: %(details)s. "
+                    "The transfer has been cancelled.",
+                    details=details,
+                )
+            )
 
         move_line_vals_list = []
         for move, line in move_lines_by_move:

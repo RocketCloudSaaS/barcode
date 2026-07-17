@@ -875,8 +875,13 @@
                                     </t>
                                 </div>
                                 <div class="ilx-tx-v2-line-divider" />
-                                <div class="ilx-tx-v2-line-bottom">
-                                    <i class="fa fa-cube" /> Reserved: <t t-esc="line.qty || '0.00'" />
+                                <div class="ilx-tx-v2-line-bottom" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span><i class="fa fa-cube" /> Reserved: <t t-esc="line.qty || '0.00'" /></span>
+                                    <t t-if="line.available_qty !== undefined">
+                                        <span t-att-style="line.is_available ? 'color: #16a34a; font-weight: 600;' : 'color: #dc2626; font-weight: 600;'">
+                                            <i class="fa fa-database" /> Available: <t t-esc="line.available_qty" />
+                                        </span>
+                                    </t>
                                 </div>
                             </div>
                         </t>
@@ -1015,6 +1020,15 @@
                     </t>
                 </div>
             </main>
+
+            <div t-if="state.selectedProduct" style="padding: 0 1rem; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; justify-content: center;">
+                    <button class="ilx-v2-btn-primary" style="width: 40px; height: 40px; border-radius: 50%; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb;" t-on-click="decrementQty">-</button>
+                    <input type="number" class="ilx-tx-v2-qty-input" t-att-value="state.qty" t-on-input="onQtyInput" min="1" style="width: 60px; text-align: center; font-size: 1.1rem; font-weight: 600; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px;" />
+                    <button class="ilx-v2-btn-primary" style="width: 40px; height: 40px; border-radius: 50%; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb;" t-on-click="incrementQty">+</button>
+                    <span style="font-size: 0.85rem; color: #6b7280; font-weight: 500;">UNITS</span>
+                </div>
+            </div>
 
             <footer class="ilx-emp-v2-footer">
                 <button class="ilx-emp-v2-confirm-btn" t-on-click="confirmSelection" t-att-disabled="!state.selectedProduct" t-att-style="!state.selectedProduct ? 'opacity: 0.5; cursor: not-allowed;' : ''">

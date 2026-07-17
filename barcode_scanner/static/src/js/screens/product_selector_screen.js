@@ -14,6 +14,7 @@ export class ProductSelectorScreen extends Component {
             search: "",
             loading: true,
             selectedProduct: null,
+            qty: 1,
         });
 
         useBarcodeHandler({
@@ -85,6 +86,22 @@ export class ProductSelectorScreen extends Component {
         this.state.selectedProduct = product;
     }
 
+    incrementQty() {
+        this.state.qty = (parseInt(this.state.qty, 10) || 0) + 1;
+    }
+
+    decrementQty() {
+        const current = parseInt(this.state.qty, 10) || 1;
+        if (current > 1) {
+            this.state.qty = current - 1;
+        }
+    }
+
+    onQtyInput(ev) {
+        const val = parseInt(ev.target.value, 10);
+        this.state.qty = isNaN(val) || val < 1 ? 1 : val;
+    }
+
     async confirmSelection() {
         const product = this.state.selectedProduct;
         if (!product) return;
@@ -97,6 +114,7 @@ export class ProductSelectorScreen extends Component {
             return;
         }
 
+        const qty = parseInt(this.state.qty, 10) || 1;
         const lines = this.props.params.lines || [];
         const existing = lines.find((l) => l.product_id === product.id);
         const lots = await this.inventory.searchRead(
@@ -105,12 +123,12 @@ export class ProductSelectorScreen extends Component {
             ["id", "name"]
         );
         if (existing) {
-            existing.qty += 1;
+            existing.qty += qty;
         } else {
             lines.push({
                 product_id: product.id,
                 product_name: product.name,
-                qty: 1,
+                qty: qty,
                 price_unit: product.standard_price || 0,
                 tracking: product.tracking || "none",
                 lot_id: null,
