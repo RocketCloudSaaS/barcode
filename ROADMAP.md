@@ -27,8 +27,8 @@ you install only what you need.
 
 | Module | Status | Purpose |
 | --- | --- | --- |
-| [`barcode_scanner`](barcode_scanner) | In progress | Base scanning framework: client action, registries, scanner input, feedback, API, hooks |
-| `barcode_stock` | Planned | Warehouse operations app: receipts, deliveries, internal transfers, quick info |
+| [`barcode_scanner`](barcode_scanner) | Available | Base scanning framework: client action, registries, scanner input, feedback, API, hooks |
+| [`barcode_stock`](barcode_stock) | Available | Warehouse operations app: receipts, deliveries, internal transfers, quick info |
 | `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
 | `barcode_camera` | In progress | Scan barcodes using the device camera |
 | `barcode_gs1` | Planned | GS1 nomenclature support (GS1-128, application identifiers) |
