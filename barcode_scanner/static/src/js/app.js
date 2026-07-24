@@ -5,8 +5,6 @@ import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
 import "@barcode_scanner/js/services/feedback_service";
-import "@barcode_scanner/js/services/barcode_scanner_state";
-import "@barcode_scanner/js/services/barcode_scanner_sync";
 
 import {barcodeScreens} from "@barcode_scanner/js/registries";
 
@@ -14,7 +12,6 @@ export class BarcodeScannerApp extends Component {
     setup() {
         this.barcode = useService("barcodeScannerBarcode");
         this.feedback = useState(useService("barcodeScannerFeedback"));
-        this.barcodeScannerState = useState(useService("barcodeScannerState"));
         this.dialog = useService("dialog");
         this.router = useState(useService("barcodeRouter"));
         if (!this.router.currentRoute) {
