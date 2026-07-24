@@ -30,7 +30,7 @@ you install only what you need.
 | [`barcode_scanner`](barcode_scanner) | Available | Base scanning framework: client action, registries, scanner input, feedback, API, hooks |
 | [`barcode_stock`](barcode_stock) | Available | Warehouse operations app: receipts, deliveries, internal transfers, quick info |
 | `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
-| `barcode_camera` | In progress | Scan barcodes using the device camera |
+| [`barcode_camera`](barcode_camera) | Available | Scan barcodes using the device camera |
 | `barcode_gs1` | Planned | GS1 nomenclature support (GS1-128, application identifiers) |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |

@@ -230,4 +230,6 @@ Deferred (tracked, non-blocking):
   the base for now (CSS has no module deps, so it is harmless).
 - Retire the `store.js` → router alias and have screens use `barcodeRouter`.
 - Split the `i18n/` catalogs per module and regenerate `README.rst` for both.
-- Reintroduce the camera as a registry-based scan source (new `barcode_camera`).
+- *(done)* The camera is reintroduced as `barcode_camera`: a registered
+  floating-action-button widget plugged into a new `barcode_app_widgets` base
+  registry, replacing the old `patch(BarcodeScannerApp)` + manual-DOM approach.
