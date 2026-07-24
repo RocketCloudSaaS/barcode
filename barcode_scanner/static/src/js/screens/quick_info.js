@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
@@ -188,3 +190,5 @@ export class QuickInfoScreen extends Component {
 }
 
 QuickInfoScreen.template = "barcode_scanner.QuickInfoScreen";
+
+barcodeScreens.add("quick_info", {component: QuickInfoScreen});

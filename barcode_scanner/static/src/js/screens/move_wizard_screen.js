@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
@@ -510,3 +512,5 @@ MoveWizardScreen.props = {
     params: {type: Object, optional: true},
     navigate: {type: Function, optional: true},
 };
+
+barcodeScreens.add("move_wizard", {component: MoveWizardScreen});

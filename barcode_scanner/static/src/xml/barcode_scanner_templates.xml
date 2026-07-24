@@ -2,8 +2,8 @@
 <templates xml:space="preserve">
     <t t-name="barcode_scanner.App">
         <div class="barcode-app-root">
-            <t t-if="router.currentRoute">
-                <t t-component="router.currentRoute.component" t-props="screenProps" />
+            <t t-if="currentScreen">
+                <t t-component="currentScreen.component" t-props="currentScreenProps" />
             </t>
             <div
                 t-if="feedback.flash.active"
@@ -45,36 +45,17 @@
 
             <main class="ilx-home-main">
                 <div class="ilx-home-grid">
-                    <button
-                        class="ilx-home-grid-item"
-                        t-on-click="() => navigate('warehouse_ops')"
-                    >
-                        <div class="ilx-home-grid-icon ilx-icon-warehouse">
-                            <i class="fa fa-home" />
-                        </div>
-                        <span class="ilx-home-grid-title">Warehouse Operations</span>
-                    </button>
-
-                    <button
-                        class="ilx-home-grid-item"
-                        t-on-click="() => navigate('internal_transfer')"
-                    >
-                        <div class="ilx-home-grid-icon ilx-icon-transfer">
-                            <i class="fa fa-exchange" />
-                        </div>
-                        <span class="ilx-home-grid-title">Internal Transfer</span>
-                    </button>
-
-
-                    <button
-                        class="ilx-home-grid-item"
-                        t-on-click="() => navigate('quick_info')"
-                    >
-                        <div class="ilx-home-grid-icon ilx-icon-info">
-                            <i class="fa fa-info-circle" />
-                        </div>
-                        <span class="ilx-home-grid-title">Quick Info</span>
-                    </button>
+                    <t t-foreach="menuTiles" t-as="tile" t-key="tile.id">
+                        <button
+                            class="ilx-home-grid-item"
+                            t-on-click="() => this.onTileClick(tile)"
+                        >
+                            <div t-att-class="'ilx-home-grid-icon ' + tile.iconClass">
+                                <i t-att-class="'fa ' + tile.icon" />
+                            </div>
+                            <span class="ilx-home-grid-title" t-esc="tile.label" />
+                        </button>
+                    </t>
                 </div>
             </main>
         </div>

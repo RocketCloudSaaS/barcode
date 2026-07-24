@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
@@ -405,3 +407,5 @@ export class InternalTransferScreen extends Component {
     }
 }
 InternalTransferScreen.template = "barcode_scanner.InternalTransferScreen";
+
+barcodeScreens.add("internal_transfer", {component: InternalTransferScreen});

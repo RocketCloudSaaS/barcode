@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
@@ -152,3 +154,5 @@ export class ProductSelectorScreen extends Component {
 }
 
 ProductSelectorScreen.template = "barcode_scanner.ProductSelectorScreen";
+
+barcodeScreens.add("product_selector", {component: ProductSelectorScreen});

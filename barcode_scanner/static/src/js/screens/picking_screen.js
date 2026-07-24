@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
@@ -591,3 +593,13 @@ export class PickingScreen extends Component {
 
 PickingScreen.template = "barcode_scanner.PickingScreen";
 PickingScreen.components = {PickingInfoTab, PickingMoveList, PickingDoneList};
+
+barcodeScreens.add("picking", {
+    component: PickingScreen,
+    props: (params) => ({
+        pickingId: params.pickingId,
+        listParams: params.listParams || null,
+        reloadToken: params.reloadToken || null,
+        params,
+    }),
+});

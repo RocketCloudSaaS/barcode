@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {Component, onWillStart, useEffect, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
@@ -655,3 +657,5 @@ export class PickingListScreen extends Component {
     }
 }
 PickingListScreen.template = "barcode_scanner.PickingListScreen";
+
+barcodeScreens.add("picking_list", {component: PickingListScreen});

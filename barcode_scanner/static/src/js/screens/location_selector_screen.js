@@ -1,5 +1,7 @@
 /** @odoo-module **/
 
+import {barcodeScreens} from "@barcode_scanner/js/registries";
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
@@ -93,3 +95,5 @@ export class LocationSelectorScreen extends Component {
 }
 
 LocationSelectorScreen.template = "barcode_scanner.LocationSelectorScreen";
+
+barcodeScreens.add("location_selector", {component: LocationSelectorScreen});

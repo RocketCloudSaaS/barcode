@@ -3,6 +3,7 @@
 import {Reactive} from "@web/core/utils/reactive";
 import {browser} from "@web/core/browser/browser";
 import {registry} from "@web/core/registry";
+import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 const HISTORY_LIMIT = 50;
 
@@ -18,7 +19,6 @@ export class BarcodeRouter extends Reactive {
         this.currentRoute = null;
         this.routeParams = {};
         this.history = [];
-        this.routes = {};
         this._onPopState = this._onPopState.bind(this);
         browser.addEventListener("popstate", this._onPopState);
     }
@@ -32,20 +32,12 @@ export class BarcodeRouter extends Reactive {
         if (!state || !state.routeName) {
             return;
         }
-        const route = this.routes[state.routeName];
-        if (!route) {
+        if (!barcodeScreens.contains(state.routeName)) {
             return;
         }
         this.history = [];
-        this.currentRoute = route;
+        this.currentRoute = {name: state.routeName};
         this.routeParams = state.params || {};
-    }
-
-    registerRoute(name, config) {
-        if (!config || !config.component) {
-            throw new Error(`Route "${name}" must have a component.`);
-        }
-        this.routes[name] = {name, component: config.component};
     }
 
     _sanitizeHistoryState(state) {
@@ -57,8 +49,7 @@ export class BarcodeRouter extends Reactive {
     }
 
     navigate(routeName, params = {}, options = {}) {
-        const route = this.routes[routeName];
-        if (!route) {
+        if (!barcodeScreens.contains(routeName)) {
             throw new Error(`Unknown route: ${routeName}`);
         }
 
@@ -96,7 +87,7 @@ export class BarcodeRouter extends Reactive {
             history.pushState(historyState, "", browser.location.href);
         }
 
-        this.currentRoute = route;
+        this.currentRoute = {name: routeName};
         this.routeParams = params;
     }
 
@@ -111,10 +102,10 @@ export class BarcodeRouter extends Reactive {
             });
             history.replaceState(historyState, "", browser.location.href);
         } else {
-            this.currentRoute = this.routes.main || null;
+            this.currentRoute = barcodeScreens.contains("main") ? {name: "main"} : null;
             this.routeParams = overrides || {};
             const historyState = this._sanitizeHistoryState({
-                routeName: (this.routes.main || {}).name || "main",
+                routeName: "main",
                 params: this.routeParams,
             });
             history.replaceState(historyState, "", browser.location.href);

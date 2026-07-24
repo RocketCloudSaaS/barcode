@@ -5,64 +5,22 @@ import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {user} from "@web/core/user";
 import {imageUrl} from "@web/core/utils/urls";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {useBarcodeDispatcher} from "@barcode_scanner/js/hooks/use_barcode_dispatcher";
+import {barcodeMenuTiles, barcodeScreens} from "@barcode_scanner/js/registries";
 
 export class MainScreen extends Component {
     setup() {
         this.store = useState(useService("barcodeStore"));
-        this.action = useService("action");
-        this.inventory = useBarcodeScanner();
         this.avatarState = useState({failed: false});
-
-        useBarcodeHandler({
-            onScan: async (barcode, parsedData) => {
-                await this.onBarcodeScanned(barcode, parsedData);
-            },
-        });
+        useBarcodeDispatcher();
     }
 
-    async onBarcodeScanned(barcode, parsedData) {
-        if (barcode.startsWith("WH/") || barcode.startsWith("INT/")) {
-            const pickings = await this.inventory.searchRead(
-                "stock.picking",
-                [["name", "=", barcode]],
-                ["id"]
-            );
-            if (pickings.length) {
-                this.store.navigate("picking", {pickingId: pickings[0].id});
-                return;
-            }
-        }
+    get menuTiles() {
+        return barcodeMenuTiles.getEntries().map(([id, tile]) => ({id, ...tile}));
+    }
 
-        const productCode = parsedData?.value || barcode;
-        const products = await this.inventory.searchRead(
-            "product.product",
-            [["barcode", "=", productCode]],
-            ["id", "display_name"]
-        );
-        if (products.length) {
-            this.store.navigate("quick_info", {
-                result: products[0],
-                result_type: "product",
-            });
-            return;
-        }
-
-        const locations = await this.inventory.searchRead(
-            "stock.location",
-            [["barcode", "=", barcode]],
-            ["id", "display_name"]
-        );
-        if (locations.length) {
-            this.store.navigate("quick_info", {
-                result: locations[0],
-                result_type: "location",
-            });
-            return;
-        }
-
-        this.inventory.notify("Barcode not recognized", {type: "warning"});
+    onTileClick(tile) {
+        tile.action({navigate: this.store.navigate.bind(this.store)});
     }
 
     get greeting() {
@@ -105,13 +63,11 @@ export class MainScreen extends Component {
         return !this.avatarState.failed;
     }
 
-    navigate = (route) => {
-        this.store.navigate(route);
-    };
-
     goHome() {
         window.location.href = "/web";
     }
 
     static template = "barcode_scanner.MainScreen";
 }
+
+barcodeScreens.add("main", {component: MainScreen});
