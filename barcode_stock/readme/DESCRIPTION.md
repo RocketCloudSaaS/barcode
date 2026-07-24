@@ -1,5 +1,6 @@
-This module provides a full-screen barcode scanning application for
-warehouse operations in Odoo.
+This module is the **warehouse application** of the Barcode suite. It builds on
+the `barcode_scanner` base framework and registers the stock operation screens,
+scan handlers and menu tiles into it.
 
 It covers the following operations:
 
@@ -8,5 +9,5 @@ It covers the following operations:
 - Internal transfers
 - Quick product and location information
 
-Only EAN13 barcodes are supported. Real-time validation and
-audio/vibration feedback is provided on each scan.
+Only EAN13 barcodes are supported. Real-time validation and audio/vibration
+feedback are provided on each scan.
