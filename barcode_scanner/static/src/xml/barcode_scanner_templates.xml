@@ -10,6 +10,9 @@
                 t-att-class="`barcode-feedback-flash barcode-feedback-flash--${feedback.flash.level}`"
                 t-att-data-token="feedback.flash.token"
             />
+            <t t-foreach="appWidgets" t-as="widget" t-key="widget_index">
+                <t t-component="widget.component" />
+            </t>
         </div>
     </t>
 

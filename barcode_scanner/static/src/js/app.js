@@ -6,7 +6,7 @@ import {useService} from "@web/core/utils/hooks";
 
 import "@barcode_scanner/js/services/feedback_service";
 
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens, barcodeAppWidgets} from "@barcode_scanner/js/registries";
 
 export class BarcodeScannerApp extends Component {
     setup() {
@@ -30,6 +30,10 @@ export class BarcodeScannerApp extends Component {
         const navigate = this.router.navigate.bind(this.router);
         const extra = entry && entry.props ? entry.props(params) : {params};
         return {navigate, ...extra};
+    }
+
+    get appWidgets() {
+        return barcodeAppWidgets.getAll();
     }
 }
 
