@@ -147,18 +147,70 @@ scanning on the home screen routes correctly (picking / product / location /
 
 ---
 
-## Phase 2 — split into `barcode_scanner` (base) + `barcode_stock` *(pending detail)*
+## Phase 2 — split into `barcode_scanner` (base) + `barcode_stock`
 
-Physically extract the warehouse app. Move to `barcode_stock`: the 10 screens,
-6 components, `state` + `sync` services, the 4 stock Python models
-(`stock_move`, `stock_move_line`, `stock_picking`, `stock_quant` ≈ 494 lines),
-`stock_location_views.xml`, and the stock parts of `security`/`data`/`demo`.
-Rewrite import paths `@barcode_scanner/…` → `@barcode_stock/…`, split the two
-manifests and asset bundles, split `templates.xml`. Drop the `barcode_scanner`
-→ `stock` dependency; base keeps only `barcodes` + `web`. Retire the `store.js`
-alias here.
+Physically extract the warehouse app into a new `barcode_stock` module, leaving
+`barcode_scanner` as a pure, stock-free scanning framework.
+
+### Analysis that shaped the split
+
+- `state` (36 stock refs) and `sync` (11 refs; lot/serial/qty guardrails) are
+  stock-specific → move to `barcode_stock`. Their only consumers are the
+  `move_wizard` and `picking` screens (which also move) plus a **dead**
+  `this.barcodeScannerState` reference in the base `app.js` (the App template
+  never uses it) → dropped from the base.
+- `barcode_parser.js` is pure JS (EAN13 regex, no server call), and
+  `barcode_nomenclature.py` aliases `product.product` → the base needs neither
+  `barcodes` nor `stock`/`product`. **The base ends up depending only on `web`.**
+- `api`, `store`, `feedback`, `use_inventory`, the scanner keyboard service, the
+  registries and the home screen are generic → stay in the base.
+
+### File split
+
+| | `barcode_scanner` (base) | `barcode_stock` (new) |
+| --- | --- | --- |
+| JS | registries, barcode_parser, barcode, api, router, store, app, feedback_service, use_barcode, use_barcode_handler, use_barcode_dispatcher, use_inventory, main_screen | state, sync, the 9 stock screens, the 6 components, handlers/stock_scan_handlers, tiles/stock_menu_tiles |
+| Templates | `App` + `MainScreen` | the stock screen/component templates |
+| Python | *(none)* | stock_move, stock_move_line, stock_picking, stock_quant, barcode_nomenclature |
+| Data/Security | `views/action.xml` (client action + menu) + icon | security.xml (user group), data.xml (nomenclature), demo.xml, stock_location_views.xml |
+| `depends` | `web` | `barcode_scanner`, `stock`, `stock_move_line_qty_picked`, `barcodes` |
+
+### Mechanical steps
+
+1. Scaffold `barcode_stock` (`__manifest__.py`, `__init__.py`, dirs).
+2. `git mv` the files listed above (preserves history).
+3. Rewrite imports in the moved files: references to *other moved files* become
+   `@barcode_stock/…`; references to base files (registries, hooks, api, …)
+   stay `@barcode_scanner/…`.
+4. Split `templates.xml` (base = `App` + `MainScreen`; stock = the rest) and
+   rename the moved templates `t-name="barcode_scanner.*"` → `barcode_stock.*`
+   (plus each component's `static template`).
+5. Drop from the base `app.js` the dead `barcodeScannerState` reference and the
+   `state`/`sync` side-effect imports.
+6. Split the two manifests (assets, data, depends).
+
+### Applying it on the `barcode` DB — one pass
+
+```
+odoo -c /etc/odoo/odoo.conf -d barcode -u barcode_scanner -i barcode_stock --stop-after-init
+```
+
+Doing the update + install in a single run means `barcode_stock` re-claims the
+models and the `validated_on_date` field while the registry is rebuilt, so the
+column is not dropped.
+
+### Risks & mitigation
+
+- **Models/field moving modules** on the DB: mitigated by the combined
+  `-u/-i` pass; `barcode` is a scratch DB anyway.
+- **XMLIDs changing module** (`barcode_scanner_group_user`, the nomenclature
+  record): recreated under `barcode_stock`. `action_barcode_scanner` stays in
+  the base, so the menu/action id is unchanged. Low impact.
+- **Splitting the ~1800-line `templates.xml`**: mechanical but needs care to
+  route each template to the right module.
 
 ## Phase 3 — verification + docs *(pending detail)*
 
-Install both modules, smoke-test the 10 screens + camera, update `ROADMAP.md`
-and the module READMEs.
+Install both modules, smoke-test the 9 stock screens + home, update `ROADMAP.md`
+and the module READMEs. Reintroduce the camera later as a registry-based scan
+source.
