@@ -19,7 +19,7 @@ you install only what you need.
 
 | Status | Meaning |
 | --- | --- |
-| Available | Released and installable |
+| Available | Built and installable |
 | In progress | Actively being developed |
 | Planned | On the roadmap, not started yet |
 
@@ -29,8 +29,8 @@ you install only what you need.
 | --- | --- | --- |
 | [`barcode_scanner`](barcode_scanner) | Available | Base scanning framework: client action, registries, scanner input, feedback, API, hooks |
 | [`barcode_stock`](barcode_stock) | Available | Warehouse operations app: receipts, deliveries, internal transfers, quick info |
-| `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
 | [`barcode_camera`](barcode_camera) | Available | Scan barcodes using the device camera |
+| `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
 | `barcode_gs1` | Planned | GS1 nomenclature support (GS1-128, application identifiers) |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |
@@ -52,16 +52,16 @@ transfers, and quick product/location lookups, with real-time validation on
 each scan. This is what most users think of as "the barcode app"; it registers
 its screens and handlers into `barcode_scanner`.
 
-### barcode_inventory
-
-Perform inventory adjustments and cycle/stock counts directly from the scanner,
-updating on-hand quantities by scanning products and locations.
-
 ### barcode_camera
 
 Use a device's built-in camera as a barcode reader, so operators can scan
 without dedicated hardware. Complements the app for phones, tablets, and
 laptops.
+
+### barcode_inventory
+
+Perform inventory adjustments and cycle/stock counts directly from the scanner,
+updating on-hand quantities by scanning products and locations.
 
 ### barcode_gs1
 
