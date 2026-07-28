@@ -15,8 +15,12 @@ import {registry} from "@web/core/registry";
  * - barcode_app_widgets: {component} overlay widgets rendered in the app shell
  *   (e.g. a floating action button); each renders itself and wires its own
  *   services.
+ * - barcode_parsers: parse(barcode) -> parsed object | null; tried in
+ *   `sequence` order, first non-null result wins. The base seeds an EAN13
+ *   parser; feature modules add richer parsers (e.g. GS1).
  */
 export const barcodeScreens = registry.category("barcode_screens");
 export const barcodeScanHandlers = registry.category("barcode_scan_handlers");
 export const barcodeMenuTiles = registry.category("barcode_menu_tiles");
 export const barcodeAppWidgets = registry.category("barcode_app_widgets");
+export const barcodeParsers = registry.category("barcode_parsers");
