@@ -1,8 +1,6 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from unittest.mock import patch
-
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
@@ -162,74 +160,54 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
                 ],
             )
 
-    def test_action_barcode_scanner_internal_transfer_blocks_insufficient_stock(self):
-        with self.assertRaises(UserError):
-            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
-                self.stock_location.id,
-                self.destination_location.id,
-                False,
-                [
-                    {
-                        "product_id": self.untracked_product.id,
-                        "qty": 999,
-                        "lot_id": False,
-                    }
-                ],
-            )
-
-    def test_internal_transfer_cancels_when_stock_gone_after_confirm(
-        self,
-    ):
-        StockPicking = type(self.env["stock.picking"])
-        original_collect = (
-            StockPicking._barcode_scanner_collect_internal_transfer_availability
-        )
-        call_count = [0]
-
-        def patched_collect(self, origin_location, prepared_lines):
-            call_count[0] += 1
-            if call_count[0] >= 2:
-                for line in prepared_lines:
-                    line["qty"] = 999999
-                result = original_collect(self, origin_location, prepared_lines)
-                for aline in result["lines"]:
-                    aline["available"] = False
-                result["available"] = False
-                return result
-            return original_collect(self, origin_location, prepared_lines)
-
-        with patch.object(
-            StockPicking,
-            "_barcode_scanner_collect_internal_transfer_availability",
-            patched_collect,
-        ):
-            with self.assertRaises(UserError) as ctx:
-                self.env["stock.picking"].action_barcode_scanner_internal_transfer(
-                    self.stock_location.id,
-                    self.destination_location.id,
-                    False,
-                    [
-                        {
-                            "product_id": self.untracked_product.id,
-                            "qty": 3,
-                            "lot_id": False,
-                        }
-                    ],
-                )
-            self.assertIn("cancelled", str(ctx.exception.args))
-
-    def test_action_barcode_scanner_internal_transfer_lock_quants(self):
-        self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+    def test_internal_transfer_transfers_available_when_over_requested(self):
+        # Only 8 untracked units exist; requesting more transfers what is
+        # available (like the back office) instead of refusing the operation.
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
             self.stock_location.id,
             self.destination_location.id,
             False,
             [
                 {
                     "product_id": self.untracked_product.id,
-                    "qty": 2,
+                    "qty": 999,
                     "lot_id": False,
                 }
             ],
+        )
+        picking = self.env["stock.picking"].browse(result["picking_id"])
+        self.assertEqual(picking.state, "done")
+        self.assertEqual(
+            self.env["stock.quant"]._get_available_quantity(
+                self.untracked_product, self.stock_location, strict=False
+            ),
+            0,
+        )
+        self.assertEqual(
+            self.env["stock.quant"]._get_available_quantity(
+                self.untracked_product, self.destination_location, strict=False
+            ),
+            8,
+        )
+
+    def test_internal_transfer_raises_when_no_stock(self):
+        empty_product = self.env["product.product"].create(
+            {"name": "No Stock Product", "is_storable": True}
+        )
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [{"product_id": empty_product.id, "qty": 1, "lot_id": False}],
+            )
+
+    def test_internal_transfer_reduces_source_stock(self):
+        self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            self.stock_location.id,
+            self.destination_location.id,
+            False,
+            [{"product_id": self.untracked_product.id, "qty": 2, "lot_id": False}],
         )
         available = self.env["stock.quant"]._get_available_quantity(
             self.untracked_product,
@@ -237,6 +215,60 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             strict=False,
         )
         self.assertEqual(available, 6)
+
+    def test_internal_transfer_pulls_from_child_locations(self):
+        # Stock living only in child sub-locations must be transferable from the
+        # parent, taken from the children (no negative quant at the parent).
+        # Regression test for the child-location availability bug.
+        parent = self.env["stock.location"].create(
+            {
+                "name": "BC Parent",
+                "usage": "internal",
+                "location_id": self.stock_location.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_a = self.env["stock.location"].create(
+            {
+                "name": "BC Child A",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_b = self.env["stock.location"].create(
+            {
+                "name": "BC Child B",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        product = self.env["product.product"].create(
+            {"name": "Child Loc Product", "is_storable": True}
+        )
+        self.env["stock.quant"]._update_available_quantity(product, child_a, 10)
+        self.env["stock.quant"]._update_available_quantity(product, child_b, 15)
+
+        # Over-request 32 against the 25 available across the children.
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            parent.id,
+            self.destination_location.id,
+            False,
+            [{"product_id": product.id, "qty": 32, "lot_id": False}],
+        )
+        picking = self.env["stock.picking"].browse(result["picking_id"])
+        self.assertEqual(picking.state, "done")
+        Quant = self.env["stock.quant"]
+        self.assertEqual(Quant._get_available_quantity(product, parent, strict=False), 0)
+        # No negative quant created directly at the parent view location.
+        self.assertEqual(Quant._get_available_quantity(product, parent, strict=True), 0)
+        self.assertEqual(
+            Quant._get_available_quantity(
+                product, self.destination_location, strict=False
+            ),
+            25,
+        )
 
 
 class TestStockMoveQtyProgress(TransactionCase):

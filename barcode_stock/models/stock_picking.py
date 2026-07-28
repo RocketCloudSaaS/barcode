@@ -1,13 +1,9 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-import logging
-
 from odoo import _, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
-
-_logger = logging.getLogger(__name__)
 
 
 class StockPicking(models.Model):
@@ -196,41 +192,49 @@ class StockPicking(models.Model):
         )
 
     @api.model
-    def _barcode_scanner_lock_quants_for_transfer(
-        self, origin_location, prepared_lines
+    def _barcode_scanner_allocate_from_origin(
+        self, origin_location, product, lot, requested_qty
     ):
+        """Allocate up to ``requested_qty`` of ``product`` (optionally ``lot``)
+        against the real quants available in ``origin_location`` and its child
+        locations, honouring the removal strategy.
+
+        Returns a list of ``{"location", "lot", "qty"}`` describing where the
+        stock is actually taken from. The candidate quants are row-locked to
+        avoid concurrent over-allocation.
+        """
         quant_model = self.env["stock.quant"]
-        locked_quant_ids = []
-        for line in prepared_lines:
-            product = line["product"]
-            lot = line["lot"]
-            domain = [
-                ("location_id", "=", origin_location.id),
-                ("product_id", "=", product.id),
-                ("quantity", ">", 0),
-            ]
-            if lot:
-                domain.append(("lot_id", "=", lot.id))
-            quants = quant_model.search(domain)
-            if quants:
-                self.env.cr.execute(
-                    "SELECT id FROM stock_quant "
-                    "WHERE id IN %s "
-                    "FOR NO KEY UPDATE SKIP LOCKED",
-                    [tuple(quants.ids)],
-                )
-                locked = [row[0] for row in self.env.cr.fetchall()]
-                locked_quant_ids.extend(locked)
-                if len(locked) < len(quants):
-                    skipped = len(quants) - len(locked)
-                    _logger.warning(
-                        "Barcode scanner: %d quants skipped due to row lock "
-                        "for product %s at location %s",
-                        skipped,
-                        product.display_name,
-                        origin_location.display_name,
-                    )
-        return locked_quant_ids
+        rounding = product.uom_id.rounding
+        quants = quant_model._gather(
+            product, origin_location, lot_id=lot or None, strict=False
+        )
+        if quants:
+            self.env.cr.execute(
+                "SELECT id FROM stock_quant WHERE id IN %s "
+                "FOR NO KEY UPDATE SKIP LOCKED",
+                [tuple(quants.ids)],
+            )
+            locked_ids = {row[0] for row in self.env.cr.fetchall()}
+            quants = quants.filtered(lambda quant: quant.id in locked_ids)
+
+        allocations = []
+        remaining = requested_qty
+        for quant in quants:
+            if float_compare(remaining, 0, precision_rounding=rounding) <= 0:
+                break
+            free = quant.quantity - quant.reserved_quantity
+            if float_compare(free, 0, precision_rounding=rounding) <= 0:
+                continue
+            take = min(remaining, free)
+            allocations.append(
+                {
+                    "location": quant.location_id,
+                    "lot": quant.lot_id,
+                    "qty": take,
+                }
+            )
+            remaining -= take
+        return allocations
 
     @api.model
     def action_barcode_scanner_internal_transfer(
@@ -252,29 +256,29 @@ class StockPicking(models.Model):
             lines,
         )
 
-        self._barcode_scanner_lock_quants_for_transfer(origin_location, prepared_lines)
-
-        availability = self._barcode_scanner_collect_internal_transfer_availability(
-            origin_location,
-            prepared_lines,
-        )
-        missing_lines = [
-            line for line in availability["lines"] if not line["available"]
-        ]
-        if missing_lines:
-            details = ", ".join(
-                _(
-                    "%(product)s (required: %(required)s, available: %(available)s)",
-                    product=line["product_name"],
-                    required=line["required_qty"],
-                    available=line["available_qty"],
-                )
-                for line in missing_lines
+        # Build the move plan by allocating each line against the stock actually
+        # on hand in the origin location *and its children*, capped at what is
+        # available. Like the back office, we transfer the available quantity
+        # instead of refusing the whole operation when more was requested.
+        move_plan = []
+        for line in prepared_lines:
+            product = line["product"]
+            rounding = product.uom_id.rounding
+            allocations = self._barcode_scanner_allocate_from_origin(
+                origin_location, product, line["lot"], line["qty"]
             )
+            allocated = sum(alloc["qty"] for alloc in allocations)
+            if float_compare(allocated, 0, precision_rounding=rounding) <= 0:
+                continue
+            move_plan.append(
+                {"line": line, "allocations": allocations, "qty": allocated}
+            )
+
+        if not move_plan:
             raise UserError(
                 _(
-                    "Insufficient stock in the origin location: %(details)s",
-                    details=details,
+                    "No stock is available in the origin location for the "
+                    "selected products."
                 )
             )
 
@@ -293,16 +297,17 @@ class StockPicking(models.Model):
             }
         )
 
-        move_lines_by_move = []
         move_line_model = self.env["stock.move.line"]
         move_has_qty_picked = "qty_picked" in move_line_model._fields
-        for line in prepared_lines:
+        move_line_vals_list = []
+        for plan in move_plan:
+            line = plan["line"]
             product = line["product"]
             move = self.env["stock.move"].create(
                 {
                     "name": product.display_name,
                     "product_id": product.id,
-                    "product_uom_qty": line["qty"],
+                    "product_uom_qty": plan["qty"],
                     "product_uom": product.uom_id.id,
                     "picking_id": picking.id,
                     "location_id": origin_location.id,
@@ -310,57 +315,29 @@ class StockPicking(models.Model):
                     "company_id": picking.company_id.id,
                 }
             )
-            move_lines_by_move.append((move, line))
+            for alloc in plan["allocations"]:
+                vals = {
+                    "move_id": move.id,
+                    "picking_id": picking.id,
+                    "product_id": product.id,
+                    "product_uom_id": product.uom_id.id,
+                    "quantity": alloc["qty"],
+                    "picked": True,
+                    "location_id": alloc["location"].id,
+                    "location_dest_id": destination_location.id,
+                    "company_id": picking.company_id.id,
+                    "lot_id": alloc["lot"].id if alloc["lot"] else False,
+                    "lot_name": alloc["lot"].name if alloc["lot"] else False,
+                }
+                if move_has_qty_picked:
+                    vals["qty_picked"] = alloc["qty"]
+                move_line_vals_list.append(vals)
 
         picking.action_confirm()
-
-        post_confirm_availability = (
-            self._barcode_scanner_collect_internal_transfer_availability(
-                origin_location, prepared_lines
-            )
-        )
-        post_confirm_missing = [
-            line for line in post_confirm_availability["lines"] if not line["available"]
-        ]
-        if post_confirm_missing:
-            picking.sudo().action_cancel()
-            details = ", ".join(
-                _(
-                    "%(product)s (required: %(required)s, available: %(available)s)",
-                    product=line["product_name"],
-                    required=line["required_qty"],
-                    available=line["available_qty"],
-                )
-                for line in post_confirm_missing
-            )
-            raise UserError(
-                _(
-                    "Stock became unavailable after reservation: %(details)s. "
-                    "The transfer has been cancelled.",
-                    details=details,
-                )
-            )
-
-        move_line_vals_list = []
-        for move, line in move_lines_by_move:
-            vals = {
-                "move_id": move.id,
-                "picking_id": picking.id,
-                "product_id": line["product"].id,
-                "product_uom_id": line["product"].uom_id.id,
-                "quantity": line["qty"],
-                "picked": True,
-                "location_id": origin_location.id,
-                "location_dest_id": destination_location.id,
-                "company_id": picking.company_id.id,
-                "lot_id": line["lot"].id if line["lot"] else False,
-                "lot_name": line["lot"].name if line["lot"] else False,
-            }
-            if move_has_qty_picked:
-                vals["qty_picked"] = line["qty"]
-            move_line_vals_list.append(vals)
+        # Our manually-allocated move lines are authoritative; drop anything the
+        # confirmation may have auto-reserved so we do not double-count stock.
+        picking.do_unreserve()
         move_line_model.create(move_line_vals_list)
-
         picking.with_context(skip_backorder=True).button_validate()
         return {
             "picking_id": picking.id,
