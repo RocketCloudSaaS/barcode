@@ -4,6 +4,7 @@ import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
+import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 
@@ -18,6 +19,8 @@ export class QuickInfoScreen extends Component {
             resultDetails: null,
             locationStock: [],
             stockPage: 0,
+            lot: null,
+            lotStock: [],
         });
         this.stockPageSize = 15;
 
@@ -40,11 +43,13 @@ export class QuickInfoScreen extends Component {
         });
     }
 
-    async loadResult(result, resultType) {
+    async loadResult(result, resultType, {lotName = null} = {}) {
         this.state.result = result;
         this.state.resultType = resultType;
         this.state.locationStock = [];
         this.state.stockPage = 0;
+        this.state.lot = null;
+        this.state.lotStock = [];
         if (resultType === "product") {
             const products = await this.inventory.searchRead(
                 "product.product",
@@ -62,6 +67,9 @@ export class QuickInfoScreen extends Component {
                 ]
             );
             this.state.resultDetails = products.length ? products[0] : null;
+            if (this.state.resultDetails && lotName) {
+                await this.loadLot(result.id, lotName);
+            }
         } else if (resultType === "location") {
             const locations = await this.inventory.searchRead(
                 "stock.location",
@@ -87,6 +95,42 @@ export class QuickInfoScreen extends Component {
         }
     }
 
+    /**
+     * A scan can name a lot or serial on top of the product, so show where that
+     * lot actually sits — the question an operator scanning a labelled pallet is
+     * really asking.
+     */
+    async loadLot(productId, lotName) {
+        const [lot] = await this.inventory.searchRead(
+            "stock.lot",
+            [
+                ["product_id", "=", productId],
+                ["name", "=", lotName],
+            ],
+            ["name"]
+        );
+        if (!lot) {
+            this.inventory.notify(`Lot ${lotName} not found for this product.`, {
+                type: "warning",
+            });
+            return;
+        }
+        this.state.lot = lot;
+        const quants = await this.inventory.readGroup(
+            "stock.quant",
+            [["lot_id", "=", lot.id]],
+            ["location_id", "quantity"],
+            ["location_id"]
+        );
+        this.state.lotStock = quants
+            .filter((quant) => quant.quantity > 0)
+            .map((quant) => ({
+                locationId: quant.location_id[0],
+                locationName: quant.location_id[1],
+                quantity: quant.quantity,
+            }));
+    }
+
     goBack() {
         if (this.state.resultDetails) {
             this.state.result = null;
@@ -94,6 +138,8 @@ export class QuickInfoScreen extends Component {
             this.state.resultType = null;
             this.state.locationStock = [];
             this.state.stockPage = 0;
+            this.state.lot = null;
+            this.state.lotStock = [];
             return;
         }
         this.store.goBack();
@@ -146,29 +192,32 @@ export class QuickInfoScreen extends Component {
             this.inventory.notify("Enter a barcode.", {type: "warning"});
             return;
         }
-        await this.lookupAndShow(barcode);
+        // A typed barcode goes through the same parsers as a scanned one, so a
+        // code carrying more than a product reads the same either way.
+        await this.lookupAndShow(barcode, parseBarcode(barcode));
     }
 
     async onBarcodeScanned(barcode, parsedData) {
-        const scanValue = parsedData?.value || barcode;
-        if (!scanValue) {
+        if (!(parsedData?.value || barcode)) {
             this.inventory.notify("Barcode not recognized.", {type: "warning"});
             return;
         }
         this.state.barcode = "";
-        await this.lookupAndShow(scanValue);
+        await this.lookupAndShow(barcode, parsedData);
     }
 
-    async lookupAndShow(barcode) {
+    async lookupAndShow(barcode, parsedData = null) {
+        const productCode = parsedData?.value || barcode;
+        const lotName = parsedData?.lot || parsedData?.serial || null;
         try {
             const products = await this.inventory.searchRead(
                 "product.product",
-                [["barcode", "=", barcode]],
+                [["barcode", "=", productCode]],
                 ["display_name"]
             );
             if (products.length) {
                 this.state.barcode = "";
-                await this.loadResult(products[0], "product");
+                await this.loadResult(products[0], "product", {lotName});
                 return;
             }
             const locations = await this.inventory.searchRead(
