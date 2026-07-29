@@ -63,19 +63,56 @@ export class MoveWizardScreen extends Component {
     }
 
     async onBarcodeScanned(barcode, parsedData) {
-        const scanValue = parsedData?.value || barcode;
-        if (!scanValue) return;
-
-        const product = this.barcodeScannerState.getProductByBarcode(scanValue);
-        if (product) {
-            if (product.id === this.state.move?.product_id?.[0]) {
-                this.adjustQty(1);
-                this.feedback.success();
-            } else {
-                this.onProductScanned(product);
-            }
+        const normalized = this.barcodeScannerState.applyScanResult({
+            barcode,
+            ...(parsedData || {}),
+        });
+        if (!normalized.product) {
             return;
         }
+        const product = this.barcodeScannerState.getProductByBarcode(
+            normalized.product
+        );
+        if (!product) {
+            return;
+        }
+        if (product.id !== this.state.move?.product_id?.[0]) {
+            this.onProductScanned(product);
+            return;
+        }
+        this.applyScannedLot(normalized);
+        this.adjustQty(normalized.quantity);
+        this.feedback.success();
+    }
+
+    /**
+     * Apply the lot or serial a scan carries: select it when it already exists,
+     * otherwise prefill the create-lot form where creating one is allowed.
+     */
+    applyScannedLot({lot, lotName, expiration}) {
+        const name = lot?.name || lotName;
+        if (!name || !this.isTracked) {
+            return;
+        }
+        if (lot && this.canUseExistingLot) {
+            if (!this.state.lots.some((item) => item.id === lot.id)) {
+                this.state.lots = [lot, ...this.state.lots];
+            }
+            this.state.selectedLotId = String(lot.id);
+            return;
+        }
+        if (!this.canCreateLot) {
+            this.inventory.notify(
+                _t("Lot %(lot)s is not available for this product.", {lot: name}),
+                {type: "warning"}
+            );
+            return;
+        }
+        this.state.newLotName = name;
+        if (expiration) {
+            this.state.newLotExpirationDate = expiration;
+        }
+        this.setMode("create_lot");
     }
 
     get isIncoming() {
@@ -265,6 +302,19 @@ export class MoveWizardScreen extends Component {
         this.state._lastInputSource = "tap";
     }
 
+    /**
+     * A quantity that arrives prefilled (a count carried by the scanned barcode)
+     * still has to respect the serial rule and what is left to process.
+     */
+    clampScannedQty(value) {
+        const qty = parseFloat(value) || 1;
+        if (this.isSerial) {
+            return 1;
+        }
+        const remaining = this.remainingQty;
+        return remaining > 0 ? Math.min(qty, remaining) : qty;
+    }
+
     setQty(value) {
         const qty = parseFloat(value);
         if (Number.isNaN(qty) || qty < 0) {
@@ -372,6 +422,7 @@ export class MoveWizardScreen extends Component {
             }
         }
         this.state.lots = lots || [];
+        this.state.qtyPicked = this.clampScannedQty(this.state.qtyPicked);
         this.state.loading = false;
     }
 

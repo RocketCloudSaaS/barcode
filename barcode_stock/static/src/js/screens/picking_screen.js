@@ -451,17 +451,17 @@ export class PickingScreen extends Component {
         });
     }
 
-    async handleEAN13(barcode, preselectedMove = null) {
+    async openMoveForProduct(barcode, preselectedMove = null, {qty = 1} = {}) {
         if (preselectedMove) {
             this.setLastScanContext({
                 barcode,
                 tone: "success",
                 message: _t("Product matched and ready to confirm."),
                 move: preselectedMove,
-                quantity: 1,
+                quantity: qty,
             });
             this.openMoveWizard(preselectedMove, {
-                qty: 1,
+                qty,
             });
             return;
         }
@@ -497,10 +497,89 @@ export class PickingScreen extends Component {
             tone: "success",
             message: _t("Product matched and ready to confirm."),
             move,
-            quantity: 1,
+            quantity: qty,
         });
         this.openMoveWizard(move, {
-            qty: 1,
+            qty,
+        });
+    }
+
+    /**
+     * A scan carrying a lot or serial number opens the wizard with it already
+     * resolved: a known lot is preselected, and a lot the operation cannot pick
+     * from stock goes through the create-lot flow — available on receipts only,
+     * the one operation allowed to register lots.
+     */
+    async handleScannedLot(move, normalized, source) {
+        const {barcode, lot, quantity, expiration} = normalized;
+        const lotName = lot?.name || normalized.lotName;
+        if (lot && this.barcodeScannerState.isLotExpired(lot.id)) {
+            const message = _t("Lot %(lot)s has passed its expiration date.", {
+                lot: lotName,
+            });
+            this.setLastScanContext({
+                barcode,
+                source,
+                tone: "warning",
+                message,
+                move,
+                lotName,
+            });
+            this.feedback.warning({notify: true, message});
+            return;
+        }
+        if (lot && this.barcodeScannerState.useExistingLots) {
+            this.setLastScanContext({
+                barcode,
+                source,
+                tone: "success",
+                message: _t("Lot %(lot)s matched and ready to confirm.", {
+                    lot: lot.name,
+                }),
+                move,
+                quantity,
+                lotName: lot.name,
+            });
+            this.openMoveWizard(move, {
+                qty: quantity,
+                lot: lot.id,
+                lotName: lot.name,
+            });
+            return;
+        }
+
+        const canCreateLot =
+            this.state.pickingTypeCode === "incoming" &&
+            this.barcodeScannerState.useCreateLots;
+        if (!canCreateLot) {
+            const message = _t("Lot %(lot)s is not available for this product.", {
+                lot: lotName,
+            });
+            this.setLastScanContext({
+                barcode,
+                source,
+                tone: "warning",
+                message,
+                move,
+                lotName,
+            });
+            this.feedback.warning({notify: true, message});
+            return;
+        }
+        this.setLastScanContext({
+            barcode,
+            source,
+            tone: "success",
+            message: _t("Lot %(lot)s ready to be registered.", {lot: lotName}),
+            move,
+            quantity,
+            lotName,
+        });
+        this.openMoveWizard(move, {
+            qty: quantity,
+            lotName,
+            expiration,
+            createLot: true,
         });
     }
 
@@ -514,10 +593,11 @@ export class PickingScreen extends Component {
             ...(parsedData || {}),
         });
         const candidateMove = normalized.candidates[0] || null;
+        const source = payload?.source || "hardware";
         if (!normalized.candidates.length) {
             this.setLastScanContext({
                 barcode,
-                source: payload?.source || "hardware",
+                source,
                 tone: "warning",
                 message: _t("Scanned barcode is not part of the current picking."),
             });
@@ -531,6 +611,9 @@ export class PickingScreen extends Component {
         const productId = candidateMove.product_id?.[0];
         const tracking =
             this.barcodeScannerState.indexes.trackingByProductId[productId];
+        // The scan states how much it represents (one unit for a plain product
+        // barcode, a count or a net weight for a barcode that carries one).
+        const scannedQty = normalized.quantity;
         if (tracking === "none") {
             const existingLine = this.state.moveLines.find(
                 (line) =>
@@ -539,7 +622,7 @@ export class PickingScreen extends Component {
                     (line.qty_picked || 0) > 0
             );
             if (existingLine) {
-                const newQty = (existingLine.qty_picked || 0) + 1;
+                const newQty = (existingLine.qty_picked || 0) + scannedQty;
                 await this.barcodeScannerSync.confirmMove({
                     moveId: candidateMove.id,
                     pickingId: this.state.picking.id,
@@ -552,7 +635,7 @@ export class PickingScreen extends Component {
                 });
                 this.setLastScanContext({
                     barcode,
-                    source: payload?.source || "hardware",
+                    source,
                     tone: "success",
                     message: _t("Quantity incremented to %(qty)s.", {qty: newQty}),
                     move: candidateMove,
@@ -565,9 +648,12 @@ export class PickingScreen extends Component {
                 await this._reloadMoves();
                 return;
             }
+        } else if (normalized.lotName) {
+            await this.handleScannedLot(candidateMove, normalized, source);
+            return;
         }
 
-        await this.handleEAN13(barcode, candidateMove);
+        await this.openMoveForProduct(barcode, candidateMove, {qty: scannedQty});
         if (payload?.source === "camera" && candidateMove) {
             this.feedback.success();
         }

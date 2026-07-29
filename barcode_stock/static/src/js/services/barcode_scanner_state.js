@@ -632,15 +632,23 @@ export class BarcodeScannerState extends Reactive {
         return moveLine;
     }
 
+    /**
+     * Normalize a scan (raw barcode plus whatever a parser decoded from it) into
+     * the data the screens act on: the product code to match, the quantity to
+     * handle — one unit unless the barcode states otherwise — and the lot or
+     * serial it carries, resolved to a known lot when there is one.
+     */
     applyScanResult(scan) {
-        const barcode = scan.product || scan.barcode;
+        const barcode = scan.product || scan.value || scan.barcode;
         const candidates = barcode ? this.getMoveCandidatesForBarcode(barcode) : [];
         const productId = candidates[0]?.product_id?.[0] || null;
+        const lotName = scan.lot || scan.serial || null;
         return {
             barcode: scan.barcode,
             product: barcode,
-            quantity: scan.qty || scan.quantity || 1,
-            lot: scan.lot ? this.getLot(productId, scan.lot) : null,
+            quantity: parseFloat(scan.qty ?? scan.quantity ?? 0) || 1,
+            lotName,
+            lot: lotName ? this.getLot(productId, lotName) : null,
             serial: scan.serial || null,
             expiration: scan.expiration || scan.expiry || null,
             candidates,

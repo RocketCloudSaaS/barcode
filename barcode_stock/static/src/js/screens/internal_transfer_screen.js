@@ -92,20 +92,17 @@ export class InternalTransferScreen extends Component {
             }
             return;
         }
-        if (!parsedData || !parsedData.value) {
-            if (barcode) {
-                await this.handleEAN13(barcode);
-                return;
-            }
+        const productCode = parsedData?.value || barcode;
+        if (!productCode) {
             this.notification.add("Barcode not recognized.", {type: "warning"});
             return;
         }
-        await this.handleEAN13(parsedData.value || barcode);
+        await this.addScannedProduct(productCode, parsedData);
     }
 
-    async handleEAN13(barcode) {
+    async addScannedProduct(productCode, parsedData = null) {
         const products = await this.inventory.searchRead("product.product", [
-            ["barcode", "=", barcode],
+            ["barcode", "=", productCode],
         ]);
         if (!products.length) {
             this.notification.add("Product not found.", {
@@ -114,7 +111,25 @@ export class InternalTransferScreen extends Component {
             return;
         }
         const product = products[0];
-        await this.addLine(product, null, null, 1);
+        // The scan carries its own quantity and lot when the barcode states them.
+        const qty = parseFloat(parsedData?.qty ?? parsedData?.quantity ?? 0) || 1;
+        const lotName = parsedData?.lot || parsedData?.serial || null;
+        const lot =
+            lotName && product.tracking !== "none"
+                ? await this.findAvailableLot(product.id, lotName)
+                : null;
+        if (lotName && !lot) {
+            this.notification.add(`Lot ${lotName} is not available here.`, {
+                type: "warning",
+            });
+        }
+        await this.addLine(product, lot?.id || null, lot?.name || null, qty);
+    }
+
+    async findAvailableLot(productId, lotName) {
+        const lots = (await this.fetchLots(productId)) || [];
+        const wanted = lotName.trim().toUpperCase();
+        return lots.find((lot) => (lot.name || "").toUpperCase() === wanted) || null;
     }
 
     async addLine(product, lotId, lotName, qty) {
