@@ -66,6 +66,39 @@ function toISODate(value) {
         .padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Every form of a GTIN that a product barcode may hold, in priority order.
+ *
+ * GS1 always carries the GTIN zero-padded to 14 digits, while products store
+ * the short code printed on the item (EAN13, UPC-A, EAN8). Stripping the
+ * padding is therefore part of reading a GS1 scan, not of matching a product.
+ */
+export function gtinVariants(gtin) {
+    const digits = String(gtin || "").replace(/\D/g, "");
+    if (!digits) {
+        return [];
+    }
+    const significant = digits.replace(/^0+/, "") || "0";
+    const variants = [];
+    // 13 first: Odoo's `sanitize_ean` stores barcodes as EAN13, so a UPC-A is
+    // held as a 13-digit code too. The other lengths cover codes stored raw.
+    for (const length of [13, 14, 12, 8]) {
+        if (significant.length <= length) {
+            variants.push(significant.padStart(length, "0"));
+        }
+    }
+    variants.push(digits, significant);
+    return [...new Set(variants)];
+}
+
+/**
+ * The GTIN form to match a product against: the EAN13-length code when the GTIN
+ * fits in one, otherwise the 14-digit code as scanned (a genuine ITF-14).
+ */
+export function gtinToProductCode(gtin) {
+    return gtinVariants(gtin)[0] || null;
+}
+
 function normalizeBarcode(barcode) {
     const value = String(barcode || "").trim();
     // Strip a leading symbology identifier such as "]C1" / "]d2".
@@ -138,12 +171,10 @@ function parseRawGS1(barcode) {
             break;
         }
         const valueStart = index + match.ai.length;
-        let valueEnd;
-        if (match.valueLength !== null) {
-            valueEnd = valueStart + match.valueLength;
-        } else {
-            valueEnd = findVariableBoundary(barcode, valueStart, 20);
-        }
+        const valueEnd =
+            match.valueLength === null
+                ? findVariableBoundary(barcode, valueStart, 20)
+                : valueStart + match.valueLength;
         tokens.push({ai: match.ai, value: barcode.slice(valueStart, valueEnd)});
         index = valueEnd;
     }
@@ -164,9 +195,14 @@ export function isGS1Barcode(barcode) {
 }
 
 /**
- * Decode a GS1 barcode into structured fields. `value` mirrors the GTIN so the
- * result stays compatible with the base parser convention (screens/handlers
- * read `parsed.value` for the product code).
+ * Decode a GS1 barcode into structured fields.
+ *
+ * The result follows the conventions the app already reads: `value`/`product`
+ * hold the product code (screens and scan handlers look the product up with
+ * it), `qty`/`quantity` the quantity to handle — the counted or weighed amount
+ * when the barcode carries one, a single unit otherwise — and
+ * `lot`/`serial`/`expiration` the tracking data. A GS1 scan therefore flows
+ * through the existing screens without them knowing anything about GS1.
  */
 export function parseGS1Barcode(barcode) {
     const normalized = normalizeBarcode(barcode);
@@ -181,6 +217,7 @@ export function parseGS1Barcode(barcode) {
         ais: {},
         gtin: null,
         product: null,
+        productCodes: [],
         sscc: null,
         lot: null,
         serial: null,
@@ -225,8 +262,6 @@ export function parseGS1Barcode(barcode) {
             case "01":
             case "02":
                 parsed.gtin = token.value;
-                parsed.product = token.value;
-                parsed.value = token.value;
                 break;
             case "10":
                 parsed.lot = token.value;
@@ -258,8 +293,11 @@ export function parseGS1Barcode(barcode) {
         parsed.qty = parsed.weight;
         parsed.quantity = parsed.weight;
     }
-
-    if (!parsed.product) {
+    if (parsed.gtin) {
+        parsed.productCodes = gtinVariants(parsed.gtin);
+        [parsed.value] = parsed.productCodes;
+        parsed.product = parsed.value;
+    } else {
         parsed.errors.push("Missing GTIN (AI 01)");
     }
 

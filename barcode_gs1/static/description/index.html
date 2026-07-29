@@ -411,17 +411,36 @@ a scan.</p>
 <pre class="literal-block">
 {
     type: &quot;gs1&quot;,
-    value: &quot;&lt;GTIN&gt;&quot;,       // product code (AI 01)
-    gtin: &quot;&lt;GTIN&gt;&quot;,
-    lot: &quot;&lt;batch/lot&gt;&quot;,    // AI 10 (falls back to the serial, AI 21)
-    serial: &quot;&lt;serial&gt;&quot;,    // AI 21
-    expiry: &quot;YYYY-MM-DD&quot;,  // AI 15 / 17
-    qty: &lt;number&gt;,         // AI 30 / 37
+    value: &quot;&lt;product code&gt;&quot;,  // GTIN (AI 01), in the form products store
+    gtin: &quot;&lt;GTIN&gt;&quot;,           // the GTIN exactly as scanned (14 digits)
+    productCodes: [...],      // every form the GTIN may be stored as
+    lot: &quot;&lt;batch/lot&gt;&quot;,       // AI 10 (falls back to the serial, AI 21)
+    serial: &quot;&lt;serial&gt;&quot;,       // AI 21
+    expiry: &quot;YYYY-MM-DD&quot;,     // AI 15 / 17
+    qty: &lt;number&gt;,            // AI 30 / 37, or the net weight (AI 310n)
     ais: {&quot;01&quot;: &quot;...&quot;, &quot;10&quot;: &quot;...&quot;, ...},
 }
 </pre>
 <p>Both parenthesised barcodes — <tt class="docutils literal">(01)09501101020917(10)LOT123(17)261231</tt>
 — and raw FNC1-separated scans are supported.</p>
+<p>GS1 always carries the GTIN zero-padded to 14 digits, while a product
+stores the short code printed on the item. <tt class="docutils literal">value</tt> therefore holds the
+padding-free form Odoo stores (13 digits, as <tt class="docutils literal">sanitize_ean</tt> produces),
+which is what the screens match the product against; <tt class="docutils literal">productCodes</tt>
+lists the other lengths a barcode may have been stored as,
+longest-standing form first.</p>
+<p>What the warehouse app does with it (with <tt class="docutils literal">barcode_stock</tt> installed):</p>
+<ul class="simple">
+<li>the quantity — a count (AI 30/37) or a net weight (AI 310n) — is the
+quantity picked, instead of the single unit a plain product barcode
+represents;</li>
+<li>the lot or serial is looked up for the scanned product and preselected
+in the move wizard; on a receipt an unknown lot opens the create-lot
+flow with the name and, when <tt class="docutils literal">product_expiry</tt> is installed, the
+expiry date prefilled;</li>
+<li>on a delivery or an internal transfer, a lot that is not available is
+reported instead of silently picking another one.</li>
+</ul>
 </div>
 <div class="section" id="bug-tracker">
 <h2><a class="toc-backref" href="#toc-entry-2">Bug Tracker</a></h2>
