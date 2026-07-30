@@ -27,6 +27,9 @@ export class BarcodeScannerState extends Reactive {
 
     setup(orm) {
         this.orm = orm;
+        // Units of measure are configuration, so they outlive a picking and are
+        // fetched once (see `loadUoms`).
+        this.uomsById = {};
         this.reset();
     }
 
@@ -144,6 +147,7 @@ export class BarcodeScannerState extends Reactive {
                       "barcode",
                       "display_name",
                       "tracking",
+                      "uom_id",
                   ])
                 : [];
 
@@ -157,6 +161,8 @@ export class BarcodeScannerState extends Reactive {
 
             this.useExistingLots = type.use_existing_lots;
             this.useCreateLots = type.use_create_lots;
+
+            await this.loadUoms();
 
             const expiryModule = await this.orm.searchRead(
                 "ir.module.module",
@@ -633,6 +639,58 @@ export class BarcodeScannerState extends Reactive {
     }
 
     /**
+     * Fetch every unit of measure once: there are a handful of them, they are
+     * needed to read a scanned measure, and the scan path itself must stay
+     * synchronous.
+     */
+    async loadUoms() {
+        if (Object.keys(this.uomsById).length) {
+            return this.uomsById;
+        }
+        const uoms = await this.orm.searchRead(
+            "uom.uom",
+            [],
+            ["name", "category_id", "factor"]
+        );
+        this.uomsById = Object.fromEntries(uoms.map((uom) => [uom.id, uom]));
+        return this.uomsById;
+    }
+
+    /**
+     * The quantity a scan means for a product, in the product's own unit.
+     *
+     * A GS1 label can state both a piece count and a measure: a box of cured
+     * meat carries "2 pieces" (AI 30) and "2.497 kg" (AI 310n). Which of the two
+     * is the quantity depends on how the product is stocked, so the measure is
+     * used only when its unit shares the product's category — converted into the
+     * product's unit, since a label in kilograms may meet a product in grams.
+     * A product counted in units takes the piece count instead, and a single
+     * unit when the barcode states no count.
+     */
+    scannedQuantity(scan, productUomId) {
+        const stated = parseFloat(scan?.qty ?? scan?.quantity ?? 0) || 1;
+        const measure = parseFloat(scan?.weight);
+        const measureUom = this.uomsById[scan?.weightUom?.id];
+        const productUom = this.uomsById[productUomId];
+        if (!Number.isFinite(measure) || !measureUom || !productUom) {
+            // Nothing to compare (no measure, or units we could not read):
+            // whatever the barcode stated stands.
+            return stated;
+        }
+        if (measureUom.category_id?.[0] !== productUom.category_id?.[0]) {
+            const count = parseFloat(scan?.count);
+            return Number.isFinite(count) && count > 0 ? count : 1;
+        }
+        // Odoo's factor is how many of a unit make one unit of its category's
+        // reference, so converting is a ratio of the two. Only the floating
+        // point noise is rounded away: the unit's own rounding would coarsen the
+        // 2.497 kg the label states to 2.50.
+        const converted =
+            (measure / (measureUom.factor || 1)) * (productUom.factor || 1);
+        return Math.round(converted * 1e6) / 1e6;
+    }
+
+    /**
      * Normalize a scan (raw barcode plus whatever a parser decoded from it) into
      * the data the screens act on: the product code to match, the quantity to
      * handle — one unit unless the barcode states otherwise — and the lot or
@@ -643,10 +701,11 @@ export class BarcodeScannerState extends Reactive {
         const candidates = barcode ? this.getMoveCandidatesForBarcode(barcode) : [];
         const productId = candidates[0]?.product_id?.[0] || null;
         const lotName = scan.lot || scan.serial || null;
+        const productUomId = this.productsById[productId]?.uom_id?.[0] || null;
         return {
             barcode: scan.barcode,
             product: barcode,
-            quantity: parseFloat(scan.qty ?? scan.quantity ?? 0) || 1,
+            quantity: this.scannedQuantity(scan, productUomId),
             lotName,
             lot: lotName ? this.getLot(productId, lotName) : null,
             serial: scan.serial || null,

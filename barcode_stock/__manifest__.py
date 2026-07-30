@@ -40,6 +40,9 @@
             "barcode_stock/static/src/js/handlers/stock_scan_handlers.js",
             "barcode_stock/static/src/js/tiles/stock_menu_tiles.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_stock/static/tests/**/*",
+        ],
     },
     "installable": True,
     "application": False,

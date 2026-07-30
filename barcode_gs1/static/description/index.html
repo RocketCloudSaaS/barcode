@@ -440,6 +440,7 @@ a scan.</p>
     qty: &lt;number&gt;,            // AI 30 / 37, or the net weight (AI 310n)
     count: &lt;number&gt;,          // AI 30 / 37 (pieces), kept next to the weight
     weight: &lt;number&gt;,         // AI 310n–360n
+    weightUom: {id, name},    // the unit that measure is in, per the rule
     price: &lt;number&gt;,          // AI 390n–393n (amount payable)
     currency: &quot;&lt;ISO 4217&gt;&quot;,   // the numeric code AI 391n / 393n carries
     sscc: &quot;&lt;SSCC&gt;&quot;,           // AI 00 (logistic unit)
@@ -501,9 +502,10 @@ ambiguous, which is why GS1 does not allow it.</p>
 <h3><a class="toc-backref" href="#toc-entry-5">In the warehouse app</a></h3>
 <p>What the warehouse app does with it (with <tt class="docutils literal">barcode_stock</tt> installed):</p>
 <ul class="simple">
-<li>the quantity — a count (AI 30/37) or a net weight (AI 310n) — is the
-quantity picked, instead of the single unit a plain product barcode
-represents;</li>
+<li>the quantity picked comes from the barcode instead of being a single
+unit: a measure such as the net weight when the product is stocked in
+that kind of unit (converted into it — 2.497 kg becomes 2497 for a
+product in grams), the piece count (AI 30/37) when it is not;</li>
 <li>the lot or serial is looked up for the scanned product and preselected
 in the move wizard; on a receipt an unknown lot opens the create-lot
 flow with the name and, when <tt class="docutils literal">product_expiry</tt> is installed, the

@@ -12,6 +12,7 @@ export class InternalTransferScreen extends Component {
         this.inventory = useBarcodeScanner();
         this.store = useService("barcodeStore");
         this.notification = useService("notification");
+        this.barcodeScannerState = useService("barcodeScannerState");
         const params = this.props.params || {};
         const initialLines = JSON.parse(JSON.stringify(params.lines || []));
         for (const line of initialLines) {
@@ -112,7 +113,11 @@ export class InternalTransferScreen extends Component {
         }
         const product = products[0];
         // The scan carries its own quantity and lot when the barcode states them.
-        const qty = parseFloat(parsedData?.qty ?? parsedData?.quantity ?? 0) || 1;
+        await this.barcodeScannerState.loadUoms();
+        const qty = this.barcodeScannerState.scannedQuantity(
+            parsedData,
+            product.uom_id?.[0] || null
+        );
         const lotName = parsedData?.lot || parsedData?.serial || null;
         const lot =
             lotName && product.tracking !== "none"

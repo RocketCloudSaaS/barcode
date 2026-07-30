@@ -21,6 +21,7 @@ const RULE_FIELDS = [
     "pattern",
     "gs1_content_type",
     "gs1_decimal_usage",
+    "associated_uom_id",
 ];
 
 // Every rule pattern starts with the application identifier group, e.g.
@@ -81,6 +82,11 @@ export function compileGs1Rule(rule) {
             // Catch-all built-ins (a whole AI range in one pattern) match too
             // eagerly to be trusted as the boundary of a variable-length value.
             generic: Boolean(rule.generic),
+            // The unit a measure is expressed in (AI 310n is kilograms, 320n
+            // pounds, ...), which is what tells a measure apart from a count.
+            uom: rule.associated_uom_id
+                ? {id: rule.associated_uom_id[0], name: rule.associated_uom_id[1]}
+                : null,
             aiRegex: new RegExp(`^(?:${aiMatch[1]})`),
             fullRegex: new RegExp(`^${pattern}$`),
             fixedLength: variable ? null : (fixed && parseInt(fixed[1], 10)) || null,

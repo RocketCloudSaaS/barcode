@@ -473,6 +473,7 @@ export function parseGS1Barcode(barcode) {
         location: null,
         locationDest: null,
         weight: null,
+        weightUom: null,
         count: null,
         price: null,
         currency: null,
@@ -520,6 +521,7 @@ export function parseGS1Barcode(barcode) {
             case "quantity":
                 if (token.rule.decimalUsage) {
                     parsed.weight = value;
+                    parsed.weightUom = token.rule.uom;
                     if (!hasCount) {
                         parsed.qty = value;
                         parsed.quantity = value;
@@ -535,6 +537,7 @@ export function parseGS1Barcode(barcode) {
                 // A rule configured as a weighted product: the weight is what
                 // there is to pick, exactly like a variable-weight measure.
                 parsed.weight = value;
+                parsed.weightUom = token.rule.uom;
                 if (!hasCount) {
                     parsed.qty = value;
                     parsed.quantity = value;

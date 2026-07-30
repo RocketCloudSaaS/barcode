@@ -394,14 +394,15 @@ audio/vibration feedback are provided on each scan.</p>
 <li><a class="reference internal" href="#receipts" id="toc-entry-2">Receipts</a></li>
 <li><a class="reference internal" href="#deliveries" id="toc-entry-3">Deliveries</a></li>
 <li><a class="reference internal" href="#internal-transfers" id="toc-entry-4">Internal Transfers</a></li>
-<li><a class="reference internal" href="#quick-info" id="toc-entry-5">Quick Info</a></li>
+<li><a class="reference internal" href="#quantities-from-the-barcode" id="toc-entry-5">Quantities from the barcode</a></li>
+<li><a class="reference internal" href="#quick-info" id="toc-entry-6">Quick Info</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-6">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-7">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-8">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-9">Contributors</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-10">Maintainers</a></li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-7">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-8">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-9">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-10">Contributors</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-11">Maintainers</a></li>
 </ul>
 </li>
 </ul>
@@ -426,15 +427,30 @@ ship items. Scan product barcodes to confirm each item.</p>
 between locations. Select the origin and destination locations, then
 scan or search products to add transfer lines.</p>
 </div>
+<div class="section" id="quantities-from-the-barcode">
+<h3><a class="toc-backref" href="#toc-entry-5">Quantities from the barcode</a></h3>
+<p>A scan normally counts as one unit. When the barcode states a quantity —
+as a GS1 label does, with <tt class="docutils literal">barcode_gs1</tt> installed — that quantity is
+taken instead, in the product's own unit of measure:</p>
+<ul class="simple">
+<li>a label that states a <strong>measure</strong> (a net weight, for instance) is the
+quantity when the product is stocked in that kind of unit, converted if
+needed: 2.497 kg on the label becomes 2.497 for a product in kilograms
+and 2497 for one in grams;</li>
+<li>when the product is <em>not</em> stocked that way — a box counted in units —
+the <strong>piece count</strong> on the label is the quantity, and a single unit when
+the label states no count. A weight never turns into a number of units.</li>
+</ul>
+</div>
 <div class="section" id="quick-info">
-<h3><a class="toc-backref" href="#toc-entry-5">Quick Info</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-6">Quick Info</a></h3>
 <p>Select <strong>Quick Info</strong> from the main menu, then scan any product or
 location barcode to view information. Alternatively, search by barcode
 or browse the product and location lists.</p>
 </div>
 </div>
 <div class="section" id="bug-tracker">
-<h2><a class="toc-backref" href="#toc-entry-6">Bug Tracker</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">Bug Tracker</a></h2>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -442,15 +458,15 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h2><a class="toc-backref" href="#toc-entry-7">Credits</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-8">Credits</a></h2>
 <div class="section" id="authors">
-<h3><a class="toc-backref" href="#toc-entry-8">Authors</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-9">Authors</a></h3>
 <ul class="simple">
 <li>Binhex</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h3><a class="toc-backref" href="#toc-entry-9">Contributors</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-10">Contributors</a></h3>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/antoniodavid">Antonio David Ruban Espinal</a></li>
 <li><a class="reference external" href="https://github.com/szalatyzuzanna">Zuzanna Elzbieta Szalaty
@@ -458,7 +474,7 @@ Szalaty</a></li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h3><a class="toc-backref" href="#toc-entry-10">Maintainers</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-11">Maintainers</a></h3>
 <p>Current maintainers:</p>
 <p><a class="reference external image-reference" href="https://github.com/antoniodavid"><img alt="antoniodavid" src="https://github.com/antoniodavid.png?size=40px" /></a> <a class="reference external image-reference" href="https://github.com/szalatyzuzanna"><img alt="szalatyzuzanna" src="https://github.com/szalatyzuzanna.png?size=40px" /></a></p>
 <p>This module is part of the <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_stock">RocketCloudSaaS/barcode</a> project on GitHub.</p>
