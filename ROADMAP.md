@@ -37,6 +37,7 @@ about the other and you can install either alone.
 | [`barcode_gs1`](barcode_gs1) | Available | GS1 barcode parsing (GS1-128, application identifiers) |
 | [`barcode_gs1_stock`](barcode_gs1_stock) | Available | Bridge: the measure on a GS1 label as the quantity picked |
 | `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
+| `barcode_scrap` | Planned | Scrap damaged or lost goods from the scanner |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |
 
@@ -84,6 +85,12 @@ installed.
 
 Perform inventory adjustments and cycle/stock counts directly from the scanner,
 updating on-hand quantities by scanning products and locations.
+
+### barcode_scrap
+
+Scrap goods without leaving the scanner: scan the product and the location it is
+being written off from, state the quantity and the reason, and the scrap order is
+created and validated on the spot.
 
 ### barcode_purchase
 
