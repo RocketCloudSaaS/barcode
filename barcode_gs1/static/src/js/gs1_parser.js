@@ -1,49 +1,186 @@
 /** @odoo-module **/
 
 import {barcodeParsers} from "@barcode_scanner/js/registries";
-
-// Fixed-length GS1 Application Identifiers -> value length (the AI value, not
-// counting the AI itself).
-const FIXED_LENGTH_AIS = {
-    "00": 18, // SSCC (logistic unit)
-    "01": 14, // GTIN
-    "02": 14, // GTIN of contained trade items
-    11: 6, // Production date (YYMMDD)
-    13: 6, // Packaging date
-    15: 6, // Best-before date
-    16: 6, // Sell-by date
-    17: 6, // Expiration date
-    20: 2, // Product variant
-};
-
-// Variable-length AIs -> maximum value length (ended by FNC1 or the next AI).
-const VARIABLE_LENGTH_AIS = {
-    10: 20, // Batch / lot number
-    21: 20, // Serial number
-    22: 20, // Consumer product variant
-    30: 8, // Variable count
-    37: 8, // Count of trade items
-    90: 30, // Internal
-    91: 30,
-    92: 30,
-    93: 30,
-};
+import {
+    compileGs1Rule,
+    getGs1Nomenclature,
+    hasValidCheckDigit,
+} from "@barcode_gs1/js/gs1_nomenclature";
 
 const GS1_SEPARATOR = String.fromCharCode(29); // FNC1 (<GS>, 0x1D)
-const DATE_AIS = new Set(["11", "13", "15", "16", "17"]);
-const EXPIRY_AIS = new Set(["15", "16", "17"]);
 
-// Measure AIs (net weight, length, volume, ...) are 4 digits in the 31xx-36xx
-// range, carry a 6-digit value, and the last AI digit is the decimal count.
-function measureDecimals(ai) {
-    return /^3[1-6]\d\d$/.test(ai) ? parseInt(ai[3], 10) : null;
+// The characters GS1 allows in an alphanumeric value, as Odoo's own rules
+// spell them out.
+const ALPHA = '[!"%-/0-9:-?A-Z_a-z]';
+
+/**
+ * Built-in application identifiers, written as `barcode.rule` patterns so they
+ * compile exactly like the ones read from the nomenclature.
+ *
+ * They are the fallback: the parser prefers the configured GS1 nomenclature and
+ * only reaches for these while it is still loading, when no GS1 nomenclature is
+ * configured, or for an identifier the nomenclature does not define (Odoo ships
+ * no rule for a production date, for instance) — otherwise an unknown AI in the
+ * middle of a barcode would cut the rest of the scan short.
+ */
+const BUILTIN_RULE_DEFS = [
+    {
+        name: "SSCC",
+        pattern: "(00)(\\d{18})",
+        type: "package",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "GTIN",
+        pattern: "(01)(\\d{14})",
+        type: "product",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "GTIN of contained trade items",
+        pattern: "(02)(\\d{14})",
+        type: "product",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "Batch or lot number",
+        pattern: `(10)(${ALPHA}{0,20})`,
+        type: "lot",
+        gs1_content_type: "alpha",
+    },
+    {
+        name: "Production date",
+        pattern: "(11)(\\d{6})",
+        type: "production_date",
+        gs1_content_type: "date",
+    },
+    {
+        name: "Pack date",
+        pattern: "(13)(\\d{6})",
+        type: "pack_date",
+        gs1_content_type: "date",
+    },
+    {
+        name: "Best before date",
+        pattern: "(15)(\\d{6})",
+        type: "use_date",
+        gs1_content_type: "date",
+    },
+    {
+        name: "Sell by date",
+        pattern: "(16)(\\d{6})",
+        type: "use_date",
+        gs1_content_type: "date",
+    },
+    {
+        name: "Expiration date",
+        pattern: "(17)(\\d{6})",
+        type: "expiration_date",
+        gs1_content_type: "date",
+    },
+    {
+        name: "Product variant",
+        pattern: "(20)(\\d{2})",
+        type: null,
+        gs1_content_type: "alpha",
+    },
+    {
+        name: "Serial number",
+        pattern: `(21)(${ALPHA}{0,20})`,
+        type: "lot",
+        gs1_content_type: "alpha",
+    },
+    {
+        name: "Consumer product variant",
+        pattern: `(22)(${ALPHA}{0,20})`,
+        type: null,
+        gs1_content_type: "alpha",
+    },
+    {
+        name: "Variable count of items",
+        pattern: "(30)(\\d{0,8})",
+        type: "quantity",
+        gs1_content_type: "measure",
+        gs1_decimal_usage: false,
+    },
+    {
+        name: "Measure (weight, length, volume, ...)",
+        pattern: "(3[1-6]\\d[0-5])(\\d{6})",
+        type: "quantity",
+        gs1_content_type: "measure",
+        gs1_decimal_usage: true,
+    },
+    {
+        name: "Count of trade items",
+        pattern: "(37)(\\d{0,8})",
+        type: "quantity",
+        gs1_content_type: "measure",
+        gs1_decimal_usage: false,
+    },
+    {
+        name: "Ship to / Deliver to GLN",
+        pattern: "(410)(\\d{13})",
+        type: "location_dest",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "Ship for / Deliver for GLN",
+        pattern: "(413)(\\d{13})",
+        type: "location_dest",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "Physical location GLN",
+        pattern: "(414)(\\d{13})",
+        type: "location",
+        gs1_content_type: "identifier",
+    },
+    {
+        name: "Package type",
+        pattern: `(91)(${ALPHA}{0,90})`,
+        type: "package_type",
+        gs1_content_type: "alpha",
+    },
+    {
+        name: "Company internal information",
+        pattern: `(9[0-3])(${ALPHA}{0,30})`,
+        type: null,
+        gs1_content_type: "alpha",
+    },
+];
+
+const BUILTIN_RULES = BUILTIN_RULE_DEFS.map(compileGs1Rule).filter(Boolean);
+
+/**
+ * The rules to parse with: the configured GS1 nomenclature first — so an
+ * administrator's rule always wins — then the built-in identifiers.
+ */
+function activeRules() {
+    const nomenclature = getGs1Nomenclature();
+    return nomenclature ? [...nomenclature.rules, ...BUILTIN_RULES] : BUILTIN_RULES;
+}
+
+/**
+ * The year a 2-digit GS1 year refers to, per section 7.12 of the GS1 General
+ * Specifications: the closest year within -49/+50 of the current one.
+ */
+function gs1Year(twoDigitYear) {
+    const now = new Date();
+    const difference = twoDigitYear - (now.getFullYear() % 100);
+    let century = Math.floor(now.getFullYear() / 100);
+    if (difference >= 51 && difference <= 99) {
+        century -= 1;
+    } else if (difference >= -99 && difference <= -50) {
+        century += 1;
+    }
+    return century * 100 + twoDigitYear;
 }
 
 function toISODate(value) {
     if (!/^\d{6}$/.test(value)) {
         return null;
     }
-    const year = 2000 + parseInt(value.slice(0, 2), 10);
+    const year = gs1Year(parseInt(value.slice(0, 2), 10));
     const month = parseInt(value.slice(2, 4), 10);
     let day = parseInt(value.slice(4, 6), 10);
     if (month < 1 || month > 12) {
@@ -51,7 +188,7 @@ function toISODate(value) {
     }
     if (day === 0) {
         // GS1 allows DD = 00, meaning the last day of the month.
-        day = new Date(year, month, 0).getDate();
+        day = new Date(Date.UTC(year, month, 0)).getUTCDate();
     }
     const candidate = new Date(Date.UTC(year, month - 1, day));
     if (
@@ -100,65 +237,106 @@ export function gtinToProductCode(gtin) {
 }
 
 function normalizeBarcode(barcode) {
-    const value = String(barcode || "").trim();
+    let value = String(barcode || "").trim();
     // Strip a leading symbology identifier such as "]C1" / "]d2".
     if (/^\][A-Za-z0-9]{2}/.test(value)) {
-        return value.slice(3);
+        value = value.slice(3);
+    }
+    if (value.startsWith(GS1_SEPARATOR)) {
+        value = value.slice(1);
     }
     return value;
 }
 
-// Identify the AI starting at `index`; returns {ai, valueLength} or null.
-// valueLength is null for variable-length AIs.
-function matchAi(barcode, index) {
-    const ai4 = barcode.slice(index, index + 4);
-    if (measureDecimals(ai4) !== null) {
-        return {ai: ai4, valueLength: 6};
+/**
+ * The nomenclature may declare its own separator characters, since a scanner
+ * that cannot emit FNC1 often sends "#" instead. This runs once the barcode is
+ * known to be GS1, never before: a product code that happens to contain such a
+ * character must not start looking like GS1 data because of it.
+ */
+function applyAlternativeSeparators(barcode) {
+    const separator = getGs1Nomenclature()?.separator;
+    if (!separator) {
+        return barcode;
     }
-    const ai2 = barcode.slice(index, index + 2);
-    if (ai2 in FIXED_LENGTH_AIS) {
-        return {ai: ai2, valueLength: FIXED_LENGTH_AIS[ai2]};
+    try {
+        return barcode.replace(new RegExp(separator, "g"), GS1_SEPARATOR);
+    } catch {
+        // An invalid separator regex in the nomenclature: leave the scan as is.
+        return barcode;
     }
-    if (ai2 in VARIABLE_LENGTH_AIS) {
-        return {ai: ai2, valueLength: null};
+}
+
+/** The rule that defines `ai`, or null. */
+function ruleForAi(ai, rules) {
+    for (const rule of rules) {
+        const match = rule.aiRegex.exec(ai);
+        if (match && match[0].length === ai.length) {
+            return rule;
+        }
     }
     return null;
 }
 
-function findVariableBoundary(barcode, start, maxLength) {
+/**
+ * Where a variable-length value ends: at the FNC1 separator, or — when the
+ * scanner sends none — heuristically at the next application identifier.
+ */
+function findVariableEnd(barcode, start, maxLength, rules) {
     const separatorIndex = barcode.indexOf(GS1_SEPARATOR, start);
     if (separatorIndex !== -1 && separatorIndex - start <= maxLength) {
         return separatorIndex;
     }
-    // No separator: heuristically stop at the next recognised AI.
     const maxIndex = Math.min(barcode.length, start + maxLength);
     for (let index = start + 1; index < maxIndex; index++) {
-        const match = matchAi(barcode, index);
-        if (!match) {
-            continue;
+        if (matchRule(barcode, index, rules)) {
+            return index;
         }
-        if (
-            match.valueLength !== null &&
-            index + match.ai.length + match.valueLength > barcode.length
-        ) {
-            continue;
-        }
-        return index;
     }
     return maxIndex;
 }
 
-function parseParenthesizedGS1(barcode) {
-    const tokenRegex = /\((\d{2,4})\)([^()]+)/g;
+/** The first rule that matches at `index`, with the value it captures. */
+function matchRule(barcode, index, rules) {
+    const rest = barcode.slice(index);
+    for (const rule of rules) {
+        const aiMatch = rule.aiRegex.exec(rest);
+        if (!aiMatch) {
+            continue;
+        }
+        const ai = aiMatch[0];
+        const valueStart = index + ai.length;
+        let valueEnd = null;
+        if (rule.fixedLength) {
+            valueEnd = valueStart + rule.fixedLength;
+            if (valueEnd > barcode.length) {
+                continue;
+            }
+        } else {
+            const maxLength = rule.maxLength || 20;
+            valueEnd = findVariableEnd(barcode, valueStart, maxLength, rules);
+        }
+        const value = barcode.slice(valueStart, valueEnd);
+        if (!rule.fullRegex.test(ai + value)) {
+            continue;
+        }
+        return {rule, ai, value, end: valueEnd};
+    }
+    return null;
+}
+
+function parseParenthesizedGS1(barcode, rules) {
+    const tokenRegex = /\((\d{2,4})\)([^()]*)/g;
     const tokens = [];
     let match = null;
     while ((match = tokenRegex.exec(barcode)) !== null) {
-        tokens.push({ai: match[1], value: match[2].trim()});
+        const ai = match[1];
+        tokens.push({rule: ruleForAi(ai, rules), ai, value: match[2].trim()});
     }
-    return tokens;
+    return {tokens, rest: ""};
 }
 
-function parseRawGS1(barcode) {
+function parseRawGS1(barcode, rules) {
     const tokens = [];
     let index = 0;
     while (index < barcode.length) {
@@ -166,19 +344,179 @@ function parseRawGS1(barcode) {
             index += 1;
             continue;
         }
-        const match = matchAi(barcode, index);
+        const match = matchRule(barcode, index, rules);
         if (!match) {
             break;
         }
-        const valueStart = index + match.ai.length;
-        const valueEnd =
-            match.valueLength === null
-                ? findVariableBoundary(barcode, valueStart, 20)
-                : valueStart + match.valueLength;
-        tokens.push({ai: match.ai, value: barcode.slice(valueStart, valueEnd)});
-        index = valueEnd;
+        tokens.push({rule: match.rule, ai: match.ai, value: match.value});
+        index = match.end;
     }
-    return tokens;
+    return {tokens, rest: barcode.slice(index).replace(GS1_SEPARATOR, "")};
+}
+
+/**
+ * Read a token's value the way its rule says to: a numeric identifier is only
+ * accepted when its check digit is right, a date becomes an ISO date, and a
+ * measure gets its decimal point from the last digit of the AI.
+ */
+function readValue(token) {
+    const {rule, ai, value} = token;
+    switch (rule && rule.contentType) {
+        case "identifier":
+            if (!hasValidCheckDigit(value)) {
+                return {error: `Invalid GS1 check digit for AI ${ai}`};
+            }
+            return {value};
+        case "date": {
+            const date = toISODate(value);
+            return date ? {value: date} : {error: `Invalid GS1 date for AI ${ai}`};
+        }
+        case "measure": {
+            const decimals = rule.decimalUsage ? parseInt(ai.slice(-1), 10) : 0;
+            const digits = parseInt(value, 10);
+            if (!Number.isFinite(digits)) {
+                return {error: `Invalid GS1 measure for AI ${ai}`};
+            }
+            return {value: decimals > 0 ? digits / Math.pow(10, decimals) : digits};
+        }
+        default:
+            return {value};
+    }
+}
+
+/**
+ * Decode a GS1 barcode into structured fields.
+ *
+ * The result follows the conventions the app already reads: `value`/`product`
+ * hold the product code (screens and scan handlers look the product up with
+ * it), `qty`/`quantity` the quantity to handle — the counted or weighed amount
+ * when the barcode carries one, a single unit otherwise — and
+ * `lot`/`serial`/`expiration` the tracking data. A GS1 scan therefore flows
+ * through the existing screens without them knowing anything about GS1.
+ *
+ * What each application identifier means comes from Odoo's GS1 nomenclature
+ * when one is configured, so a rule added in Settings is honoured here too.
+ */
+export function parseGS1Barcode(barcode) {
+    const normalized = applyAlternativeSeparators(normalizeBarcode(barcode));
+    const rules = activeRules();
+    const {tokens, rest} = normalized.includes("(")
+        ? parseParenthesizedGS1(normalized, rules)
+        : parseRawGS1(normalized, rules);
+
+    const parsed = {
+        type: "gs1",
+        barcode: normalized,
+        value: null,
+        ais: {},
+        gtin: null,
+        product: null,
+        productCodes: [],
+        sscc: null,
+        packageType: null,
+        lot: null,
+        serial: null,
+        expiration: null,
+        expiry: null,
+        useDate: null,
+        packDate: null,
+        productionDate: null,
+        location: null,
+        locationDest: null,
+        weight: null,
+        qty: 1,
+        quantity: 1,
+        errors: [],
+    };
+    let hasCount = false;
+    let hasExpiration = false;
+    let rejectedGtin = false;
+
+    for (const token of tokens) {
+        parsed.ais[token.ai] = token.value;
+        if (!token.rule) {
+            parsed.errors.push(`Unknown GS1 application identifier ${token.ai}`);
+            continue;
+        }
+        const read = readValue(token);
+        if (read.error) {
+            parsed.errors.push(read.error);
+            rejectedGtin = rejectedGtin || token.rule.type === "product";
+            continue;
+        }
+        const value = read.value;
+
+        switch (token.rule.type) {
+            case "product":
+                // The trade item (AI 01) wins over the items it contains (02).
+                parsed.gtin = parsed.gtin || value;
+                break;
+            case "package":
+                parsed.sscc = value;
+                break;
+            case "package_type":
+                parsed.packageType = value;
+                break;
+            case "lot":
+                if (token.ai === "21") {
+                    parsed.serial = value;
+                    parsed.lot = parsed.lot || value;
+                } else {
+                    parsed.lot = value;
+                }
+                break;
+            case "quantity":
+                if (token.rule.decimalUsage) {
+                    parsed.weight = value;
+                    if (!hasCount) {
+                        parsed.qty = value;
+                        parsed.quantity = value;
+                    }
+                } else {
+                    parsed.qty = value;
+                    parsed.quantity = value;
+                    hasCount = true;
+                }
+                break;
+            case "expiration_date":
+                parsed.expiration = value;
+                parsed.expiry = value;
+                hasExpiration = true;
+                break;
+            case "use_date":
+                parsed.useDate = value;
+                if (!hasExpiration) {
+                    parsed.expiration = value;
+                    parsed.expiry = value;
+                }
+                break;
+            case "pack_date":
+                parsed.packDate = value;
+                break;
+            case "production_date":
+                parsed.productionDate = value;
+                break;
+            case "location":
+                parsed.location = value;
+                break;
+            case "location_dest":
+                parsed.locationDest = value;
+                break;
+        }
+    }
+
+    if (rest) {
+        parsed.errors.push(`Unparsed GS1 data "${rest}"`);
+    }
+    if (parsed.gtin) {
+        parsed.productCodes = gtinVariants(parsed.gtin);
+        [parsed.value] = parsed.productCodes;
+        parsed.product = parsed.value;
+    } else if (!rejectedGtin) {
+        parsed.errors.push("Missing GTIN (AI 01)");
+    }
+
+    return parsed;
 }
 
 /**
@@ -192,116 +530,6 @@ export function isGS1Barcode(barcode) {
         return true;
     }
     return normalized.startsWith("01") && normalized.length > 13;
-}
-
-/**
- * Decode a GS1 barcode into structured fields.
- *
- * The result follows the conventions the app already reads: `value`/`product`
- * hold the product code (screens and scan handlers look the product up with
- * it), `qty`/`quantity` the quantity to handle — the counted or weighed amount
- * when the barcode carries one, a single unit otherwise — and
- * `lot`/`serial`/`expiration` the tracking data. A GS1 scan therefore flows
- * through the existing screens without them knowing anything about GS1.
- */
-export function parseGS1Barcode(barcode) {
-    const normalized = normalizeBarcode(barcode);
-    const tokens = normalized.includes("(")
-        ? parseParenthesizedGS1(normalized)
-        : parseRawGS1(normalized);
-
-    const parsed = {
-        type: "gs1",
-        barcode: normalized,
-        value: null,
-        ais: {},
-        gtin: null,
-        product: null,
-        productCodes: [],
-        sscc: null,
-        lot: null,
-        serial: null,
-        expiration: null,
-        expiry: null,
-        weight: null,
-        qty: 1,
-        quantity: 1,
-        errors: [],
-    };
-    let hasCount = false;
-
-    for (const token of tokens) {
-        parsed.ais[token.ai] = token.value;
-
-        const decimals = measureDecimals(token.ai);
-        if (decimals !== null) {
-            const raw = parseInt(token.value, 10);
-            if (Number.isFinite(raw)) {
-                parsed.weight = raw / Math.pow(10, decimals);
-            } else {
-                parsed.errors.push(`Invalid GS1 measure for AI ${token.ai}`);
-            }
-            continue;
-        }
-
-        if (DATE_AIS.has(token.ai)) {
-            const date = toISODate(token.value);
-            if (!date) {
-                parsed.errors.push(`Invalid GS1 date for AI ${token.ai}`);
-            } else if (EXPIRY_AIS.has(token.ai)) {
-                parsed.expiration = date;
-                parsed.expiry = date;
-            }
-            continue;
-        }
-
-        switch (token.ai) {
-            case "00":
-                parsed.sscc = token.value;
-                break;
-            case "01":
-            case "02":
-                parsed.gtin = token.value;
-                break;
-            case "10":
-                parsed.lot = token.value;
-                break;
-            case "21":
-                parsed.serial = token.value;
-                if (!parsed.lot) {
-                    parsed.lot = token.value;
-                }
-                break;
-            case "30":
-            case "37": {
-                const quantity = parseFloat(token.value);
-                if (Number.isFinite(quantity)) {
-                    parsed.qty = quantity;
-                    parsed.quantity = quantity;
-                    hasCount = true;
-                } else {
-                    parsed.errors.push(`Invalid GS1 quantity for AI ${token.ai}`);
-                }
-                break;
-            }
-        }
-    }
-
-    // For variable-weight items with no explicit count, the net weight is the
-    // quantity to handle.
-    if (parsed.weight !== null && !hasCount) {
-        parsed.qty = parsed.weight;
-        parsed.quantity = parsed.weight;
-    }
-    if (parsed.gtin) {
-        parsed.productCodes = gtinVariants(parsed.gtin);
-        [parsed.value] = parsed.productCodes;
-        parsed.product = parsed.value;
-    } else {
-        parsed.errors.push("Missing GTIN (AI 01)");
-    }
-
-    return parsed;
 }
 
 /**

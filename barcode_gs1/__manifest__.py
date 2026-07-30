@@ -9,10 +9,13 @@
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
+        "barcodes_gs1_nomenclature",
     ],
     "assets": {
         "web.assets_backend": [
+            "barcode_gs1/static/src/js/gs1_nomenclature.js",
             "barcode_gs1/static/src/js/gs1_parser.js",
+            "barcode_gs1/static/src/js/gs1_startup.js",
         ],
         "web.assets_unit_tests": [
             "barcode_gs1/static/tests/**/*",

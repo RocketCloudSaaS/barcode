@@ -33,9 +33,22 @@ the ``barcode_parsers`` registry, without patching the base. Scanned
 GS1-128 barcodes, whether written with parenthesised application
 identifiers (``(01)...(10)...``) or as raw FNC1-separated data, are
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
-(21), production/best-before/expiry dates (11/13/15/16/17), count
+(21), production/pack/best-before/expiry dates (11/13/15/16/17), count
 (30/37), net weight and other measures (310n–360n, with the variable
-weight used as the quantity) and SSCC (00).
+weight used as the quantity), SSCC (00) and location GLNs
+(410/413/414).
+
+What each application identifier means is read from **Odoo's own GS1
+nomenclature** (``barcode.nomenclature`` and its rules, as shipped by
+the standard *Barcode - GS1 Nomenclature* module), so a rule added or
+adapted in Settings applies to the scanner too. Identifiers the
+nomenclature does not define fall back to the ones built into this
+module, so an unknown AI in the middle of a barcode never cuts the rest
+of the scan short.
+
+Numeric identifiers — GTIN, SSCC, GLN — are only accepted when their
+**check digit** matches, so a misread is reported instead of quietly
+resolving to the wrong product.
 
 Every screen then receives the parsed data alongside the raw scan, so a
 single GS1 scan can identify the product and fill lot, expiry and
@@ -66,9 +79,17 @@ A scanned GS1 barcode produces a parsed object such as:
        productCodes: [...],      // every form the GTIN may be stored as
        lot: "<batch/lot>",       // AI 10 (falls back to the serial, AI 21)
        serial: "<serial>",       // AI 21
-       expiry: "YYYY-MM-DD",     // AI 15 / 17
+       expiry: "YYYY-MM-DD",     // AI 17, or 15/16 when no 17 is present
+       useDate: "YYYY-MM-DD",    // AI 15 / 16 (best before, sell by)
+       packDate: "YYYY-MM-DD",   // AI 13
+       productionDate: "...",    // AI 11
        qty: <number>,            // AI 30 / 37, or the net weight (AI 310n)
+       weight: <number>,         // AI 310n–360n
+       sscc: "<SSCC>",           // AI 00 (logistic unit)
+       location: "<GLN>",        // AI 414
+       locationDest: "<GLN>",    // AI 410 / 413
        ais: {"01": "...", "10": "...", ...},
+       errors: [...],            // what could not be read, e.g. a bad check digit
    }
 
 Both parenthesised barcodes — ``(01)09501101020917(10)LOT123(17)261231``
@@ -80,6 +101,36 @@ padding-free form Odoo stores (13 digits, as ``sanitize_ean`` produces),
 which is what the screens match the product against; ``productCodes``
 lists the other lengths a barcode may have been stored as,
 longest-standing form first.
+
+The rules come from Odoo
+------------------------
+
+The application identifiers are read from a GS1
+``barcode.nomenclature``: the one set on the company when it is a GS1
+nomenclature, otherwise the first GS1 nomenclature found (the *Default
+GS1 Nomenclature* Odoo ships). Its GS1-128 rules are fetched once, when
+the barcode app opens.
+
+So to teach the scanner a new application identifier, add a rule under
+*Inventory → Configuration → Barcode Nomenclatures* — no code change. A
+rule whose *Type* is one the app understands (product, lot, quantity,
+package, expiration date, best before date, pack date, location,
+destination location, package type) lands on the matching field above;
+the value of any other rule is still available in ``ais``.
+
+Identifiers the nomenclature does not define keep working through the
+ones built into the module, and if the nomenclature cannot be read at all
+the module falls back to them entirely.
+
+Misreads are refused
+--------------------
+
+A GTIN, SSCC or GLN is only accepted when its check digit (GS1 modulo
+10) matches. A misread identifier is left empty and reported in
+``errors`` instead of resolving to the wrong product or pallet.
+
+In the warehouse app
+--------------------
 
 What the warehouse app does with it (with ``barcode_stock`` installed):
 
