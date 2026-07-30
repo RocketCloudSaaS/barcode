@@ -118,6 +118,21 @@ const BUILTIN_RULE_DEFS = [
         gs1_decimal_usage: false,
     },
     {
+        name: "Amount payable, single monetary area",
+        pattern: "(39[02][0-9])(\\d{0,15})",
+        type: "price",
+        gs1_content_type: "measure",
+        gs1_decimal_usage: true,
+    },
+    {
+        // The value opens with the 3-digit ISO 4217 code of its currency.
+        name: "Amount payable with ISO currency code",
+        pattern: "(39[13][0-9])(\\d{3,18})",
+        type: "price",
+        gs1_content_type: "measure",
+        gs1_decimal_usage: true,
+    },
+    {
         name: "Ship to / Deliver to GLN",
         pattern: "(410)(\\d{13})",
         type: "location_dest",
@@ -373,11 +388,21 @@ function readValue(token) {
         }
         case "measure": {
             const decimals = rule.decimalUsage ? parseInt(ai.slice(-1), 10) : 0;
-            const digits = parseInt(value, 10);
+            let amount = value;
+            let currency = null;
+            // AI 391n and 393n put the ISO 4217 currency code before the amount.
+            if (rule.type === "price" && /^39[13]/.test(ai) && amount.length > 3) {
+                currency = amount.slice(0, 3);
+                amount = amount.slice(3);
+            }
+            const digits = parseInt(amount, 10);
             if (!Number.isFinite(digits)) {
                 return {error: `Invalid GS1 measure for AI ${ai}`};
             }
-            return {value: decimals > 0 ? digits / Math.pow(10, decimals) : digits};
+            return {
+                value: decimals > 0 ? digits / Math.pow(10, decimals) : digits,
+                currency,
+            };
         }
         default:
             return {value};
@@ -424,6 +449,8 @@ export function parseGS1Barcode(barcode) {
         location: null,
         locationDest: null,
         weight: null,
+        price: null,
+        currency: null,
         qty: 1,
         quantity: 1,
         errors: [],
@@ -477,6 +504,19 @@ export function parseGS1Barcode(barcode) {
                     parsed.quantity = value;
                     hasCount = true;
                 }
+                break;
+            case "weight":
+                // A rule configured as a weighted product: the weight is what
+                // there is to pick, exactly like a variable-weight measure.
+                parsed.weight = value;
+                if (!hasCount) {
+                    parsed.qty = value;
+                    parsed.quantity = value;
+                }
+                break;
+            case "price":
+                parsed.price = value;
+                parsed.currency = read.currency || parsed.currency;
                 break;
             case "expiration_date":
                 parsed.expiration = value;

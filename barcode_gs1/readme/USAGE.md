@@ -17,6 +17,8 @@ A scanned GS1 barcode produces a parsed object such as:
         productionDate: "...",    // AI 11
         qty: <number>,            // AI 30 / 37, or the net weight (AI 310n)
         weight: <number>,         // AI 310n–360n
+        price: <number>,          // AI 390n–393n (amount payable)
+        currency: "<ISO 4217>",   // the numeric code AI 391n / 393n carries
         sscc: "<SSCC>",           // AI 00 (logistic unit)
         location: "<GLN>",        // AI 414
         locationDest: "<GLN>",    // AI 410 / 413
@@ -42,10 +44,10 @@ rules are fetched once, when the barcode app opens.
 
 So to teach the scanner a new application identifier, add a rule under
 *Inventory → Configuration → Barcode Nomenclatures* — no code change. A rule
-whose *Type* is one the app understands (product, lot, quantity, package,
-expiration date, best before date, pack date, location, destination location,
-package type) lands on the matching field above; the value of any other rule is
-still available in ``ais``.
+whose *Type* is one the app understands (product, lot, quantity, weighted
+product, priced product, package, package type, expiration date, best before
+date, pack date, location, destination location) lands on the matching field
+above; the value of any other rule is still available in ``ais``.
 
 Identifiers the nomenclature does not define keep working through the ones built
 into the module, and if the nomenclature cannot be read at all the module falls

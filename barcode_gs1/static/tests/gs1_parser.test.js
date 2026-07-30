@@ -318,6 +318,54 @@ describe("BarcodeGs1", () => {
         });
     });
 
+    test("an amount payable (AI 39xn) is decoded, with its currency", () => {
+        expect(parseGs1("(01)09501101020917(3922)000150")).toMatchObject({
+            price: 1.5,
+            currency: null,
+            errors: [],
+        });
+        // AI 391n and 393n open with the ISO 4217 numeric code (978 = EUR).
+        expect(parseGs1("(01)09501101020917(3932)978000150")).toMatchObject({
+            price: 1.5,
+            currency: "978",
+            errors: [],
+        });
+        expect(parseGs1("01095011010209173922000150")).toMatchObject({
+            price: 1.5,
+            errors: [],
+        });
+    });
+
+    test("a rule configured as a weighted product is the quantity", () => {
+        loadNomenclature(
+            [
+                ODOO_RULES[1],
+                {
+                    name: "Net weight",
+                    sequence: 2,
+                    pattern: "(310[0-5])(\\d{6})",
+                    type: "weight",
+                    gs1_content_type: "measure",
+                    gs1_decimal_usage: true,
+                },
+                ODOO_RULES[6],
+            ],
+            false
+        );
+        expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
+            weight: 1.25,
+            qty: 1.25,
+            quantity: 1.25,
+            errors: [],
+        });
+        // A counted quantity still wins over the weight.
+        expect(parseGs1("(01)09501101020917(3103)001250(30)4")).toMatchObject({
+            weight: 1.25,
+            qty: 4,
+            errors: [],
+        });
+    });
+
     test("a rule configured in Odoo wins over the built-in identifier", () => {
         // AI 91 is company-internal: here it is configured to carry the lot.
         loadNomenclature(

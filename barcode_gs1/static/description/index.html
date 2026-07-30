@@ -383,8 +383,8 @@ identifiers (<tt class="docutils literal"><span class="pre">(01)...(10)...</span
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
 (21), production/pack/best-before/expiry dates (11/13/15/16/17), count
 (30/37), net weight and other measures (310n–360n, with the variable
-weight used as the quantity), SSCC (00) and location GLNs
-(410/413/414).</p>
+weight used as the quantity), amounts payable (390n–393n), SSCC (00) and
+location GLNs (410/413/414).</p>
 <p>What each application identifier means is read from <strong>Odoo's own GS1
 nomenclature</strong> (<tt class="docutils literal">barcode.nomenclature</tt> and its rules, as shipped by
 the standard <em>Barcode - GS1 Nomenclature</em> module), so a rule added or
@@ -438,6 +438,8 @@ a scan.</p>
     productionDate: &quot;...&quot;,    // AI 11
     qty: &lt;number&gt;,            // AI 30 / 37, or the net weight (AI 310n)
     weight: &lt;number&gt;,         // AI 310n–360n
+    price: &lt;number&gt;,          // AI 390n–393n (amount payable)
+    currency: &quot;&lt;ISO 4217&gt;&quot;,   // the numeric code AI 391n / 393n carries
     sscc: &quot;&lt;SSCC&gt;&quot;,           // AI 00 (logistic unit)
     location: &quot;&lt;GLN&gt;&quot;,        // AI 414
     locationDest: &quot;&lt;GLN&gt;&quot;,    // AI 410 / 413
@@ -463,9 +465,10 @@ the barcode app opens.</p>
 <p>So to teach the scanner a new application identifier, add a rule under
 <em>Inventory → Configuration → Barcode Nomenclatures</em> — no code change. A
 rule whose <em>Type</em> is one the app understands (product, lot, quantity,
-package, expiration date, best before date, pack date, location,
-destination location, package type) lands on the matching field above;
-the value of any other rule is still available in <tt class="docutils literal">ais</tt>.</p>
+weighted product, priced product, package, package type, expiration date,
+best before date, pack date, location, destination location) lands on the
+matching field above; the value of any other rule is still available in
+<tt class="docutils literal">ais</tt>.</p>
 <p>Identifiers the nomenclature does not define keep working through the
 ones built into the module, and if the nomenclature cannot be read at all
 the module falls back to them entirely.</p>
