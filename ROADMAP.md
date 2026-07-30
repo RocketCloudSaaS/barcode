@@ -30,8 +30,8 @@ you install only what you need.
 | [`barcode_scanner`](barcode_scanner) | Available | Base scanning framework: client action, registries, scanner input, feedback, API, hooks |
 | [`barcode_stock`](barcode_stock) | Available | Warehouse operations app: receipts, deliveries, internal transfers, quick info |
 | [`barcode_camera`](barcode_camera) | Available | Scan barcodes using the device camera |
+| [`barcode_gs1`](barcode_gs1) | Available | GS1 barcode parsing (GS1-128, application identifiers) |
 | `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
-| `barcode_gs1` | Planned | GS1 nomenclature support (GS1-128, application identifiers) |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |
 
@@ -58,16 +58,19 @@ Use a device's built-in camera as a barcode reader, so operators can scan
 without dedicated hardware. Complements the app for phones, tablets, and
 laptops.
 
+### barcode_gs1
+
+GS1 barcode support (GS1-128 and application identifiers) on top of the base
+scanner, which on its own reads EAN13. It registers a parser instead of
+patching the base, so a single scan yields the product plus its structured
+data: lot/serial, production and expiry dates, counts, net weight and SSCC.
+The warehouse app then applies the scanned quantity and lot without knowing
+anything about GS1.
+
 ### barcode_inventory
 
 Perform inventory adjustments and cycle/stock counts directly from the scanner,
 updating on-hand quantities by scanning products and locations.
-
-### barcode_gs1
-
-Add GS1 barcode support (GS1-128 and application identifiers) on top of the
-base scanner, which today focuses on EAN13. Enables parsing of structured data
-such as lot/serial numbers, expiry dates, and quantities from a single scan.
 
 ### barcode_purchase
 
