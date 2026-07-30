@@ -158,9 +158,11 @@ In the warehouse app
 What the warehouse app does with it (with ``barcode_stock`` installed):
 
 - the quantity picked comes from the barcode instead of being a single
-  unit: a measure such as the net weight when the product is stocked in
-  that kind of unit (converted into it — 2.497 kg becomes 2497 for a
-  product in grams), the piece count (AI 30/37) when it is not;
+  unit: the piece count (AI 30/37), or the measure — a net weight, say —
+  when the product is stocked in that kind of unit. Weighing that choice
+  needs the unit the product is stocked in, so it lives in
+  ``barcode_gs1_stock``, which installs itself as soon as both modules are
+  there;
 - the lot or serial is looked up for the scanned product and preselected
   in the move wizard; on a receipt an unknown lot opens the create-lot
   flow with the name and, when ``product_expiry`` is installed, the
