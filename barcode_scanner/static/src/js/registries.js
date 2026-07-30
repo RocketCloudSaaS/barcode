@@ -18,9 +18,13 @@ import {registry} from "@web/core/registry";
  * - barcode_parsers: parse(barcode) -> parsed object | null; tried in
  *   `sequence` order, first non-null result wins. The base seeds an EAN13
  *   parser; feature modules add richer parsers (e.g. GS1).
+ * - barcode_startup_tasks: task(env) -> Promise; awaited when the app starts,
+ *   for the data a module needs before the first scan (e.g. GS1 reading its
+ *   nomenclature). A task that fails is logged and skipped, never fatal.
  */
 export const barcodeScreens = registry.category("barcode_screens");
 export const barcodeScanHandlers = registry.category("barcode_scan_handlers");
 export const barcodeMenuTiles = registry.category("barcode_menu_tiles");
 export const barcodeAppWidgets = registry.category("barcode_app_widgets");
 export const barcodeParsers = registry.category("barcode_parsers");
+export const barcodeStartupTasks = registry.category("barcode_startup_tasks");

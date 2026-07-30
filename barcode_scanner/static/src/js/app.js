@@ -1,12 +1,16 @@
 /** @odoo-module **/
 
-import {Component, useState} from "@odoo/owl";
+import {Component, onWillStart, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
 import "@barcode_scanner/js/services/feedback_service";
 
-import {barcodeScreens, barcodeAppWidgets} from "@barcode_scanner/js/registries";
+import {
+    barcodeScreens,
+    barcodeAppWidgets,
+    barcodeStartupTasks,
+} from "@barcode_scanner/js/registries";
 
 export class BarcodeScannerApp extends Component {
     setup() {
@@ -17,6 +21,24 @@ export class BarcodeScannerApp extends Component {
         if (!this.router.currentRoute) {
             this.router.navigate("main");
         }
+        onWillStart(() => this.runStartupTasks());
+    }
+
+    /**
+     * Let the installed feature modules warm up before the first scan. One
+     * failing task (a missing record, no access) must not keep the app closed,
+     * so each is caught on its own.
+     */
+    async runStartupTasks() {
+        await Promise.all(
+            barcodeStartupTasks.getAll().map(async (task) => {
+                try {
+                    await task(this.env);
+                } catch (error) {
+                    console.warn("Barcode: a startup task failed", error);
+                }
+            })
+        );
     }
 
     get currentScreen() {

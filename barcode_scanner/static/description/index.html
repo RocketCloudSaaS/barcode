@@ -437,6 +437,23 @@ returns a truthy value consumes the scan):</p>
     </span><span class="nx">action</span><span class="o">:</span><span class="w"> </span><span class="p">({</span><span class="nx">navigate</span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">navigate</span><span class="p">(</span><span class="s2">&quot;my_screen&quot;</span><span class="p">),</span><span class="w">
 </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nx">sequence</span><span class="o">:</span><span class="w"> </span><span class="mf">50</span><span class="p">});</span>
 </pre>
+<p>Register a barcode parser (tried in <tt class="docutils literal">sequence</tt> order before the
+built-in EAN13 one; return <tt class="docutils literal">null</tt> to let the next parser try):</p>
+<pre class="code js literal-block">
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">barcodeParsers</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;&#64;barcode_scanner/js/registries&quot;</span><span class="p">;</span><span class="w">
+
+</span><span class="nx">barcodeParsers</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s2">&quot;my_symbology&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">barcode</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="c1">// return {type: &quot;...&quot;, value: &quot;&lt;product code&gt;&quot;, ...} or null</span><span class="w">
+</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nx">sequence</span><span class="o">:</span><span class="w"> </span><span class="mf">20</span><span class="p">});</span>
+</pre>
+<p>Register a startup task, for data your module needs before the first
+scan (<tt class="docutils literal">barcode_gs1</tt> reads its nomenclature this way). Tasks are awaited
+when the app opens; one that fails is logged and skipped:</p>
+<pre class="code js literal-block">
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">barcodeStartupTasks</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;&#64;barcode_scanner/js/registries&quot;</span><span class="p">;</span><span class="w">
+
+</span><span class="nx">barcodeStartupTasks</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s2">&quot;my_config&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">env</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">loadMyConfig</span><span class="p">(</span><span class="nx">env</span><span class="p">.</span><span class="nx">services</span><span class="p">.</span><span class="nx">orm</span><span class="p">));</span>
+</pre>
 </div>
 <div class="section" id="bug-tracker">
 <h2><a class="toc-backref" href="#toc-entry-2">Bug Tracker</a></h2>

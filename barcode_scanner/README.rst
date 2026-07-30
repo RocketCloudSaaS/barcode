@@ -91,6 +91,27 @@ Register a home-screen tile:
        action: ({navigate}) => navigate("my_screen"),
    }, {sequence: 50});
 
+Register a barcode parser (tried in ``sequence`` order before the
+built-in EAN13 one; return ``null`` to let the next parser try):
+
+.. code:: js
+
+   import {barcodeParsers} from "@barcode_scanner/js/registries";
+
+   barcodeParsers.add("my_symbology", (barcode) => {
+       // return {type: "...", value: "<product code>", ...} or null
+   }, {sequence: 20});
+
+Register a startup task, for data your module needs before the first
+scan (``barcode_gs1`` reads its nomenclature this way). Tasks are awaited
+when the app opens; one that fails is logged and skipped:
+
+.. code:: js
+
+   import {barcodeStartupTasks} from "@barcode_scanner/js/registries";
+
+   barcodeStartupTasks.add("my_config", (env) => loadMyConfig(env.services.orm));
+
 Bug Tracker
 ===========
 
