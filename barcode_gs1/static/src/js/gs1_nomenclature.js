@@ -78,6 +78,9 @@ export function compileGs1Rule(rule) {
             type: rule.type,
             contentType: rule.gs1_content_type,
             decimalUsage: Boolean(rule.gs1_decimal_usage),
+            // Catch-all built-ins (a whole AI range in one pattern) match too
+            // eagerly to be trusted as the boundary of a variable-length value.
+            generic: Boolean(rule.generic),
             aiRegex: new RegExp(`^(?:${aiMatch[1]})`),
             fullRegex: new RegExp(`^${pattern}$`),
             fixedLength: variable ? null : (fixed && parseInt(fixed[1], 10)) || null,

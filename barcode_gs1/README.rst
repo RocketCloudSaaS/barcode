@@ -84,6 +84,7 @@ A scanned GS1 barcode produces a parsed object such as:
        packDate: "YYYY-MM-DD",   // AI 13
        productionDate: "...",    // AI 11
        qty: <number>,            // AI 30 / 37, or the net weight (AI 310n)
+       count: <number>,          // AI 30 / 37 (pieces), kept next to the weight
        weight: <number>,         // AI 310n–360n
        price: <number>,          // AI 390n–393n (amount payable)
        currency: "<ISO 4217>",   // the numeric code AI 391n / 393n carries
@@ -124,6 +125,24 @@ matching field above; the value of any other rule is still available in
 Identifiers the nomenclature does not define keep working through the
 ones built into the module, and if the nomenclature cannot be read at all
 the module falls back to them entirely.
+
+Scanners that drop the separator
+--------------------------------
+
+GS1 ends a variable-length value with FNC1, and a keyboard-wedge scanner
+often sends nothing in its place. Odoo has a field for exactly that —
+*FNC1 Separator* on the nomenclature — so configure the scanner to send
+one of those characters (``#`` out of the box) and the scan is read as
+printed.
+
+With no separator at all the reading is a guess, and the parser makes an
+educated one: it ends a variable-length value only at a specific numeric
+identifier, never inside an alphanumeric one and never at a catch-all
+range. That reads a real pallet label —
+``(01)…(3103)002497(10)534343(30)02(15)261006`` — exactly as printed,
+where a naive scan cuts the lot number in half and turns the rest into a
+quantity. Two alphanumeric values in a row with nothing between them stay
+ambiguous, which is why GS1 does not allow it.
 
 Misreads are refused
 --------------------

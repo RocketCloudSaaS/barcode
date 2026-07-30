@@ -404,15 +404,16 @@ so the module is safe to install next to the rest of the suite.</p>
 <ul class="simple">
 <li><a class="reference internal" href="#usage" id="toc-entry-1">Usage</a><ul>
 <li><a class="reference internal" href="#the-rules-come-from-odoo" id="toc-entry-2">The rules come from Odoo</a></li>
-<li><a class="reference internal" href="#misreads-are-refused" id="toc-entry-3">Misreads are refused</a></li>
-<li><a class="reference internal" href="#in-the-warehouse-app" id="toc-entry-4">In the warehouse app</a></li>
+<li><a class="reference internal" href="#scanners-that-drop-the-separator" id="toc-entry-3">Scanners that drop the separator</a></li>
+<li><a class="reference internal" href="#misreads-are-refused" id="toc-entry-4">Misreads are refused</a></li>
+<li><a class="reference internal" href="#in-the-warehouse-app" id="toc-entry-5">In the warehouse app</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-5">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-6">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-7">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-8">Contributors</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-9">Maintainers</a></li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-6">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-7">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-8">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-9">Contributors</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-10">Maintainers</a></li>
 </ul>
 </li>
 </ul>
@@ -437,6 +438,7 @@ a scan.</p>
     packDate: &quot;YYYY-MM-DD&quot;,   // AI 13
     productionDate: &quot;...&quot;,    // AI 11
     qty: &lt;number&gt;,            // AI 30 / 37, or the net weight (AI 310n)
+    count: &lt;number&gt;,          // AI 30 / 37 (pieces), kept next to the weight
     weight: &lt;number&gt;,         // AI 310n–360n
     price: &lt;number&gt;,          // AI 390n–393n (amount payable)
     currency: &quot;&lt;ISO 4217&gt;&quot;,   // the numeric code AI 391n / 393n carries
@@ -473,14 +475,30 @@ matching field above; the value of any other rule is still available in
 ones built into the module, and if the nomenclature cannot be read at all
 the module falls back to them entirely.</p>
 </div>
+<div class="section" id="scanners-that-drop-the-separator">
+<h3><a class="toc-backref" href="#toc-entry-3">Scanners that drop the separator</a></h3>
+<p>GS1 ends a variable-length value with FNC1, and a keyboard-wedge scanner
+often sends nothing in its place. Odoo has a field for exactly that —
+<em>FNC1 Separator</em> on the nomenclature — so configure the scanner to send
+one of those characters (<tt class="docutils literal">#</tt> out of the box) and the scan is read as
+printed.</p>
+<p>With no separator at all the reading is a guess, and the parser makes an
+educated one: it ends a variable-length value only at a specific numeric
+identifier, never inside an alphanumeric one and never at a catch-all
+range. That reads a real pallet label —
+<tt class="docutils literal"><span class="pre">(01)…(3103)002497(10)534343(30)02(15)261006</span></tt> — exactly as printed,
+where a naive scan cuts the lot number in half and turns the rest into a
+quantity. Two alphanumeric values in a row with nothing between them stay
+ambiguous, which is why GS1 does not allow it.</p>
+</div>
 <div class="section" id="misreads-are-refused">
-<h3><a class="toc-backref" href="#toc-entry-3">Misreads are refused</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-4">Misreads are refused</a></h3>
 <p>A GTIN, SSCC or GLN is only accepted when its check digit (GS1 modulo
 10) matches. A misread identifier is left empty and reported in
 <tt class="docutils literal">errors</tt> instead of resolving to the wrong product or pallet.</p>
 </div>
 <div class="section" id="in-the-warehouse-app">
-<h3><a class="toc-backref" href="#toc-entry-4">In the warehouse app</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-5">In the warehouse app</a></h3>
 <p>What the warehouse app does with it (with <tt class="docutils literal">barcode_stock</tt> installed):</p>
 <ul class="simple">
 <li>the quantity — a count (AI 30/37) or a net weight (AI 310n) — is the
@@ -496,7 +514,7 @@ reported instead of silently picking another one.</li>
 </div>
 </div>
 <div class="section" id="bug-tracker">
-<h2><a class="toc-backref" href="#toc-entry-5">Bug Tracker</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-6">Bug Tracker</a></h2>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -504,15 +522,15 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h2><a class="toc-backref" href="#toc-entry-6">Credits</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">Credits</a></h2>
 <div class="section" id="authors">
-<h3><a class="toc-backref" href="#toc-entry-7">Authors</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-8">Authors</a></h3>
 <ul class="simple">
 <li>Binhex</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h3><a class="toc-backref" href="#toc-entry-8">Contributors</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-9">Contributors</a></h3>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/antoniodavid">Antonio David Ruban Espinal</a></li>
 <li><a class="reference external" href="https://github.com/szalatyzuzanna">Zuzanna Elzbieta Szalaty
@@ -520,7 +538,7 @@ Szalaty</a></li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h3><a class="toc-backref" href="#toc-entry-9">Maintainers</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-10">Maintainers</a></h3>
 <p>Current maintainers:</p>
 <p><a class="reference external image-reference" href="https://github.com/antoniodavid"><img alt="antoniodavid" src="https://github.com/antoniodavid.png?size=40px" /></a> <a class="reference external image-reference" href="https://github.com/szalatyzuzanna"><img alt="szalatyzuzanna" src="https://github.com/szalatyzuzanna.png?size=40px" /></a></p>
 <p>This module is part of the <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_gs1">RocketCloudSaaS/barcode</a> project on GitHub.</p>

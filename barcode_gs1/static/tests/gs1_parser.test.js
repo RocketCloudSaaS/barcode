@@ -318,6 +318,73 @@ describe("BarcodeGs1", () => {
         });
     });
 
+    test("labels off real pallets decode the same in every form", () => {
+        // Cured guanciale, 2 pieces of 2.497 kg: (01)(3103)(10)(30)(15).
+        const guanciale = {
+            value: "98003948002568",
+            lot: "534343",
+            weight: 2.497,
+            count: 2,
+            qty: 2,
+            expiry: "2026-10-06",
+            errors: [],
+        };
+        expect(
+            parseGs1("(01)98003948002568(3103)002497(10)534343(30)02(15)261006")
+        ).toMatchObject(guanciale);
+        expect(
+            parseGs1(`0198003948002568310300249710534343${GS}3002${GS}15261006`)
+        ).toMatchObject(guanciale);
+        // The same data with the separators dropped, as a scanner that cannot
+        // emit FNC1 sends it: the lot is a run of digits in which a catch-all
+        // measure range would match "3434", and cutting there would invent a
+        // 33.0021 quantity out of the lot number.
+        expect(
+            parseGs1("0198003948002568310300249710534343300215261006")
+        ).toMatchObject(guanciale);
+
+        // Hard cheese, 4.324 kg, no count: the lot closes the barcode.
+        const cheese = {
+            value: "98436038190867",
+            lot: "L0892611",
+            weight: 4.324,
+            qty: 4.324,
+            expiry: "2026-09-26",
+            errors: [],
+        };
+        expect(
+            parseGs1("(01)98436038190867(15)260926(3103)004324(10)L0892611")
+        ).toMatchObject(cheese);
+        // "L0892611" contains "92", a company-internal identifier: breaking
+        // there would truncate the lot to "L08".
+        expect(
+            parseGs1("019843603819086715260926310300432410L0892611")
+        ).toMatchObject(cheese);
+
+        // Gorgonzola, weight only on the upper barcode.
+        expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
+            value: "98017024009181",
+            weight: 3.09,
+            qty: 3.09,
+            errors: [],
+        });
+        // ... and the tracking data on a second one, which carries no GTIN. A
+        // GS1-128 scan announces itself with the "]C1" symbology identifier,
+        // which is what makes this half a GS1 barcode rather than a plain code.
+        expect(parseGs1("]C115260613" + "1026104005" + GS + "37002")).toMatchObject({
+            lot: "26104005",
+            count: 2,
+            expiry: "2026-06-13",
+            errors: ["Missing GTIN (AI 01)"],
+        });
+        expect(parseGs1("]C1152606131026104005" + "37002")).toMatchObject({
+            lot: "26104005",
+            count: 2,
+            expiry: "2026-06-13",
+        });
+        expect(isGS1Barcode("]C1152606131026104005")).toBe(true);
+    });
+
     test("an amount payable (AI 39xn) is decoded, with its currency", () => {
         expect(parseGs1("(01)09501101020917(3922)000150")).toMatchObject({
             price: 1.5,

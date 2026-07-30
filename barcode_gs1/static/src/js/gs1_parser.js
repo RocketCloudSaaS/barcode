@@ -9,6 +9,11 @@ import {
 
 const GS1_SEPARATOR = String.fromCharCode(29); // FNC1 (<GS>, 0x1D)
 
+// The symbology identifiers the GS1 carriers prefix their data with: GS1-128,
+// DataBar, GS1 DataMatrix, GS1 QR and GS1 Aztec. Their presence is itself proof
+// that what follows is GS1 data ("]E0", a plain EAN-13, is not one of them).
+const GS1_SYMBOLOGIES = ["]C1", "]e0", "]d2", "]Q3", "]J1"];
+
 // The characters GS1 allows in an alphanumeric value, as Odoo's own rules
 // spell them out.
 const ALPHA = '[!"%-/0-9:-?A-Z_a-z]';
@@ -109,6 +114,7 @@ const BUILTIN_RULE_DEFS = [
         type: "quantity",
         gs1_content_type: "measure",
         gs1_decimal_usage: true,
+        generic: true,
     },
     {
         name: "Count of trade items",
@@ -161,6 +167,7 @@ const BUILTIN_RULE_DEFS = [
         pattern: `(9[0-3])(${ALPHA}{0,30})`,
         type: null,
         gs1_content_type: "alpha",
+        generic: true,
     },
 ];
 
@@ -294,8 +301,24 @@ function ruleForAi(ai, rules) {
 }
 
 /**
+ * Whether an identifier may be taken as the end of the variable-length value
+ * that precedes it, when the scanner sent no separator to say so.
+ *
+ * Only a specific, non-alphanumeric identifier qualifies. A digit sequence in a
+ * lot number happens to look like plenty of identifiers — a real label reads
+ * `10 534343 30 02 15 261006`, where a catch-all measure range would also match
+ * "3434" inside the lot, and an alphanumeric lot such as "L0892611" contains
+ * "92" — and breaking there silently invents a quantity or truncates the lot.
+ */
+function canEndValue(rule) {
+    return !rule.generic && rule.contentType !== "alpha";
+}
+
+/**
  * Where a variable-length value ends: at the FNC1 separator, or — when the
- * scanner sends none — heuristically at the next application identifier.
+ * scanner sends none — heuristically at the next application identifier that
+ * may end it. GS1 requires the separator unless the value is the last element,
+ * so this is a best effort at reading a barcode that omits it.
  */
 function findVariableEnd(barcode, start, maxLength, rules) {
     const separatorIndex = barcode.indexOf(GS1_SEPARATOR, start);
@@ -304,7 +327,8 @@ function findVariableEnd(barcode, start, maxLength, rules) {
     }
     const maxIndex = Math.min(barcode.length, start + maxLength);
     for (let index = start + 1; index < maxIndex; index++) {
-        if (matchRule(barcode, index, rules)) {
+        const match = matchRule(barcode, index, rules);
+        if (match && canEndValue(match.rule)) {
             return index;
         }
     }
@@ -449,6 +473,7 @@ export function parseGS1Barcode(barcode) {
         location: null,
         locationDest: null,
         weight: null,
+        count: null,
         price: null,
         currency: null,
         qty: 1,
@@ -500,6 +525,7 @@ export function parseGS1Barcode(barcode) {
                         parsed.quantity = value;
                     }
                 } else {
+                    parsed.count = value;
                     parsed.qty = value;
                     parsed.quantity = value;
                     hasCount = true;
@@ -565,6 +591,10 @@ export function parseGS1Barcode(barcode) {
  * than a plain EAN13 (so genuine EAN13 codes fall through to the base parser).
  */
 export function isGS1Barcode(barcode) {
+    const raw = String(barcode || "").trim();
+    if (GS1_SYMBOLOGIES.some((identifier) => raw.startsWith(identifier))) {
+        return true;
+    }
     const normalized = normalizeBarcode(barcode);
     if (normalized.includes("(") || normalized.includes(GS1_SEPARATOR)) {
         return true;
