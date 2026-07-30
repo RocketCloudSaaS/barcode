@@ -113,7 +113,6 @@ export class InternalTransferScreen extends Component {
         }
         const product = products[0];
         // The scan carries its own quantity and lot when the barcode states them.
-        await this.barcodeScannerState.loadUoms();
         const qty = this.barcodeScannerState.scannedQuantity(
             parsedData,
             product.uom_id?.[0] || null
