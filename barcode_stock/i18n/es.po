@@ -1266,3 +1266,51 @@ msgstr "Sí"
 #: code:addons/barcode_stock/static/src/js/components/picking_move_card.js:0
 msgid "pending"
 msgstr "pendiente"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "SKUs to pick"
+msgstr "SKUs por preparar"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "done"
+msgstr "hecho"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "remaining"
+msgstr "restantes"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "visible"
+msgstr "visibles"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "picking"
+msgstr "albarán"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "pickings"
+msgstr "albaranes"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/move_wizard_screen.js:0
+msgid "on hand"
+msgstr "en stock"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/move_wizard_screen.js:0
+msgid "remaining to process"
+msgstr "restante por procesar"
