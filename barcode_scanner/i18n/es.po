@@ -760,8 +760,8 @@ msgstr "Cantidad no disponible"
 #. module: barcode_scanner
 #. odoo-javascript
 #: code:addons/barcode_scanner/static/src/xml/barcode_scanner_templates.xml:0
-msgid "Quantity Picked"
-msgstr "Cantidad preparada"
+msgid "Quantity to pick"
+msgstr "Cantidad a preparar"
 
 #. module: barcode_scanner
 #. odoo-javascript
