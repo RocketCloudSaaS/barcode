@@ -4,6 +4,7 @@ import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {Component, onWillStart, useEffect, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
+import {deserializeDateTime} from "@web/core/l10n/dates";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
@@ -302,8 +303,12 @@ export class PickingListScreen extends Component {
         if (!value) {
             return null;
         }
-        const date = new Date(value.replace(" ", "T"));
-        return Number.isNaN(date.getTime()) ? null : date;
+        // scheduled_date arrives from the ORM in UTC; deserializeDateTime
+        // converts it to the user's timezone so that day-based grouping, the
+        // date filter and the Today/Tomorrow and Urgent labels line up with the
+        // date shown on the picking instead of slipping to the previous day.
+        const date = deserializeDateTime(value);
+        return date && date.isValid ? date.toJSDate() : null;
     }
 
     isSameDay(first, second) {
