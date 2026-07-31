@@ -8,9 +8,14 @@ export class PickingMoveCard extends Component {
         if (!this.props.moveLines) {
             return [];
         }
+        // Only list lines that already carry a lot/serial and still have
+        // something pending. Reserved lines without a lot showed up as noisy,
+        // repeated "No lot" rows -- one per unit on a serial move -- while the
+        // demand/done/remaining figures already cover the untracked case.
         return this.props.moveLines.filter(
             (line) =>
                 line.move_id?.[0] === this.props.move.id &&
+                line.lot_id &&
                 line.quantity > 0 &&
                 line.qty_picked < line.quantity
         );
