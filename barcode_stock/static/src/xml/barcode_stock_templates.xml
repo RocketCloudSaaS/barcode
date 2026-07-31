@@ -698,7 +698,7 @@
                     </t>
 
                     <div class="ilx-v2-field-group">
-                        <label class="ilx-v2-label">Quantity Picked</label>
+                        <label class="ilx-v2-label">Quantity to pick</label>
                         <div
                             class="ilx-mw-v2-qty-row"
                             role="group"
