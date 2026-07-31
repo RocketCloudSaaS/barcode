@@ -622,12 +622,17 @@ export class PickingScreen extends Component {
                     (line.qty_picked || 0) > 0
             );
             if (existingLine) {
+                // newQty is the resulting total, only used for the feedback
+                // message below. confirmMove()/stageMoveLine() already increment
+                // the existing line by the qtyPicked it receives, so pass the
+                // scanned delta here -- passing the total would add the existing
+                // quantity a second time (a re-scan jumped by +2 instead of +1).
                 const newQty = (existingLine.qty_picked || 0) + scannedQty;
                 await this.barcodeScannerSync.confirmMove({
                     moveId: candidateMove.id,
                     pickingId: this.state.picking.id,
                     productId,
-                    qtyPicked: newQty,
+                    qtyPicked: scannedQty,
                     lotId: false,
                     lotName: false,
                     locationId: candidateMove.location_id?.[0] || false,
