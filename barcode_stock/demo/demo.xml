@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo noupdate="1">
+
+    <record id="base.user_demo" model="res.users">
+        <field
+            name="groups_id"
+            eval="[(4, ref('stock.group_production_lot')), (4, ref('stock.group_tracking_lot'))]"
+        />
+    </record>
+    <record id="base.user_admin" model="res.users">
+        <field
+            name="groups_id"
+            eval="[(4, ref('stock.group_production_lot')), (4, ref('stock.group_tracking_lot'))]"
+        />
+    </record>
+
+    <record id="product_demo_a" model="product.product">
+        <field name="name">EAN13 Sample Product A</field>
+        <field name="type">consu</field>
+        <field name="barcode">5901234123457</field>
+        <field name="tracking">lot</field>
+        <field name="list_price">25.00</field>
+        <field name="standard_price">10.00</field>
+    </record>
+
+    <record id="product_demo_b" model="product.product">
+        <field name="name">EAN13 Sample Product B</field>
+        <field name="type">consu</field>
+        <field name="barcode">4012345678900</field>
+        <field name="tracking">serial</field>
+        <field name="list_price">99.00</field>
+        <field name="standard_price">55.00</field>
+    </record>
+
+    <record id="product_demo_c" model="product.product">
+        <field name="name">EAN13 Sample Product C</field>
+        <field name="type">consu</field>
+        <field name="barcode">2001234567890</field>
+        <field name="list_price">15.00</field>
+        <field name="standard_price">8.00</field>
+    </record>
+
+    <record id="picking_receipt_demo" model="stock.picking">
+        <field name="picking_type_id" ref="stock.picking_type_in" />
+        <field name="partner_id" ref="base.res_partner_1" />
+        <field name="location_id" ref="stock.stock_location_suppliers" />
+        <field name="location_dest_id" ref="stock.stock_location_stock" />
+        <field name="origin">DEMO-EAN13-TEST</field>
+        <field name="state">draft</field>
+    </record>
+
+    <record id="move_receipt_a" model="stock.move">
+        <field name="name">Receive Product A</field>
+        <field name="picking_id" ref="picking_receipt_demo" />
+        <field name="product_id" ref="product_demo_a" />
+        <field name="product_uom_qty">10.0</field>
+        <field name="product_uom" ref="uom.product_uom_unit" />
+        <field name="location_id" ref="stock.stock_location_suppliers" />
+        <field name="location_dest_id" ref="stock.stock_location_stock" />
+    </record>
+
+    <record id="move_receipt_b" model="stock.move">
+        <field name="name">Receive Product B</field>
+        <field name="picking_id" ref="picking_receipt_demo" />
+        <field name="product_id" ref="product_demo_b" />
+        <field name="product_uom_qty">5.0</field>
+        <field name="product_uom" ref="uom.product_uom_unit" />
+        <field name="location_id" ref="stock.stock_location_suppliers" />
+        <field name="location_dest_id" ref="stock.stock_location_stock" />
+    </record>
+
+    <record id="move_receipt_c" model="stock.move">
+        <field name="name">Receive Product C</field>
+        <field name="picking_id" ref="picking_receipt_demo" />
+        <field name="product_id" ref="product_demo_c" />
+        <field name="product_uom_qty">20.0</field>
+        <field name="product_uom" ref="uom.product_uom_unit" />
+        <field name="location_id" ref="stock.stock_location_suppliers" />
+        <field name="location_dest_id" ref="stock.stock_location_stock" />
+    </record>
+
+</odoo>
