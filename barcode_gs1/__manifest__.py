@@ -1,0 +1,26 @@
+{
+    "name": "Barcode GS1",
+    "version": "18.0.1.0.0",
+    "category": "Inventory/Logistics",
+    "summary": "GS1 barcode parsing (GS1-128, application identifiers)",
+    "author": "Binhex, Odoo Community Association (OCA)",
+    "website": "https://github.com/RocketCloudSaaS/barcode",
+    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "license": "AGPL-3",
+    "depends": [
+        "barcode_scanner",
+        "barcodes_gs1_nomenclature",
+    ],
+    "assets": {
+        "web.assets_backend": [
+            "barcode_gs1/static/src/js/gs1_nomenclature.js",
+            "barcode_gs1/static/src/js/gs1_parser.js",
+            "barcode_gs1/static/src/js/gs1_startup.js",
+        ],
+        "web.assets_unit_tests": [
+            "barcode_gs1/static/tests/**/*",
+        ],
+    },
+    "installable": True,
+    "auto_install": False,
+}
