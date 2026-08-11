@@ -152,7 +152,9 @@ export class MoveWizardScreen extends Component {
         if (this.isSerial) {
             return this.state.qtyPicked < 1 && !this.selectedLotIdNumber;
         }
-        return this.state.qtyPicked < this.remainingQty;
+        // Over-picking is allowed (Odoo puts no cap on done vs demand), so the
+        // stepper can always add; the remaining figure stays informational.
+        return true;
     }
 
     get canFulfill() {
@@ -304,15 +306,16 @@ export class MoveWizardScreen extends Component {
 
     /**
      * A quantity that arrives prefilled (a count carried by the scanned barcode)
-     * still has to respect the serial rule and what is left to process.
+     * still has to respect the serial rule, but it is NOT capped to the
+     * remaining demand: over-picking is allowed, exactly as Odoo lets you
+     * receive/process more than was ordered.
      */
     clampScannedQty(value) {
         const qty = parseFloat(value) || 1;
         if (this.isSerial) {
             return 1;
         }
-        const remaining = this.remainingQty;
-        return remaining > 0 ? Math.min(qty, remaining) : qty;
+        return qty;
     }
 
     setQty(value) {
@@ -321,8 +324,9 @@ export class MoveWizardScreen extends Component {
             this.state.qtyPicked = 0;
             return;
         }
-        const max = this.isSerial ? 1 : this.remainingQty;
-        this.state.qtyPicked = Math.min(qty, max);
+        // Serial stays a single unit; anything else may exceed the demand
+        // (over-picking is allowed, matching Odoo).
+        this.state.qtyPicked = this.isSerial ? Math.min(qty, 1) : qty;
         this.state._lastInputSource = "tap";
     }
 

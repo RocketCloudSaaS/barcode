@@ -532,12 +532,25 @@ export class BarcodeScannerState extends Reactive {
         mode = "increment",
         extraValues = {},
     }) {
-        const matchingLines = this.moveLines.filter(
-            (line) =>
-                line.move_id?.[0] === moveId &&
-                line.product_id?.[0] === productId &&
-                sameLotId(line.lot_id?.[0], lotId)
-        );
+        const wantedLotName = (lotName || "").trim().toUpperCase();
+        const matchingLines = this.moveLines.filter((line) => {
+            if (
+                line.move_id?.[0] !== moveId ||
+                line.product_id?.[0] !== productId
+            ) {
+                return false;
+            }
+            if (sameLotId(line.lot_id?.[0], lotId)) {
+                return true;
+            }
+            // Fall back to the lot NAME so a re-scan lands on the existing line
+            // even when the lot resolved to a different record, instead of
+            // spawning a duplicate line for the same lot.
+            const lineLotName = (line.lot_name || line.lot_id?.[1] || "")
+                .trim()
+                .toUpperCase();
+            return Boolean(wantedLotName) && lineLotName === wantedLotName;
+        });
         let targetLine = matchingLines.find(
             (line) => normalizeQty(line.qty_picked) === 0
         );
