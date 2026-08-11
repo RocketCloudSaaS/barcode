@@ -1314,3 +1314,75 @@ msgstr "en stock"
 #: code:addons/barcode_stock/static/src/js/screens/move_wizard_screen.js:0
 msgid "remaining to process"
 msgstr "restante por procesar"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Default"
+msgstr "Predeterminado"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Set default"
+msgstr "Fijar predeterminado"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "this operation"
+msgstr "esta operación"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Default filter for %(operation)s — tap to remove."
+msgstr "Filtro predeterminado de %(operation)s — toca para quitarlo."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Save this filter as the default for %(operation)s."
+msgstr "Guardar este filtro como predeterminado de %(operation)s."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Add a filter first, then save it as the default."
+msgstr "Añade primero un filtro y luego guárdalo como predeterminado."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Default filter cleared for %(operation)s."
+msgstr "Filtro predeterminado eliminado de %(operation)s."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Filter saved as the default for %(operation)s."
+msgstr "Filtro guardado como predeterminado de %(operation)s."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Filters"
+msgstr "Filtros"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Group by"
+msgstr "Agrupar por"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Custom date"
+msgstr "Fecha personalizada"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Quick filters"
+msgstr "Filtros rápidos"

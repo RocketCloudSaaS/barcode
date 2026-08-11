@@ -2,10 +2,17 @@
 
 import {barcodeScreens} from "@barcode_scanner/js/registries";
 
-import {Component, onWillStart, useEffect, useState} from "@odoo/owl";
+import {
+    Component,
+    onWillStart,
+    useEffect,
+    useExternalListener,
+    useState,
+} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {deserializeDateTime} from "@web/core/l10n/dates";
 import {useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {scanBarcode} from "@web/core/barcode/barcode_dialog";
@@ -44,12 +51,24 @@ export class PickingListScreen extends Component {
             stateLabels: {},
             activeFilters: [],
             filterValues: {state: "all", date: null},
+            savedDefault: null,
+            openMenu: null,
         });
+        // Whole `res.users.barcode_default_filters` map, kept out of reactive
+        // state: only this operation type's entry (state.savedDefault) drives the
+        // ★, but the full map must survive a write so other operations' defaults
+        // are not wiped.
+        this.allDefaults = {};
         this.groupLabels = {
             state: _t("Status"),
             date: _t("Date"),
         };
         this.filterLabels = FILTER_LABELS;
+        this.groupOrder = GROUP_ORDER;
+
+        // Close any open filter/group menu when tapping outside the toolbar; the
+        // toolbar itself stops propagation so its own taps do not trigger this.
+        useExternalListener(document, "click", () => this.closeMenu());
 
         useBarcodeHandler({
             onScan: (barcode) => this.onBarcodeScanned(barcode),
@@ -57,6 +76,7 @@ export class PickingListScreen extends Component {
 
         onWillStart(async () => {
             await this.loadStateLabels();
+            await this.loadDefaultFilter();
             await this.loadPickings();
         });
 
@@ -579,6 +599,93 @@ export class PickingListScreen extends Component {
         this.computeGroups();
     }
 
+    toggleMenu(name) {
+        this.state.openMenu = this.state.openMenu === name ? null : name;
+    }
+
+    closeMenu() {
+        if (this.state.openMenu) {
+            this.state.openMenu = null;
+        }
+    }
+
+    /** Radio options for the Date section of the Filters menu. */
+    get dateFilterOptions() {
+        return [
+            {value: null, label: _t("All")},
+            {value: "today", label: _t("Today")},
+            {value: "tomorrow", label: _t("Tomorrow")},
+            {value: "custom:", label: _t("Custom date")},
+        ];
+    }
+
+    isDateOptionSelected(value) {
+        const active = this.state.activeFilters.includes("date");
+        const current = this.state.filterValues.date;
+        if (!value) {
+            return !active;
+        }
+        if (value === "custom:") {
+            return active && typeof current === "string" && current.startsWith("custom:");
+        }
+        return active && current === value;
+    }
+
+    /** Pick a status from the menu; "all" turns the status filter off. */
+    setStateFilter(value) {
+        if (!value || value === "all") {
+            this.removeFilter("state");
+            return;
+        }
+        if (!this.state.activeFilters.includes("state")) {
+            this.state.activeFilters = [...this.state.activeFilters, "state"];
+        }
+        this.state.filterValues.state = value;
+        this.computeGroups();
+    }
+
+    /** Label of the "assigned" state, shown on the Ready quick filter. */
+    get readyStateLabel() {
+        return this.state.stateLabels.assigned || _t("Ready");
+    }
+
+    /** The Ready quick filter is just a shortcut for status = assigned. */
+    get isReadyQuickActive() {
+        return (
+            this.state.activeFilters.includes("state") &&
+            this.state.filterValues.state === "assigned"
+        );
+    }
+
+    toggleReadyQuick() {
+        this.setStateFilter(this.isReadyQuickActive ? "all" : "assigned");
+    }
+
+    /** Pick a date option from the menu; the empty value turns it off. */
+    setDateFilter(value) {
+        if (!value) {
+            this.removeFilter("date");
+            return;
+        }
+        if (!this.state.activeFilters.includes("date")) {
+            this.state.activeFilters = [...this.state.activeFilters, "date"];
+        }
+        this.state.filterValues.date = value;
+        this.computeGroups();
+    }
+
+    /** Add or remove a grouping level from the Group menu, keeping GROUP_ORDER. */
+    toggleGroupLevel(group) {
+        if (this.state.groupByLevels.includes(group)) {
+            this.removeGroup(group);
+            return;
+        }
+        this.state.groupByLevels = GROUP_ORDER.filter(
+            (level) => level === group || this.state.groupByLevels.includes(level)
+        );
+        this.computeGroups();
+    }
+
     getFilterDisplayValue(filter) {
         const value = this.state.filterValues[filter];
         if (filter === "state") {
@@ -631,6 +738,159 @@ export class PickingListScreen extends Component {
         this.state.activeFilters = [];
         this.state.filterValues = {state: "all", date: null};
         this.computeGroups();
+    }
+
+    /**
+     * The operation type this list belongs to; also the key under which its
+     * default filter is stored in `res.users.barcode_default_filters`.
+     */
+    get operationType() {
+        return this.props.params?.type || null;
+    }
+
+    /**
+     * The built-in, Odoo-like default: show the pickings that are ready to
+     * process. Applied on entry when the user has not saved their own default.
+     */
+    get builtinDefaultConfig() {
+        return {activeFilters: ["state"], filterValues: {state: "assigned"}};
+    }
+
+    /**
+     * Read the user's saved defaults and apply the one for this operation type
+     * before the pickings load, so the queue arrives already filtered.
+     */
+    async loadDefaultFilter() {
+        if (!this.operationType) {
+            return;
+        }
+        let stored = {};
+        try {
+            const [record] = await this.inventory.read(
+                "res.users",
+                [user.userId],
+                ["barcode_default_filters"]
+            );
+            stored = JSON.parse(record?.barcode_default_filters || "{}") || {};
+        } catch {
+            // A malformed blob or a read hiccup must never keep the list from
+            // loading: fall back to no default.
+            stored = {};
+        }
+        this.allDefaults = stored && typeof stored === "object" ? stored : {};
+        const config = this.allDefaults[this.operationType];
+        if (config && Array.isArray(config.activeFilters)) {
+            this.applyFilterConfig(config);
+            this.state.savedDefault = this.normalizeFilterConfig(config);
+        } else {
+            // No personal default: open on the ready-to-process view, the way
+            // Odoo opens its operation lists. A ★ default overrides this.
+            this.applyFilterConfig(this.builtinDefaultConfig);
+        }
+    }
+
+    /**
+     * Canonical, comparable form of a filter config: sorted keys and only the
+     * values of the active filters, so the ★ can tell "current == saved" apart
+     * from cosmetic ordering differences.
+     */
+    normalizeFilterConfig({activeFilters, filterValues}) {
+        const filters = [...(activeFilters || [])].filter(Boolean).sort();
+        const values = {};
+        for (const filter of filters) {
+            const value = (filterValues || {})[filter];
+            values[filter] = value === undefined ? FILTER_DEFAULTS[filter] : value;
+        }
+        return {activeFilters: filters, filterValues: values};
+    }
+
+    applyFilterConfig(config) {
+        const normalized = this.normalizeFilterConfig(config);
+        this.state.activeFilters = [...normalized.activeFilters];
+        this.state.filterValues = {...FILTER_DEFAULTS, ...normalized.filterValues};
+    }
+
+    get currentFilterConfig() {
+        return this.normalizeFilterConfig({
+            activeFilters: this.state.activeFilters,
+            filterValues: this.state.filterValues,
+        });
+    }
+
+    get isCurrentFilterDefault() {
+        if (!this.state.savedDefault) {
+            return false;
+        }
+        return (
+            JSON.stringify(this.currentFilterConfig) ===
+            JSON.stringify(this.normalizeFilterConfig(this.state.savedDefault))
+        );
+    }
+
+    /** Whether the ★ has anything to act on: an active filter or a saved one. */
+    get canStarFilter() {
+        return this.state.activeFilters.length > 0 || Boolean(this.state.savedDefault);
+    }
+
+    get starLabel() {
+        return this.isCurrentFilterDefault ? _t("Default") : _t("Set default");
+    }
+
+    get starTitle() {
+        return this.isCurrentFilterDefault
+            ? _t("Default filter for %(operation)s — tap to remove.", {
+                  operation: this.operationLabel,
+              })
+            : _t("Save this filter as the default for %(operation)s.", {
+                  operation: this.operationLabel,
+              });
+    }
+
+    async persistDefaultFilters() {
+        await this.inventory.write("res.users", [user.userId], {
+            barcode_default_filters: JSON.stringify(this.allDefaults),
+        });
+    }
+
+    /**
+     * Star: save the current filter as this operation's default. Filled star:
+     * remove it. Starring an empty filter is the same as clearing the default.
+     */
+    async toggleDefaultFilter() {
+        const type = this.operationType;
+        if (!type) {
+            return;
+        }
+        const config = this.currentFilterConfig;
+        const clearing = this.isCurrentFilterDefault || !config.activeFilters.length;
+        if (clearing) {
+            if (!this.state.savedDefault) {
+                this.inventory.notify(
+                    _t("Add a filter first, then save it as the default."),
+                    {type: "warning"}
+                );
+                return;
+            }
+            delete this.allDefaults[type];
+            this.state.savedDefault = null;
+            await this.persistDefaultFilters();
+            this.inventory.notify(
+                _t("Default filter cleared for %(operation)s.", {
+                    operation: this.operationLabel,
+                }),
+                {type: "info"}
+            );
+            return;
+        }
+        this.allDefaults[type] = config;
+        this.state.savedDefault = config;
+        await this.persistDefaultFilters();
+        this.inventory.notify(
+            _t("Filter saved as the default for %(operation)s.", {
+                operation: this.operationLabel,
+            }),
+            {type: "success"}
+        );
     }
 
     countGroupEntries(groupNode) {

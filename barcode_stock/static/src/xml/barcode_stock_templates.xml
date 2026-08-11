@@ -359,46 +359,112 @@
                         />
                     </div>
 
-                    <div class="ilx-kw-filter-chips">
-                        <t t-foreach="state.activeFilters" t-as="filter" t-key="filter">
-                            <div class="ilx-kw-chip ilx-kw-chip--active">
-                                <span class="ilx-kw-chip-label">
-                                    <t t-esc="filterLabels[filter]" />: <t
-                                        t-esc="getFilterDisplayValue(filter)"
-                                    />
-                                </span>
-                                <t t-if="filter === 'state'">
-                                    <select
-                                        class="ilx-kw-filter-value-select"
-                                        t-on-change="(ev) => this.setFilterValue('state', ev.target.value)"
+                    <div class="ilx-kw-filter-tools" t-on-click.stop="() => {}">
+                        <div class="ilx-kw-filter-toolbar">
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn"
+                                t-att-class="{active: state.openMenu === 'filters', 'has-value': state.activeFilters.length}"
+                                t-on-click="() => this.toggleMenu('filters')"
+                            >
+                                <i class="fa fa-filter" /> <span>Filters</span>
+                                <span
+                                    t-if="state.activeFilters.length"
+                                    class="ilx-kw-tool-count"
+                                    t-esc="state.activeFilters.length"
+                                />
+                                <i class="fa fa-caret-down" />
+                            </button>
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn"
+                                t-att-class="{active: state.openMenu === 'group', 'has-value': state.groupByLevels.length}"
+                                t-on-click="() => this.toggleMenu('group')"
+                            >
+                                <i class="fa fa-layer-group" /> <span>Group by</span>
+                                <i class="fa fa-caret-down" />
+                            </button>
+                            <div class="ilx-kw-tool-spacer" />
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn ilx-kw-star-btn"
+                                t-att-class="{active: isCurrentFilterDefault}"
+                                t-att-title="starTitle"
+                                t-on-click="() => this.toggleDefaultFilter()"
+                            >
+                                <i
+                                    t-att-class="isCurrentFilterDefault ? 'fa fa-star' : 'fa fa-star-o'"
+                                />
+                            </button>
+
+                            <div class="ilx-kw-menu" t-if="state.openMenu === 'filters'">
+                                <div class="ilx-kw-menu-section">
+                                    <div class="ilx-kw-menu-title">Quick filters</div>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-att-class="{selected: isReadyQuickActive}"
+                                        t-on-click="() => this.toggleReadyQuick()"
                                     >
-                                        <option value="all">All</option>
-                                        <t
-                                            t-foreach="Object.entries(state.stateLabels)"
-                                            t-as="entry"
-                                            t-key="entry[0]"
-                                        >
-                                            <option t-att-value="entry[0]"><t
-                                                    t-esc="entry[1]"
-                                                /></option>
-                                        </t>
-                                    </select>
-                                </t>
-                                <t t-if="filter === 'date'">
-                                    <select
-                                        class="ilx-kw-filter-value-select"
-                                        t-on-change="(ev) => this.setFilterValue('date', ev.target.value || null)"
+                                        <i
+                                            class="fa"
+                                            t-att-class="isReadyQuickActive ? 'fa-check-square-o' : 'fa-square-o'"
+                                        /> <span t-esc="readyStateLabel" />
+                                    </button>
+                                </div>
+                                <div class="ilx-kw-menu-section">
+                                    <div class="ilx-kw-menu-title">Status</div>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-att-class="{selected: !state.activeFilters.includes('state')}"
+                                        t-on-click="() => this.setStateFilter('all')"
                                     >
-                                        <option value="">All</option>
-                                        <option value="today">Today</option>
-                                        <option value="tomorrow">Tomorrow</option>
-                                        <option
-                                            value="custom"
-                                            t-att-selected="state.filterValues.date and state.filterValues.date.startsWith('custom:')"
-                                        >Custom...</option>
-                                    </select>
+                                        <i
+                                            class="fa"
+                                            t-att-class="!state.activeFilters.includes('state') ? 'fa-dot-circle-o' : 'fa-circle-o'"
+                                        /> <span>All</span>
+                                    </button>
                                     <t
-                                        t-if="state.filterValues.date and state.filterValues.date.startsWith('custom:')"
+                                        t-foreach="Object.entries(state.stateLabels)"
+                                        t-as="entry"
+                                        t-key="entry[0]"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="ilx-kw-menu-option"
+                                            t-att-class="{selected: state.activeFilters.includes('state') &amp;&amp; state.filterValues.state === entry[0]}"
+                                            t-on-click="() => this.setStateFilter(entry[0])"
+                                        >
+                                            <i
+                                                class="fa"
+                                                t-att-class="(state.activeFilters.includes('state') &amp;&amp; state.filterValues.state === entry[0]) ? 'fa-dot-circle-o' : 'fa-circle-o'"
+                                            /> <span t-esc="entry[1]" />
+                                        </button>
+                                    </t>
+                                </div>
+                                <div class="ilx-kw-menu-section">
+                                    <div class="ilx-kw-menu-title">Date</div>
+                                    <t
+                                        t-foreach="dateFilterOptions"
+                                        t-as="opt"
+                                        t-key="opt.value || 'all'"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="ilx-kw-menu-option"
+                                            t-att-class="{selected: isDateOptionSelected(opt.value)}"
+                                            t-on-click="() => this.setDateFilter(opt.value)"
+                                        >
+                                            <i
+                                                class="fa"
+                                                t-att-class="isDateOptionSelected(opt.value) ? 'fa-dot-circle-o' : 'fa-circle-o'"
+                                            /> <span t-esc="opt.label" />
+                                        </button>
+                                    </t>
+                                    <div
+                                        class="ilx-kw-menu-custom-date"
+                                        t-if="state.filterValues.date &amp;&amp; state.filterValues.date.startsWith('custom:')"
                                     >
                                         <input
                                             type="date"
@@ -406,58 +472,63 @@
                                             t-att-value="state.filterValues.date ? state.filterValues.date.substring(7) : ''"
                                             t-on-change="(ev) => this.setCustomDate(ev.target.value)"
                                         />
-                                    </t>
-                                </t>
-                                <i
-                                    class="fa fa-times"
-                                    t-on-click="() => this.removeFilter(filter)"
-                                />
+                                    </div>
+                                </div>
                             </div>
-                        </t>
-                        <t t-foreach="state.groupByLevels" t-as="group" t-key="group">
-                            <button
-                                class="ilx-kw-chip ilx-kw-chip--active"
-                                t-on-click="() => this.removeGroup(group)"
-                            >
-                                <i class="fa fa-layer-group" /> Group by: <t
-                                    t-esc="groupLabels[group] || group"
-                                /> <i class="fa fa-times" />
-                            </button>
-                        </t>
-                        <select
-                            name="filter"
-                            class="ilx-kw-chip ilx-kw-chip--default ilx-kw-select-chip"
-                            t-if="availableFilterOptions.length"
-                            t-on-change="addFilter"
+
+                            <div class="ilx-kw-menu" t-if="state.openMenu === 'group'">
+                                <div class="ilx-kw-menu-section">
+                                    <div class="ilx-kw-menu-title">Group by</div>
+                                    <t t-foreach="groupOrder" t-as="group" t-key="group">
+                                        <button
+                                            type="button"
+                                            class="ilx-kw-menu-option"
+                                            t-att-class="{selected: state.groupByLevels.includes(group)}"
+                                            t-on-click="() => this.toggleGroupLevel(group)"
+                                        >
+                                            <i
+                                                class="fa"
+                                                t-att-class="state.groupByLevels.includes(group) ? 'fa-check-square-o' : 'fa-square-o'"
+                                            /> <span t-esc="groupLabels[group] || group" />
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="ilx-kw-facets"
+                            t-if="state.activeFilters.length || state.groupByLevels.length"
                         >
-                            <option value="">+ Add Filter...</option>
-                            <t
-                                t-foreach="availableFilterOptions"
-                                t-as="opt"
-                                t-key="opt"
-                            >
-                                <option t-att-value="opt"><t
-                                        t-esc="filterLabels[opt]"
-                                    /></option>
+                            <t t-foreach="state.activeFilters" t-as="filter" t-key="filter">
+                                <span class="ilx-kw-facet">
+                                    <span class="ilx-kw-facet-text"><t
+                                            t-esc="filterLabels[filter]"
+                                        />: <t t-esc="getFilterDisplayValue(filter)" /></span>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-facet-remove"
+                                        t-on-click="() => this.removeFilter(filter)"
+                                    >
+                                        <i class="fa fa-times" />
+                                    </button>
+                                </span>
                             </t>
-                        </select>
-                        <select
-                            name="group_by"
-                            class="ilx-kw-chip ilx-kw-chip--default ilx-kw-select-chip"
-                            t-if="availableGroupingOptions.length"
-                            t-on-change="addGroup"
-                        >
-                            <option value="">+ Add Group...</option>
-                            <t
-                                t-foreach="availableGroupingOptions"
-                                t-as="opt"
-                                t-key="opt"
-                            >
-                                <option t-att-value="opt"><t
-                                        t-esc="groupLabels[opt]"
-                                    /></option>
+                            <t t-foreach="state.groupByLevels" t-as="group" t-key="group">
+                                <span class="ilx-kw-facet ilx-kw-facet--group">
+                                    <span class="ilx-kw-facet-text"><i
+                                            class="fa fa-layer-group"
+                                        /> <t t-esc="groupLabels[group] || group" /></span>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-facet-remove"
+                                        t-on-click="() => this.removeGroup(group)"
+                                    >
+                                        <i class="fa fa-times" />
+                                    </button>
+                                </span>
                             </t>
-                        </select>
+                        </div>
                     </div>
                 </div>
 
