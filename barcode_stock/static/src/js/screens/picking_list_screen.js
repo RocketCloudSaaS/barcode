@@ -35,6 +35,13 @@ const OPERATION_LABELS = {
     outgoing: _t("Delivery Orders"),
 };
 
+// In-session working view (filters + grouping) per operation-type code. Module
+// scope so it outlives the screen being re-created on navigation: entering a
+// picking and coming back keeps the filter the user was working with, without
+// persisting it to the server (that is what the ★ default is for). Cleared only
+// on a full app reload.
+const SESSION_VIEWS = {};
+
 export class PickingListScreen extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
@@ -90,6 +97,7 @@ export class PickingListScreen extends Component {
         useEffect(
             () => {
                 this.computeGroups();
+                this.persistSessionView();
                 const collapsed = {};
                 const groups = this.state.groupedPickings;
                 const keys = Object.keys(groups);
@@ -780,13 +788,43 @@ export class PickingListScreen extends Component {
         this.allDefaults = stored && typeof stored === "object" ? stored : {};
         const config = this.allDefaults[this.operationType];
         if (config && Array.isArray(config.activeFilters)) {
-            this.applyFilterConfig(config);
+            // Keep the saved default for the ★ state regardless of what we show.
             this.state.savedDefault = this.normalizeFilterConfig(config);
+        }
+        // What to show, in priority order:
+        const session = SESSION_VIEWS[this.operationType];
+        if (session) {
+            // The filter the user was working with before navigating away:
+            // survive the round trip into a picking so it need not be re-set.
+            this.applyViewState(session);
+        } else if (config && Array.isArray(config.activeFilters)) {
+            this.applyFilterConfig(config);
         } else {
             // No personal default: open on the ready-to-process view, the way
             // Odoo opens its operation lists. A ★ default overrides this.
             this.applyFilterConfig(this.builtinDefaultConfig);
         }
+    }
+
+    /** Restore a full working view (filters + grouping) from the session stash. */
+    applyViewState(view) {
+        this.applyFilterConfig(view);
+        this.state.groupByLevels = [...(view.groupByLevels || [])];
+    }
+
+    /**
+     * Remember the current working view for this operation type, so it survives
+     * the screen being torn down and rebuilt on navigation (picking ↔ list).
+     */
+    persistSessionView() {
+        if (!this.operationType) {
+            return;
+        }
+        SESSION_VIEWS[this.operationType] = {
+            activeFilters: [...this.state.activeFilters],
+            filterValues: {...this.state.filterValues},
+            groupByLevels: [...this.state.groupByLevels],
+        };
     }
 
     /**
