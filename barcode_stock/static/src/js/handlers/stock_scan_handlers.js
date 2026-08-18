@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import {barcodeScanHandlers} from "@barcode_scanner/js/registries";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 /**
  * Home-screen scan recognition for stock. Isolated in its own file so it can be
@@ -11,9 +12,11 @@ barcodeScanHandlers.add(
     "stock_picking",
     {
         async handle(barcode, parsed, {api, navigate}) {
-            if (!(barcode.startsWith("WH/") || barcode.startsWith("INT/"))) {
-                return false;
-            }
+            // A picking reference is client-configurable: its name comes from the
+            // operation type's sequence, whose prefix is the warehouse's own code
+            // (AC-HAU, DI-LIC, JOBS...), not necessarily WH or INT. Never gate the
+            // lookup on a hard-coded prefix — search by name and fall through when
+            // nothing matches, exactly like the product and location handlers.
             const pickings = await api.searchRead(
                 "stock.picking",
                 [["name", "=", barcode]],
@@ -34,11 +37,14 @@ barcodeScanHandlers.add(
     {
         async handle(barcode, parsed, {api, navigate}) {
             const productCode = parsed?.value || barcode;
-            const products = await api.searchRead(
-                "product.product",
-                [["barcode", "=", productCode]],
-                ["id", "display_name"]
-            );
+            const productDomain = barcodeMatchDomain(productCode);
+            const products = productDomain
+                ? await api.searchRead(
+                      "product.product",
+                      productDomain,
+                      ["id", "display_name"]
+                  )
+                : [];
             if (!products.length) {
                 return false;
             }
@@ -53,11 +59,14 @@ barcodeScanHandlers.add(
     "location",
     {
         async handle(barcode, parsed, {api, navigate}) {
-            const locations = await api.searchRead(
-                "stock.location",
-                [["barcode", "=", barcode]],
-                ["id", "display_name"]
-            );
+            const locationDomain = barcodeMatchDomain(barcode);
+            const locations = locationDomain
+                ? await api.searchRead(
+                      "stock.location",
+                      locationDomain,
+                      ["id", "display_name"]
+                  )
+                : [];
             if (!locations.length) {
                 return false;
             }
