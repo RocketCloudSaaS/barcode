@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import {Component, onWillStart, useState} from "@odoo/owl";
+import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
@@ -22,6 +22,10 @@ export class BarcodeScannerApp extends Component {
             this.router.navigate("main");
         }
         onWillStart(() => this.runStartupTasks());
+        // Capture scans (incl. Android IME/soft-input PDAs) only while the app
+        // is open, so it never steals focus on the rest of the back office.
+        onMounted(() => this.barcode.activate());
+        onWillUnmount(() => this.barcode.deactivate());
     }
 
     /**
