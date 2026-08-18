@@ -11,9 +11,11 @@ barcodeScanHandlers.add(
     "stock_picking",
     {
         async handle(barcode, parsed, {api, navigate}) {
-            if (!(barcode.startsWith("WH/") || barcode.startsWith("INT/"))) {
-                return false;
-            }
+            // A picking reference is client-configurable: its name comes from the
+            // operation type's sequence, whose prefix is the warehouse's own code
+            // (AC-HAU, DI-LIC, JOBS...), not necessarily WH or INT. Never gate the
+            // lookup on a hard-coded prefix — search by name and fall through when
+            // nothing matches, exactly like the product and location handlers.
             const pickings = await api.searchRead(
                 "stock.picking",
                 [["name", "=", barcode]],
