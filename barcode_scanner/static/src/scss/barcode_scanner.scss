@@ -3095,6 +3095,13 @@
 
 .ilx-mw-v2-main {
     flex: 1;
+    // Own the scroll so the footer (the confirm/back buttons) stays pinned and
+    // visible: without min-height:0 a flex child cannot shrink below its
+    // content, so a tall form on a short PDA screen pushed the footer out of
+    // the overflow:hidden screen and there was nothing to scroll.
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 0 1.5rem;
     max-width: 600px;
     margin: 0 auto;
