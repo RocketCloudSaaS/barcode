@@ -557,6 +557,21 @@ export class BarcodeScannerState extends Reactive {
         if (!targetLine && matchingLines.length) {
             [targetLine] = matchingLines;
         }
+        // No line carries this lot yet: take over a reserved line that has no
+        // lot assigned (same move and product, nothing picked on it) instead of
+        // spawning a new line beside the untouched reservation. The scan then
+        // fills the reservation — "534343: 2.5 / 10" — rather than leaving a
+        // lotless reserved line dangling next to a fresh lot line.
+        if (!targetLine && (lotId || wantedLotName)) {
+            targetLine = this.moveLines.find(
+                (line) =>
+                    line.move_id?.[0] === moveId &&
+                    line.product_id?.[0] === productId &&
+                    !line.lot_id?.[0] &&
+                    !(line.lot_name || "").trim() &&
+                    normalizeQty(line.qty_picked) === 0
+            );
+        }
 
         const nextQty = targetLine
             ? mode === "set"
