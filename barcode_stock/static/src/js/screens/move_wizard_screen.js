@@ -512,7 +512,9 @@ export class MoveWizardScreen extends Component {
             return;
         }
         const lot = this.selectedLot;
-        if (this.isLotExpired(lot)) {
+        // A reception may take in an expired lot (it records what physically
+        // arrived); only deliveries and internal moves are blocked from it.
+        if (this.isLotExpired(lot) && !this.isIncoming) {
             this.inventory.notify(_t("Lot expired"), {type: "danger"});
             return;
         }

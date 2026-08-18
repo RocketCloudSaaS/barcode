@@ -218,14 +218,17 @@ export class BarcodeScannerSync {
             };
         }
 
-        if (lotId) {
-            if (this.state.isLotExpired(lotId)) {
-                return {
-                    code: GUARDRAIL_CODES.LOT_EXPIRED,
-                    message:
-                        "This lot has passed its expiration date and cannot be used.",
-                };
-            }
+        // A reception may take in an expired lot (it records what physically
+        // arrived); only deliveries and internal moves are blocked from it.
+        if (
+            lotId &&
+            this.state.isLotExpired(lotId) &&
+            this.state.pickingTypeCode !== "incoming"
+        ) {
+            return {
+                code: GUARDRAIL_CODES.LOT_EXPIRED,
+                message: "This lot has passed its expiration date and cannot be used.",
+            };
         }
 
         if (tracking === "serial") {
@@ -322,7 +325,11 @@ export class BarcodeScannerSync {
                 continue;
             }
 
-            if (lotId && this.state.isLotExpired(lotId)) {
+            if (
+                lotId &&
+                this.state.isLotExpired(lotId) &&
+                this.state.pickingTypeCode !== "incoming"
+            ) {
                 errors.push({
                     code: GUARDRAIL_CODES.LOT_EXPIRED,
                     message: `Line for ${
