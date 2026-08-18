@@ -138,13 +138,36 @@ export class BarcodeScannerSync {
                 );
                 return;
             case "lot_create": {
-                const lotIds = await this.orm.create("stock.lot", [operation.values]);
-                const lotId = Array.isArray(lotIds) ? lotIds[0] : lotIds;
                 const readFields = ["name", "product_id", "product_qty"];
                 if (this.state.hasProductExpiry) {
                     readFields.push("expiration_date", "removal_date");
                 }
-                const [lot] = await this.orm.read("stock.lot", [lotId], readFields);
+                // A create-lots reception does not preload existing lots, so the
+                // same batch scanned twice (two boxes of one lot) would try to
+                // create a duplicate and hit the name+product uniqueness
+                // constraint. There is exactly one lot record per name+product,
+                // so reuse it when it exists and only create when it does not.
+                const {name, product_id: productId} = operation.values;
+                const existing =
+                    name && productId
+                        ? await this.orm.searchRead(
+                              "stock.lot",
+                              [
+                                  ["name", "=", name],
+                                  ["product_id", "=", productId],
+                              ],
+                              readFields,
+                              {limit: 1}
+                          )
+                        : [];
+                let lot = existing[0];
+                if (!lot) {
+                    const lotIds = await this.orm.create("stock.lot", [
+                        operation.values,
+                    ]);
+                    const lotId = Array.isArray(lotIds) ? lotIds[0] : lotIds;
+                    [lot] = await this.orm.read("stock.lot", [lotId], readFields);
+                }
                 this.state.replaceTemporaryLot(operation.tempId, lot);
                 this.updateQueuedLotReferences(queue, operation.tempId, lot);
                 return;
