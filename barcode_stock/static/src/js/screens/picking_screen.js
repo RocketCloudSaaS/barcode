@@ -513,20 +513,30 @@ export class PickingScreen extends Component {
     async handleScannedLot(move, normalized, source) {
         const {barcode, lot, quantity, expiration} = normalized;
         const lotName = lot?.name || normalized.lotName;
-        if (lot && this.barcodeScannerState.isLotExpired(lot.id)) {
+        const isIncoming = this.state.pickingTypeCode === "incoming";
+        const today = new Date().toISOString().slice(0, 10);
+        const expired =
+            (lot && this.barcodeScannerState.isLotExpired(lot.id)) ||
+            (expiration && expiration < today);
+        if (expired) {
             const message = _t("Lot %(lot)s has passed its expiration date.", {
                 lot: lotName,
             });
-            this.setLastScanContext({
-                barcode,
-                source,
-                tone: "warning",
-                message,
-                move,
-                lotName,
-            });
             this.feedback.warning({notify: true, message});
-            return;
+            // A reception records what physically arrived, so a warning is
+            // enough and the scan proceeds; deliveries and internal moves must
+            // not use an expired lot, so there it stays a hard stop.
+            if (!isIncoming) {
+                this.setLastScanContext({
+                    barcode,
+                    source,
+                    tone: "warning",
+                    message,
+                    move,
+                    lotName,
+                });
+                return;
+            }
         }
         if (lot && this.barcodeScannerState.useExistingLots) {
             this.setLastScanContext({
