@@ -218,12 +218,14 @@ export class BarcodeScannerSync {
             };
         }
 
-        // A reception may take in an expired lot (it records what physically
-        // arrived); only deliveries and internal moves are blocked from it.
+        // Receptions and internal moves may use an expired lot -- a reception
+        // records what physically arrived, and an internal transfer just
+        // relocates it (e.g. to quarantine); both warn instead of blocking.
+        // Only a delivery to a customer is a hard stop.
         if (
             lotId &&
             this.state.isLotExpired(lotId) &&
-            this.state.pickingTypeCode !== "incoming"
+            this.state.pickingTypeCode === "outgoing"
         ) {
             return {
                 code: GUARDRAIL_CODES.LOT_EXPIRED,
@@ -328,7 +330,7 @@ export class BarcodeScannerSync {
             if (
                 lotId &&
                 this.state.isLotExpired(lotId) &&
-                this.state.pickingTypeCode !== "incoming"
+                this.state.pickingTypeCode === "outgoing"
             ) {
                 errors.push({
                     code: GUARDRAIL_CODES.LOT_EXPIRED,

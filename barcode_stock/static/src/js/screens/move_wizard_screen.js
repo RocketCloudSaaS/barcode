@@ -126,6 +126,9 @@ export class MoveWizardScreen extends Component {
         return this.props.params?.pickingTypeCode === "incoming";
     }
 
+    get isOutgoing() {
+        return this.props.params?.pickingTypeCode === "outgoing";
+    }
 
     /**
      * Let the operator choose where stock comes from / goes to. Enabled for
@@ -577,9 +580,9 @@ export class MoveWizardScreen extends Component {
             return;
         }
         const lot = this.selectedLot;
-        // A reception may take in an expired lot (it records what physically
-        // arrived); only deliveries and internal moves are blocked from it.
-        if (this.isLotExpired(lot) && !this.isIncoming) {
+        // Receptions and internal moves may use an expired lot (it records what
+        // arrived / relocates it); only a delivery to a customer is blocked.
+        if (this.isLotExpired(lot) && this.isOutgoing) {
             this.inventory.notify(_t("Lot expired"), {type: "danger"});
             return;
         }
