@@ -1592,6 +1592,60 @@
                                         </span>
                                     </div>
                                 </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div
+                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
+                                    ><i class="fa fa-cubes" /></div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">On Hand</span>
+                                        <span class="ilx-kw-value"><t
+                                                t-esc="state.resultDetails.qty_available"
+                                            /> <t
+                                                t-esc="state.resultDetails.uom_id ? state.resultDetails.uom_id[1] : ''"
+                                            /></span>
+                                    </div>
+                                </div>
+                                <t t-if="state.productStock.length">
+                                    <div
+                                        class="ilx-kw-info-row mt-3"
+                                        style="align-items: flex-start;"
+                                    >
+                                        <div
+                                            class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
+                                        ><i class="fa fa-map-marker" /></div>
+                                        <div class="ilx-kw-info-text" style="flex: 1;">
+                                            <span
+                                                class="ilx-kw-eyebrow"
+                                            >Stock by Location (<t
+                                                    t-esc="state.productStock.length"
+                                                />)</span>
+                                            <div style="margin-top: 4px;">
+                                                <t
+                                                    t-foreach="state.productStock"
+                                                    t-as="item"
+                                                    t-key="item.locationId"
+                                                >
+                                                    <div
+                                                        style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;"
+                                                    >
+                                                        <span
+                                                            class="ilx-kw-value"
+                                                            style="font-size: 0.85rem;"
+                                                        ><t
+                                                                t-esc="item.locationName"
+                                                            /></span>
+                                                        <span
+                                                            class="ilx-kw-value"
+                                                            style="font-weight: 600; font-size: 0.85rem;"
+                                                        ><t
+                                                                t-esc="item.quantity"
+                                                            /></span>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
                                 <t t-if="state.lot">
                                     <div
                                         class="ilx-kw-info-row mt-3"

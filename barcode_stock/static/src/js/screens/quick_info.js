@@ -18,6 +18,7 @@ export class QuickInfoScreen extends Component {
             resultType: null,
             resultDetails: null,
             locationStock: [],
+            productStock: [],
             stockPage: 0,
             lot: null,
             lotStock: [],
@@ -47,6 +48,7 @@ export class QuickInfoScreen extends Component {
         this.state.result = result;
         this.state.resultType = resultType;
         this.state.locationStock = [];
+        this.state.productStock = [];
         this.state.stockPage = 0;
         this.state.lot = null;
         this.state.lotStock = [];
@@ -64,9 +66,32 @@ export class QuickInfoScreen extends Component {
                     "type",
                     "is_storable",
                     "image_128",
+                    "qty_available",
+                    "uom_id",
                 ]
             );
             this.state.resultDetails = products.length ? products[0] : null;
+            if (this.state.resultDetails) {
+                // Where this product physically sits: on-hand grouped by
+                // internal location -- the mirror of the location->products
+                // direction, which was the missing half of the quick lookup.
+                const quants = await this.inventory.readGroup(
+                    "stock.quant",
+                    [
+                        ["product_id", "=", result.id],
+                        ["location_id.usage", "=", "internal"],
+                    ],
+                    ["location_id", "quantity"],
+                    ["location_id"]
+                );
+                this.state.productStock = quants
+                    .filter((q) => q.quantity > 0)
+                    .map((q) => ({
+                        locationId: q.location_id[0],
+                        locationName: q.location_id[1],
+                        quantity: q.quantity,
+                    }));
+            }
             if (this.state.resultDetails && lotName) {
                 await this.loadLot(result.id, lotName);
             }
@@ -137,6 +162,7 @@ export class QuickInfoScreen extends Component {
             this.state.resultDetails = null;
             this.state.resultType = null;
             this.state.locationStock = [];
+            this.state.productStock = [];
             this.state.stockPage = 0;
             this.state.lot = null;
             this.state.lotStock = [];
