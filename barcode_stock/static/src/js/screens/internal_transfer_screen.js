@@ -4,6 +4,7 @@ import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 
@@ -65,11 +66,17 @@ export class InternalTransferScreen extends Component {
     }
 
     async handleBarcode(barcode, parsedData) {
-        const locations = await this.inventory.searchRead(
-            "stock.location",
-            [["barcode", "=", barcode]],
-            ["display_name"]
-        );
+        // Tolerant match: a physical reader may add whitespace or change case,
+        // which a raw "=" would miss (it fell through to product lookup and
+        // reported "not found") while a manual paste worked.
+        const locationDomain = barcodeMatchDomain(barcode);
+        const locations = locationDomain
+            ? await this.inventory.searchRead(
+                  "stock.location",
+                  locationDomain,
+                  ["display_name"]
+              )
+            : [];
         if (locations.length) {
             const location = locations[0];
             if (this.state.origin_location) {
@@ -102,9 +109,10 @@ export class InternalTransferScreen extends Component {
     }
 
     async addScannedProduct(productCode, parsedData = null) {
-        const products = await this.inventory.searchRead("product.product", [
-            ["barcode", "=", productCode],
-        ]);
+        const productDomain = barcodeMatchDomain(productCode);
+        const products = productDomain
+            ? await this.inventory.searchRead("product.product", productDomain)
+            : [];
         if (!products.length) {
             this.notification.add("Product not found.", {
                 type: "warning",
@@ -131,9 +139,18 @@ export class InternalTransferScreen extends Component {
     }
 
     async findAvailableLot(productId, lotName) {
-        const lots = (await this.fetchLots(productId)) || [];
         const wanted = lotName.trim().toUpperCase();
-        return lots.find((lot) => (lot.name || "").toUpperCase() === wanted) || null;
+        const match = (lots) =>
+            lots.find((lot) => (lot.name || "").toUpperCase() === wanted) || null;
+        // Prefer a lot actually on hand at the origin...
+        const atOrigin = match((await this.fetchLots(productId)) || []);
+        if (atOrigin) {
+            return atOrigin;
+        }
+        // ...otherwise still resolve the scanned lot against the product's
+        // existing lots so it lands on the line instead of being dropped;
+        // CHECK/VALIDATE then report whether it is available at the origin.
+        return match((await this.fetchAllLots(productId)) || []);
     }
 
     async addLine(product, lotId, lotName, qty) {
@@ -165,15 +182,19 @@ export class InternalTransferScreen extends Component {
         });
     }
 
+    async fetchAllLots(productId) {
+        return (
+            (await this.inventory.searchRead(
+                "stock.lot",
+                [["product_id", "=", productId]],
+                ["id", "name"]
+            )) || []
+        );
+    }
+
     async fetchLots(productId) {
         if (!this.state.origin_location?.id) {
-            return (
-                (await this.inventory.searchRead(
-                    "stock.lot",
-                    [["product_id", "=", productId]],
-                    ["id", "name"]
-                )) || []
-            );
+            return this.fetchAllLots(productId);
         }
         const quants = await this.inventory.searchRead(
             "stock.quant",
@@ -189,7 +210,11 @@ export class InternalTransferScreen extends Component {
             ...new Set(quants.map((quant) => quant.lot_id?.[0]).filter(Boolean)),
         ];
         if (!lotIds.length) {
-            return [];
+            // Nothing lotted on hand at the origin yet: still offer the
+            // product's existing lots so the operator can pick one by hand
+            // (and a scanned lot resolves) instead of facing an empty list.
+            // Availability is verified later by CHECK / VALIDATE.
+            return this.fetchAllLots(productId);
         }
         return (await this.inventory.read("stock.lot", lotIds, ["name"])) || [];
     }

@@ -536,7 +536,7 @@ export class PickingListScreen extends Component {
         }
     }
 
-    onBarcodeScanned(barcode) {
+    async onBarcodeScanned(barcode) {
         const scanValue = (barcode || "").trim();
         if (!scanValue) {
             return;
@@ -567,9 +567,28 @@ export class PickingListScreen extends Component {
             });
             return;
         }
+        // Not in the list currently shown here (which is scoped to this
+        // warehouse, operation type and open state). The scanned name may belong
+        // to another type, warehouse or an already-done operation, so look it up
+        // on the server by exact name and open it -- otherwise scanning a valid
+        // operation "worked for some and not others" with no clear reason.
+        const found = await this.inventory.searchRead(
+            "stock.picking",
+            [["name", "=", scanValue]],
+            ["id"],
+            {limit: 1}
+        );
+        if (found.length) {
+            this.feedback.success({
+                notify: true,
+                message: _t("Operation opened from scan."),
+            });
+            this.openPicking(found[0].id);
+            return;
+        }
         this.feedback.warning({
             notify: true,
-            message: _t("No picking matched the scanned value."),
+            message: _t("No operation found for “%(code)s”.", {code: scanValue}),
         });
     }
 
