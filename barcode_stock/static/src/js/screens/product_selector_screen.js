@@ -3,6 +3,7 @@
 import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {Component, onWillStart, useState} from "@odoo/owl";
+import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
@@ -42,7 +43,13 @@ export class ProductSelectorScreen extends Component {
             this.confirmSelection();
             return;
         }
+        // No product carries this barcode: filter the list by it and say so,
+        // instead of silently doing nothing.
         this.state.search = searchCode;
+        this.inventory.notify(
+            _t("No product matches “%(code)s”.", {code: searchCode}),
+            {type: "warning"}
+        );
     }
 
     async loadProducts() {

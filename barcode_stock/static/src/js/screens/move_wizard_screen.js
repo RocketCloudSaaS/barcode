@@ -81,6 +81,10 @@ export class MoveWizardScreen extends Component {
             normalized.product
         );
         if (!product) {
+            this.inventory.notify(
+                _t("Scanned barcode is not a product of this operation."),
+                {type: "warning"}
+            );
             return;
         }
         if (product.id !== this.state.move?.product_id?.[0]) {
