@@ -10,6 +10,7 @@ export class WarehouseOps extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
         this.store = useService("barcodeStore");
+        this.company = useService("company");
         this.state = useState({
             warehouses: [],
             selectedWarehouseId: null,
@@ -30,10 +31,17 @@ export class WarehouseOps extends Component {
     }
 
     async loadData() {
+        // Only the companies the operator is actually working in (the
+        // multi-company switcher selection), not every warehouse configured in
+        // the database.
+        const allowedCompanyIds = this.company.activeCompanyIds;
+        const domain = allowedCompanyIds.length
+            ? [["company_id", "in", allowedCompanyIds]]
+            : [];
         const warehouses = await this.inventory.searchRead(
             "stock.warehouse",
-            [],
-            ["name"]
+            domain,
+            ["name", "company_id"]
         );
         const pickingTypes = await this.inventory.searchRead(
             "stock.picking.type",
@@ -67,12 +75,19 @@ export class WarehouseOps extends Component {
         this.state.warehouses = warehouses.map((w) => ({
             id: w.id,
             name: w.name,
+            companyId: w.company_id?.[0] || null,
             receipts: warehouseMap[w.id]?.incoming || 0,
             internal: warehouseMap[w.id]?.internal || 0,
             delivery: warehouseMap[w.id]?.outgoing || 0,
         }));
         if (this.state.warehouses.length) {
-            this.state.selectedWarehouseId = this.state.warehouses[0].id;
+            // Preselect the warehouse of the active company, not just the first
+            // in the list (which was rarely the operator's own).
+            const currentCompanyId = this.company.currentCompany?.id;
+            const active = this.state.warehouses.find(
+                (w) => w.companyId === currentCompanyId
+            );
+            this.state.selectedWarehouseId = (active || this.state.warehouses[0]).id;
         }
     }
 
