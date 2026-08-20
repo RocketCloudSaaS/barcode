@@ -11,6 +11,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class PickingScreen extends Component {
     setup() {
@@ -465,11 +466,14 @@ export class PickingScreen extends Component {
             });
             return;
         }
-        const products = await this.inventory.searchRead(
-            "product.product",
-            [["barcode", "=", barcode]],
-            ["display_name", "tracking"]
-        );
+        const productDomain = barcodeMatchDomain(barcode);
+        const products = productDomain
+            ? await this.inventory.searchRead(
+                  "product.product",
+                  productDomain,
+                  ["display_name", "tracking"]
+              )
+            : [];
         if (!products.length) {
             this.setLastScanContext({
                 barcode,

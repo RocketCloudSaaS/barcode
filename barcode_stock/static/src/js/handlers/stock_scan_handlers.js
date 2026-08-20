@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import {barcodeScanHandlers} from "@barcode_scanner/js/registries";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 /**
  * Home-screen scan recognition for stock. Isolated in its own file so it can be
@@ -36,11 +37,14 @@ barcodeScanHandlers.add(
     {
         async handle(barcode, parsed, {api, navigate}) {
             const productCode = parsed?.value || barcode;
-            const products = await api.searchRead(
-                "product.product",
-                [["barcode", "=", productCode]],
-                ["id", "display_name"]
-            );
+            const productDomain = barcodeMatchDomain(productCode);
+            const products = productDomain
+                ? await api.searchRead(
+                      "product.product",
+                      productDomain,
+                      ["id", "display_name"]
+                  )
+                : [];
             if (!products.length) {
                 return false;
             }
@@ -55,11 +59,14 @@ barcodeScanHandlers.add(
     "location",
     {
         async handle(barcode, parsed, {api, navigate}) {
-            const locations = await api.searchRead(
-                "stock.location",
-                [["barcode", "=", barcode]],
-                ["id", "display_name"]
-            );
+            const locationDomain = barcodeMatchDomain(barcode);
+            const locations = locationDomain
+                ? await api.searchRead(
+                      "stock.location",
+                      locationDomain,
+                      ["id", "display_name"]
+                  )
+                : [];
             if (!locations.length) {
                 return false;
             }

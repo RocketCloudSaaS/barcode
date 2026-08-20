@@ -4,6 +4,7 @@ import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 
@@ -65,11 +66,17 @@ export class InternalTransferScreen extends Component {
     }
 
     async handleBarcode(barcode, parsedData) {
-        const locations = await this.inventory.searchRead(
-            "stock.location",
-            [["barcode", "=", barcode]],
-            ["display_name"]
-        );
+        // Tolerant match: a physical reader may add whitespace or change case,
+        // which a raw "=" would miss (it fell through to product lookup and
+        // reported "not found") while a manual paste worked.
+        const locationDomain = barcodeMatchDomain(barcode);
+        const locations = locationDomain
+            ? await this.inventory.searchRead(
+                  "stock.location",
+                  locationDomain,
+                  ["display_name"]
+              )
+            : [];
         if (locations.length) {
             const location = locations[0];
             if (this.state.origin_location) {
@@ -102,9 +109,10 @@ export class InternalTransferScreen extends Component {
     }
 
     async addScannedProduct(productCode, parsedData = null) {
-        const products = await this.inventory.searchRead("product.product", [
-            ["barcode", "=", productCode],
-        ]);
+        const productDomain = barcodeMatchDomain(productCode);
+        const products = productDomain
+            ? await this.inventory.searchRead("product.product", productDomain)
+            : [];
         if (!products.length) {
             this.notification.add("Product not found.", {
                 type: "warning",

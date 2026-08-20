@@ -7,6 +7,7 @@ import {useService} from "@web/core/utils/hooks";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class QuickInfoScreen extends Component {
     setup() {
@@ -236,21 +237,27 @@ export class QuickInfoScreen extends Component {
         const productCode = parsedData?.value || barcode;
         const lotName = parsedData?.lot || parsedData?.serial || null;
         try {
-            const products = await this.inventory.searchRead(
-                "product.product",
-                [["barcode", "=", productCode]],
-                ["display_name"]
-            );
+            const productDomain = barcodeMatchDomain(productCode);
+            const products = productDomain
+                ? await this.inventory.searchRead(
+                      "product.product",
+                      productDomain,
+                      ["display_name"]
+                  )
+                : [];
             if (products.length) {
                 this.state.barcode = "";
                 await this.loadResult(products[0], "product", {lotName});
                 return;
             }
-            const locations = await this.inventory.searchRead(
-                "stock.location",
-                [["barcode", "=", barcode]],
-                ["display_name"]
-            );
+            const locationDomain = barcodeMatchDomain(barcode);
+            const locations = locationDomain
+                ? await this.inventory.searchRead(
+                      "stock.location",
+                      locationDomain,
+                      ["display_name"]
+                  )
+                : [];
             if (locations.length) {
                 this.state.barcode = "";
                 await this.loadResult(locations[0], "location");
