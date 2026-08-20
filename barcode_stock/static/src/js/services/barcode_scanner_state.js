@@ -562,20 +562,34 @@ export class BarcodeScannerState extends Reactive {
         if (!targetLine && matchingLines.length) {
             [targetLine] = matchingLines;
         }
-        // No line carries this lot yet: take over a reserved line that has no
-        // lot assigned (same move and product, nothing picked on it) instead of
-        // spawning a new line beside the untouched reservation. The scan then
-        // fills the reservation — "534343: 2.5 / 10" — rather than leaving a
-        // lotless reserved line dangling next to a fresh lot line.
+        // No line carries this lot yet: take over an already-reserved line
+        // (same move and product, nothing picked on it) instead of spawning a
+        // new line beside the untouched reservation. The scan then fills the
+        // reservation — "534343: 2.5 / 10" — rather than leaving a reserved
+        // line dangling next to a fresh lot line that reserves nothing.
         if (!targetLine && (lotId || wantedLotName)) {
-            targetLine = this.moveLines.find(
+            const untouched = this.moveLines.filter(
                 (line) =>
                     line.move_id?.[0] === moveId &&
                     line.product_id?.[0] === productId &&
-                    !line.lot_id?.[0] &&
-                    !(line.lot_name || "").trim() &&
                     normalizeQty(line.qty_picked) === 0
             );
+            // Prefer a lotless reserved line (the reception case).
+            targetLine = untouched.find(
+                (line) => !line.lot_id?.[0] && !(line.lot_name || "").trim()
+            );
+            // Outside receptions, internal/outgoing pickings reserve against a
+            // specific lot, so a fresh line for the scanned lot would reserve
+            // nothing (its quantity stays 0 and _pick_qty won't raise it once
+            // the move is fully reserved). Take over such a reserved line and
+            // reassign it to the scanned lot instead: writing lot_id makes Odoo
+            // move the quant reservation onto it (see stock.move.line.write),
+            // which is what "I'm moving THIS lot" means.
+            if (!targetLine && this.pickingTypeCode !== "incoming") {
+                targetLine = untouched.find(
+                    (line) => normalizeQty(line.quantity) > 0
+                );
+            }
         }
 
         const nextQty = targetLine
