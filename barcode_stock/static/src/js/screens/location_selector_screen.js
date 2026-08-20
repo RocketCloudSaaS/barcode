@@ -3,9 +3,11 @@
 import {barcodeScreens} from "@barcode_scanner/js/registries";
 
 import {Component, onWillStart, useState} from "@odoo/owl";
+import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class LocationSelectorScreen extends Component {
     setup() {
@@ -30,17 +32,26 @@ export class LocationSelectorScreen extends Component {
     }
 
     async onBarcodeScanned(barcode) {
-        const locations = await this.inventory.searchRead(
-            "stock.location",
-            [["barcode", "=", barcode]],
-            ["id", "display_name", "usage"]
-        );
+        const domain = barcodeMatchDomain(barcode);
+        const locations = domain
+            ? await this.inventory.searchRead(
+                  "stock.location",
+                  domain,
+                  ["id", "display_name", "usage"]
+              )
+            : [];
         if (locations.length) {
             this.state.selectedLocation = locations[0];
             this.confirmSelection();
             return;
         }
+        // No location carries this barcode: filter the list by it and say so,
+        // instead of silently doing nothing.
         this.state.search = barcode;
+        this.inventory.notify(
+            _t("No location matches “%(code)s”.", {code: barcode}),
+            {type: "warning"}
+        );
     }
 
     async loadLocations() {

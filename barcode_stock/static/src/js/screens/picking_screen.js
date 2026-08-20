@@ -11,6 +11,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class PickingScreen extends Component {
     setup() {
@@ -465,11 +466,14 @@ export class PickingScreen extends Component {
             });
             return;
         }
-        const products = await this.inventory.searchRead(
-            "product.product",
-            [["barcode", "=", barcode]],
-            ["display_name", "tracking"]
-        );
+        const productDomain = barcodeMatchDomain(barcode);
+        const products = productDomain
+            ? await this.inventory.searchRead(
+                  "product.product",
+                  productDomain,
+                  ["display_name", "tracking"]
+              )
+            : [];
         if (!products.length) {
             this.setLastScanContext({
                 barcode,
@@ -513,7 +517,7 @@ export class PickingScreen extends Component {
     async handleScannedLot(move, normalized, source) {
         const {barcode, lot, quantity, expiration} = normalized;
         const lotName = lot?.name || normalized.lotName;
-        const isIncoming = this.state.pickingTypeCode === "incoming";
+        const isOutgoing = this.state.pickingTypeCode === "outgoing";
         const today = new Date().toISOString().slice(0, 10);
         const expired =
             (lot && this.barcodeScannerState.isLotExpired(lot.id)) ||
@@ -523,10 +527,10 @@ export class PickingScreen extends Component {
                 lot: lotName,
             });
             this.feedback.warning({notify: true, message});
-            // A reception records what physically arrived, so a warning is
-            // enough and the scan proceeds; deliveries and internal moves must
-            // not use an expired lot, so there it stays a hard stop.
-            if (!isIncoming) {
+            // A reception records what physically arrived and an internal move
+            // just relocates the stock, so both warn and let the scan proceed;
+            // only a delivery to a customer stays a hard stop.
+            if (isOutgoing) {
                 this.setLastScanContext({
                     barcode,
                     source,

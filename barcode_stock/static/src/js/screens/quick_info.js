@@ -7,6 +7,7 @@ import {useService} from "@web/core/utils/hooks";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class QuickInfoScreen extends Component {
     setup() {
@@ -18,6 +19,7 @@ export class QuickInfoScreen extends Component {
             resultType: null,
             resultDetails: null,
             locationStock: [],
+            productStock: [],
             stockPage: 0,
             lot: null,
             lotStock: [],
@@ -47,6 +49,7 @@ export class QuickInfoScreen extends Component {
         this.state.result = result;
         this.state.resultType = resultType;
         this.state.locationStock = [];
+        this.state.productStock = [];
         this.state.stockPage = 0;
         this.state.lot = null;
         this.state.lotStock = [];
@@ -64,9 +67,32 @@ export class QuickInfoScreen extends Component {
                     "type",
                     "is_storable",
                     "image_128",
+                    "qty_available",
+                    "uom_id",
                 ]
             );
             this.state.resultDetails = products.length ? products[0] : null;
+            if (this.state.resultDetails) {
+                // Where this product physically sits: on-hand grouped by
+                // internal location -- the mirror of the location->products
+                // direction, which was the missing half of the quick lookup.
+                const quants = await this.inventory.readGroup(
+                    "stock.quant",
+                    [
+                        ["product_id", "=", result.id],
+                        ["location_id.usage", "=", "internal"],
+                    ],
+                    ["location_id", "quantity"],
+                    ["location_id"]
+                );
+                this.state.productStock = quants
+                    .filter((q) => q.quantity > 0)
+                    .map((q) => ({
+                        locationId: q.location_id[0],
+                        locationName: q.location_id[1],
+                        quantity: q.quantity,
+                    }));
+            }
             if (this.state.resultDetails && lotName) {
                 await this.loadLot(result.id, lotName);
             }
@@ -137,6 +163,7 @@ export class QuickInfoScreen extends Component {
             this.state.resultDetails = null;
             this.state.resultType = null;
             this.state.locationStock = [];
+            this.state.productStock = [];
             this.state.stockPage = 0;
             this.state.lot = null;
             this.state.lotStock = [];
@@ -210,21 +237,27 @@ export class QuickInfoScreen extends Component {
         const productCode = parsedData?.value || barcode;
         const lotName = parsedData?.lot || parsedData?.serial || null;
         try {
-            const products = await this.inventory.searchRead(
-                "product.product",
-                [["barcode", "=", productCode]],
-                ["display_name"]
-            );
+            const productDomain = barcodeMatchDomain(productCode);
+            const products = productDomain
+                ? await this.inventory.searchRead(
+                      "product.product",
+                      productDomain,
+                      ["display_name"]
+                  )
+                : [];
             if (products.length) {
                 this.state.barcode = "";
                 await this.loadResult(products[0], "product", {lotName});
                 return;
             }
-            const locations = await this.inventory.searchRead(
-                "stock.location",
-                [["barcode", "=", barcode]],
-                ["display_name"]
-            );
+            const locationDomain = barcodeMatchDomain(barcode);
+            const locations = locationDomain
+                ? await this.inventory.searchRead(
+                      "stock.location",
+                      locationDomain,
+                      ["display_name"]
+                  )
+                : [];
             if (locations.length) {
                 this.state.barcode = "";
                 await this.loadResult(locations[0], "location");
