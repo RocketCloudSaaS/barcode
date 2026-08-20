@@ -151,10 +151,15 @@ export class BarcodeScannerState extends Reactive {
             const trackedProductIds = productIds.filter(
                 (pid) => products.find((p) => p.id === pid)?.tracking !== "none"
             );
-            const incomingNeedsAllLots =
-                type.code === "incoming" &&
-                type.use_existing_lots &&
-                trackedProductIds.length > 0;
+            // Preload the full lot set for tracked products whenever the
+            // operation can pick from existing lots: receptions need it to
+            // resolve a scanned/typed lot, and internal/outgoing transfers need
+            // it so the operator can scan or pick ANY existing lot -- not only
+            // the ones already reserved on this picking (lotsById would
+            // otherwise hold just those, so a scanned lot resolved to null and
+            // the manual dropdown came up empty).
+            const needsAllLots =
+                type.use_existing_lots && trackedProductIds.length > 0;
 
             this.useExistingLots = type.use_existing_lots;
             this.useCreateLots = type.use_create_lots;
@@ -178,7 +183,7 @@ export class BarcodeScannerState extends Reactive {
                 ? await this.orm.read("stock.lot", lotIds, lotBaseFields)
                 : [];
 
-            if (incomingNeedsAllLots) {
+            if (needsAllLots) {
                 const allLots = await this.orm.searchRead(
                     "stock.lot",
                     [["product_id", "in", trackedProductIds]],

@@ -131,9 +131,18 @@ export class InternalTransferScreen extends Component {
     }
 
     async findAvailableLot(productId, lotName) {
-        const lots = (await this.fetchLots(productId)) || [];
         const wanted = lotName.trim().toUpperCase();
-        return lots.find((lot) => (lot.name || "").toUpperCase() === wanted) || null;
+        const match = (lots) =>
+            lots.find((lot) => (lot.name || "").toUpperCase() === wanted) || null;
+        // Prefer a lot actually on hand at the origin...
+        const atOrigin = match((await this.fetchLots(productId)) || []);
+        if (atOrigin) {
+            return atOrigin;
+        }
+        // ...otherwise still resolve the scanned lot against the product's
+        // existing lots so it lands on the line instead of being dropped;
+        // CHECK/VALIDATE then report whether it is available at the origin.
+        return match((await this.fetchAllLots(productId)) || []);
     }
 
     async addLine(product, lotId, lotName, qty) {
@@ -165,15 +174,19 @@ export class InternalTransferScreen extends Component {
         });
     }
 
+    async fetchAllLots(productId) {
+        return (
+            (await this.inventory.searchRead(
+                "stock.lot",
+                [["product_id", "=", productId]],
+                ["id", "name"]
+            )) || []
+        );
+    }
+
     async fetchLots(productId) {
         if (!this.state.origin_location?.id) {
-            return (
-                (await this.inventory.searchRead(
-                    "stock.lot",
-                    [["product_id", "=", productId]],
-                    ["id", "name"]
-                )) || []
-            );
+            return this.fetchAllLots(productId);
         }
         const quants = await this.inventory.searchRead(
             "stock.quant",
@@ -189,7 +202,11 @@ export class InternalTransferScreen extends Component {
             ...new Set(quants.map((quant) => quant.lot_id?.[0]).filter(Boolean)),
         ];
         if (!lotIds.length) {
-            return [];
+            // Nothing lotted on hand at the origin yet: still offer the
+            // product's existing lots so the operator can pick one by hand
+            // (and a scanned lot resolves) instead of facing an empty list.
+            // Availability is verified later by CHECK / VALIDATE.
+            return this.fetchAllLots(productId);
         }
         return (await this.inventory.read("stock.lot", lotIds, ["name"])) || [];
     }
