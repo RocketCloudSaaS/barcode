@@ -48,9 +48,7 @@ describe("ProductMultiBarcode", () => {
 
     test("a barcode with no alternate still resolves through the main barcode", () => {
         const state = stateWithAlternates();
-        expect(state.getMoveCandidatesForBarcode(PRODUCT.barcode)[0].id).toBe(
-            MOVE.id
-        );
+        expect(state.getMoveCandidatesForBarcode(PRODUCT.barcode)[0].id).toBe(MOVE.id);
     });
 
     test("an unknown barcode yields no candidates", () => {
@@ -60,7 +58,7 @@ describe("ProductMultiBarcode", () => {
 
     test("preloadPicking loads and indexes the alternate barcodes", async () => {
         const orm = {
-            searchRead(model, domain, fields) {
+            searchRead(model) {
                 if (model === "stock.picking") {
                     return [
                         {
@@ -73,17 +71,11 @@ describe("ProductMultiBarcode", () => {
                         },
                     ];
                 }
-                if (model === "stock.picking.type") {
-                    return [{id: 1, code: "incoming", use_existing_lots: false, use_create_lots: true}];
-                }
                 if (model === "stock.move") {
                     return [MOVE];
                 }
                 if (model === "stock.move.line") {
                     return [];
-                }
-                if (model === "product.product") {
-                    return [PRODUCT];
                 }
                 if (model === "product.packaging") {
                     return [];
@@ -99,9 +91,19 @@ describe("ProductMultiBarcode", () => {
                 }
                 return [];
             },
-            read(model, ids, fields) {
+            read(model, ids) {
                 if (model === "stock.picking.type") {
-                    return [{id: 1, code: "incoming", use_existing_lots: false, use_create_lots: true}];
+                    return [
+                        {
+                            id: 1,
+                            code: "incoming",
+                            use_existing_lots: false,
+                            use_create_lots: true,
+                        },
+                    ];
+                }
+                if (model === "product.product") {
+                    return ids.map((id) => ({...PRODUCT, id}));
                 }
                 return [];
             },
