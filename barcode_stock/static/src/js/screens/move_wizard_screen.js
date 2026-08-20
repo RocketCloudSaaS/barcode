@@ -24,6 +24,8 @@ export class MoveWizardScreen extends Component {
         this.setQty = this.setQty.bind(this);
         this.fulfillRemaining = this.fulfillRemaining.bind(this);
         this.onKeyDown = this.onKeyDown.bind(this);
+        this.selectSourceLocation = this.selectSourceLocation.bind(this);
+        this.selectDestLocation = this.selectDestLocation.bind(this);
 
         this.state = useState({
             move: null,
@@ -41,6 +43,11 @@ export class MoveWizardScreen extends Component {
             lots: [],
             useExistingLots: true,
             useCreateLots: true,
+            // Editable source/destination. Carried across the location-picker
+            // round-trip via params (the wizard remounts on return); otherwise
+            // seeded from the move in loadData.
+            sourceLocation: this.props.params?.moveSourceLocation || null,
+            destLocation: this.props.params?.moveDestLocation || null,
         });
 
         useBarcodeHandler({
@@ -117,6 +124,17 @@ export class MoveWizardScreen extends Component {
 
     get isIncoming() {
         return this.props.params?.pickingTypeCode === "incoming";
+    }
+
+
+    /**
+     * Let the operator choose where stock comes from / goes to. Enabled for
+     * receptions (put-away destination) and internal transfers; kept off for
+     * deliveries, whose destination is the customer location and must not be
+     * repointed to an internal one from here.
+     */
+    get canEditLocations() {
+        return this.props.params?.pickingTypeCode !== "outgoing";
     }
 
     get moveId() {
@@ -382,6 +400,38 @@ export class MoveWizardScreen extends Component {
         this.state.selectedLotId = ev.target.value || null;
     }
 
+    /**
+     * Open the shared location picker, forwarding everything the wizard needs
+     * to rebuild itself on return (it remounts) so the in-progress quantity,
+     * lot and mode survive, plus both current location choices and which field
+     * this selection targets. The picker writes the chosen location back under
+     * `type` and returns here.
+     */
+    navigateToLocationSelector(type) {
+        this.store.navigate("location_selector", {
+            moveId: this.moveId,
+            pickingId: this.pickingId,
+            pickingTypeCode: this.props.params?.pickingTypeCode,
+            listParams: this.listParams,
+            defaultQty: this.state.qtyPicked,
+            defaultLot: this.state.selectedLotId,
+            lotName: this.state.newLotName,
+            expiration: this.state.newLotExpirationDate,
+            createLot: this.state.mode === "create_lot",
+            moveSourceLocation: this.state.sourceLocation,
+            moveDestLocation: this.state.destLocation,
+            type,
+        });
+    }
+
+    selectSourceLocation() {
+        this.navigateToLocationSelector("moveSourceLocation");
+    }
+
+    selectDestLocation() {
+        this.navigateToLocationSelector("moveDestLocation");
+    }
+
     async loadData() {
         if (
             !this.barcodeScannerState.ready ||
@@ -417,6 +467,21 @@ export class MoveWizardScreen extends Component {
         this.state.move = move;
         this.state.moveLines = moveLines;
         this.state.tracking = product.tracking;
+
+        // Seed the editable locations from the move unless the operator already
+        // picked one (preserved across the location-picker round-trip).
+        if (!this.state.sourceLocation && move.location_id) {
+            this.state.sourceLocation = {
+                id: move.location_id[0],
+                display_name: move.location_id[1],
+            };
+        }
+        if (!this.state.destLocation && move.location_dest_id) {
+            this.state.destLocation = {
+                id: move.location_dest_id[0],
+                display_name: move.location_dest_id[1],
+            };
+        }
 
         if (this.isTracked && this.isIncoming) {
             if (this.state.useCreateLots && !this.state.useExistingLots) {
@@ -528,8 +593,9 @@ export class MoveWizardScreen extends Component {
             lotName: lot ? lot.name : this.state.newLotName || false,
             createLot: this.state.mode === "create_lot",
             expirationDate: this.state.newLotExpirationDate || false,
-            locationId: this.state.move.location_id[0],
-            locationDestId: this.state.move.location_dest_id[0],
+            locationId: this.state.sourceLocation?.id || this.state.move.location_id[0],
+            locationDestId:
+                this.state.destLocation?.id || this.state.move.location_dest_id[0],
         });
         this.store.navigate(
             "picking",

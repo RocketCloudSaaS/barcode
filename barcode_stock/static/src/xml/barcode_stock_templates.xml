@@ -810,6 +810,49 @@
                             </button>
                         </div>
                     </div>
+
+                    <t t-if="canEditLocations">
+                        <div class="ilx-v2-field-group">
+                            <label class="ilx-v2-label">Source location</label>
+                            <div
+                                class="ilx-tx-v2-select-card"
+                                t-on-click="selectSourceLocation"
+                            >
+                                <div class="ilx-tx-v2-icon"><i
+                                        class="fa fa-map-marker"
+                                    /></div>
+                                <div class="ilx-tx-v2-text">
+                                    <t t-if="state.sourceLocation"><t
+                                            t-esc="state.sourceLocation.display_name"
+                                        /></t>
+                                    <t t-else="">Select source</t>
+                                </div>
+                                <div class="ilx-tx-v2-chevron"><i
+                                        class="fa fa-chevron-down"
+                                    /></div>
+                            </div>
+                        </div>
+                        <div class="ilx-v2-field-group">
+                            <label class="ilx-v2-label">Destination location</label>
+                            <div
+                                class="ilx-tx-v2-select-card"
+                                t-on-click="selectDestLocation"
+                            >
+                                <div class="ilx-tx-v2-icon"><i
+                                        class="fa fa-sign-in"
+                                    /></div>
+                                <div class="ilx-tx-v2-text">
+                                    <t t-if="state.destLocation"><t
+                                            t-esc="state.destLocation.display_name"
+                                        /></t>
+                                    <t t-else="">Select destination</t>
+                                </div>
+                                <div class="ilx-tx-v2-chevron"><i
+                                        class="fa fa-chevron-down"
+                                    /></div>
+                            </div>
+                        </div>
+                    </t>
                 </div>
 
                 <footer class="ilx-v2-footer">
