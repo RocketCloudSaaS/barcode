@@ -578,6 +578,12 @@ export class BarcodeScannerState extends Reactive {
                 ? normalizeQty(qtyPicked)
                 : normalizeQty(targetLine.qty_picked) + normalizeQty(qtyPicked)
             : normalizeQty(qtyPicked);
+        // Pin the line to the product's own unit of measure. Without it the
+        // server falls back to its default (Units), so a product stocked in kg
+        // -- whose scanned quantity a GS1 weight already converts to kg -- would
+        // land on the line labelled "Units". The product's uom_id is preloaded
+        // in productsById.
+        const productUomId = this.getProduct(productId)?.uom_id?.[0] || false;
         const values = {
             qty_picked: nextQty,
             picked: true,
@@ -585,6 +591,7 @@ export class BarcodeScannerState extends Reactive {
             lot_name: lotName || false,
             location_id: locationId || false,
             location_dest_id: locationDestId || false,
+            ...(productUomId ? {product_uom_id: productUomId} : {}),
             ...extraValues,
         };
 
@@ -688,10 +695,11 @@ export class BarcodeScannerState extends Reactive {
         const productId = candidates[0]?.product_id?.[0] || null;
         const lotName = scan.lot || scan.serial || null;
         const productUomId = this.productsById[productId]?.uom_id?.[0] || null;
+        let quantity = this.scannedQuantity(scan, productUomId);
         return {
             barcode: scan.barcode,
             product: barcode,
-            quantity: this.scannedQuantity(scan, productUomId),
+            quantity,
             lotName,
             lot: lotName ? this.getLot(productId, lotName) : null,
             serial: scan.serial || null,
