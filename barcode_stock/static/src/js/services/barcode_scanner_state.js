@@ -42,6 +42,7 @@ export class BarcodeScannerState extends Reactive {
         this.moveLines = [];
         this.productsById = {};
         this.lotsById = {};
+        this.packagings = [];
         this.useExistingLots = true;
         this.useCreateLots = true;
         this.indexes = {
@@ -50,6 +51,7 @@ export class BarcodeScannerState extends Reactive {
             moveLineIdsByMoveId: {},
             moveLineIdsByLotId: {},
             barcodeToProductIds: {},
+            packagingByBarcode: {},
             trackingByProductId: {},
             lotIdsByCompositeKey: {},
             expiredLotIds: [],
@@ -148,6 +150,29 @@ export class BarcodeScannerState extends Reactive {
                   ])
                 : [];
 
+            // Alternate barcodes: a product can carry several barcodes through
+            // its packagings (a box, a pallet…), each with its own barcode and
+            // unit count. Scanning any of them must resolve to the product in
+            // the picking -- exactly as the back office and the native barcode
+            // app do -- not only the product's main barcode. Guarded so a user
+            // without read access to product.packaging still loads the picking
+            // (it just falls back to main barcodes).
+            let packagings = [];
+            if (productIds.length) {
+                try {
+                    packagings = await this.orm.searchRead(
+                        "product.packaging",
+                        [
+                            ["product_id", "in", productIds],
+                            ["barcode", "!=", false],
+                        ],
+                        ["barcode", "product_id", "qty"]
+                    );
+                } catch {
+                    packagings = [];
+                }
+            }
+
             const trackedProductIds = productIds.filter(
                 (pid) => products.find((p) => p.id === pid)?.tracking !== "none"
             );
@@ -206,6 +231,7 @@ export class BarcodeScannerState extends Reactive {
                 products.map((product) => [product.id, product])
             );
             this.lotsById = Object.fromEntries(lots.map((lot) => [lot.id, lot]));
+            this.packagings = packagings;
             this.buildIndexes();
             this.ready = true;
             this.lastLoadedAt = Date.now();
@@ -225,6 +251,7 @@ export class BarcodeScannerState extends Reactive {
             moveLineIdsByMoveId: {},
             moveLineIdsByLotId: {},
             barcodeToProductIds: {},
+            packagingByBarcode: {},
             trackingByProductId: {},
             lotIdsByCompositeKey: {},
             expiredLotIds: [],
@@ -239,6 +266,25 @@ export class BarcodeScannerState extends Reactive {
                     product.id,
                 ];
             }
+        }
+
+        // Map every packaging barcode to its product too, so a scan of an
+        // alternate (pack/box/pallet) barcode matches the same move; keep the
+        // pack's unit count to translate one scan into that many units.
+        for (const packaging of this.packagings || []) {
+            const productId = packaging.product_id?.[0];
+            const code = packaging.barcode;
+            if (!productId || !code) {
+                continue;
+            }
+            indexes.barcodeToProductIds[code] = [
+                ...(indexes.barcodeToProductIds[code] || []),
+                productId,
+            ];
+            indexes.packagingByBarcode[code] = {
+                productId,
+                qty: normalizeQty(packaging.qty) || 1,
+            };
         }
 
         for (const move of this.moves) {
@@ -714,7 +760,17 @@ export class BarcodeScannerState extends Reactive {
         const productId = candidates[0]?.product_id?.[0] || null;
         const lotName = scan.lot || scan.serial || null;
         const productUomId = this.productsById[productId]?.uom_id?.[0] || null;
+        // A packaging barcode stands for a whole pack, so scanning it means
+        // "packaging.qty units" -- unless the barcode itself states a quantity
+        // (a GS1 count or weight), which always takes precedence.
+        const packaging = barcode
+            ? this.indexes.packagingByBarcode?.[barcode]
+            : null;
+        const statedQty = scan?.qty ?? scan?.quantity;
         let quantity = this.scannedQuantity(scan, productUomId);
+        if (packaging && statedQty == null) {
+            quantity = packaging.qty;
+        }
         return {
             barcode: scan.barcode,
             product: barcode,
