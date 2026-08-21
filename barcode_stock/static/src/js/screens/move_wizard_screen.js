@@ -414,7 +414,7 @@ export class MoveWizardScreen extends Component {
      * this selection targets. The picker writes the chosen location back under
      * `type` and returns here.
      */
-    navigateToLocationSelector(type) {
+    navigateToLocationSelector(type, locationDomain = null) {
         this.store.navigate("location_selector", {
             moveId: this.moveId,
             pickingId: this.pickingId,
@@ -427,6 +427,7 @@ export class MoveWizardScreen extends Component {
             createLot: this.state.mode === "create_lot",
             moveSourceLocation: this.state.sourceLocation,
             moveDestLocation: this.state.destLocation,
+            locationDomain,
             type,
         });
     }
@@ -436,7 +437,31 @@ export class MoveWizardScreen extends Component {
     }
 
     selectDestLocation() {
-        this.navigateToLocationSelector("moveDestLocation");
+        this.navigateToLocationSelector(
+            "moveDestLocation",
+            this.locationDomainFor("location_dest_id")
+        );
+    }
+
+    // Restrict the destination picker to valid locations for this move -- exactly
+    // Odoo's back-office domain for the move line "To": child_of the picking's own
+    // destination, excluding view locations. Without it the picker offered every
+    // internal location (any warehouse), and choosing one outside the operation's
+    // warehouse silently reverted to the operation type default on validation.
+    locationDomainFor(field) {
+        const picking = this.barcodeScannerState.picking;
+        const anchor =
+            field === "location_dest_id"
+                ? picking?.location_dest_id?.[0] ||
+                  this.state.move?.location_dest_id?.[0]
+                : picking?.location_id?.[0] || this.state.move?.location_id?.[0];
+        if (!anchor) {
+            return null;
+        }
+        return [
+            ["id", "child_of", anchor],
+            ["usage", "!=", "view"],
+        ];
     }
 
     async loadData() {

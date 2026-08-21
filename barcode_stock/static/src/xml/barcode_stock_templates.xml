@@ -19,6 +19,7 @@
                         <select
                             name="warehouse_id"
                             class="ilx-stitch-select"
+                            t-ref="warehouseSelect"
                             t-att-value="state.selectedWarehouseId"
                             t-on-change="selectWarehouse"
                         >

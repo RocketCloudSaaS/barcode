@@ -32,7 +32,11 @@ export class LocationSelectorScreen extends Component {
     }
 
     async onBarcodeScanned(barcode) {
-        const domain = barcodeMatchDomain(barcode);
+        const match = barcodeMatchDomain(barcode);
+        // Keep a scanned location within the caller's scope too, so scanning a
+        // location the operation can't use is rejected just like typing it.
+        const scope = this.props.params?.locationDomain || [];
+        const domain = match ? [...match, ...scope] : null;
         const locations = domain
             ? await this.inventory.searchRead(
                   "stock.location",
@@ -55,7 +59,10 @@ export class LocationSelectorScreen extends Component {
     }
 
     async loadLocations() {
-        let domain = [["usage", "=", "internal"]];
+        // When the caller scopes the picker (e.g. the move wizard restricts the
+        // destination to valid locations of the operation, like the back office),
+        // honour that domain; otherwise show all internal locations.
+        const domain = this.props.params?.locationDomain || [["usage", "=", "internal"]];
         this.state.locations = await this.inventory.searchRead(
             "stock.location",
             domain,
