@@ -103,8 +103,8 @@ built-in EAN13 one; return ``null`` to let the next parser try):
    }, {sequence: 20});
 
 Register a startup task, for data your module needs before the first
-scan (``barcode_gs1`` reads its nomenclature this way). Tasks are awaited
-when the app opens; one that fails is logged and skipped:
+scan (``barcode_gs1`` reads its nomenclature this way). Tasks are
+awaited when the app opens; one that fails is logged and skipped:
 
 .. code:: js
 
