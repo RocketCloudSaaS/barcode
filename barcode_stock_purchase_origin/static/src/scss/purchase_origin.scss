@@ -1,0 +1,6 @@
+// Purchase origin shown below the transfer name on the Barcode picking list
+// card for incoming transfers. Matches the ilx-kw-meta-text style family.
+.ilx-kw-picking-origin {
+    font-size: 0.9rem;
+    color: var(--ilx-on-surface);
+}

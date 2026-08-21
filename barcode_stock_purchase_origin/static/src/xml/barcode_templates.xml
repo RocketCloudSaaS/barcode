@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <template
+        id="picking_origin_group_renderer"
+        t-inherit="barcode_scanner.GroupRenderer"
+        t-inherit-mode="extension"
+    >
+        <xpath expr="//span[hasclass('ilx-kw-picking-code')]" position="after">
+            <div
+                t-if="p.picking_type_code === 'incoming' and p.purchase_origin"
+                class="ilx-kw-picking-origin"
+            >
+                <t t-esc="p.purchase_origin" />
+            </div>
+        </xpath>
+    </template>
+</templates>
