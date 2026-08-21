@@ -447,8 +447,8 @@ built-in EAN13 one; return <tt class="docutils literal">null</tt> to let the nex
 </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nx">sequence</span><span class="o">:</span><span class="w"> </span><span class="mf">20</span><span class="p">});</span>
 </pre>
 <p>Register a startup task, for data your module needs before the first
-scan (<tt class="docutils literal">barcode_gs1</tt> reads its nomenclature this way). Tasks are awaited
-when the app opens; one that fails is logged and skipped:</p>
+scan (<tt class="docutils literal">barcode_gs1</tt> reads its nomenclature this way). Tasks are
+awaited when the app opens; one that fails is logged and skipped:</p>
 <pre class="code js literal-block">
 <span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">barcodeStartupTasks</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;&#64;barcode_scanner/js/registries&quot;</span><span class="p">;</span><span class="w">
 
