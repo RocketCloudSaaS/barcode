@@ -2,7 +2,7 @@
 
 import {barcodeScreens} from "@barcode_scanner/js/registries";
 
-import {Component, onWillStart, useState} from "@odoo/owl";
+import {Component, onMounted, onPatched, onWillStart, useRef, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 
@@ -48,6 +48,15 @@ export class WarehouseOps extends Component {
             warehouses: [],
             selectedWarehouseId: null,
         });
+
+        // A <select>'s shown option is driven by its `value` PROPERTY, which OWL
+        // may set before the <option> children exist on a fresh mount -- so on
+        // returning to this screen the box showed the first option even though
+        // state held the remembered warehouse. Re-apply it after every render,
+        // once the options are in the DOM.
+        this.warehouseSelect = useRef("warehouseSelect");
+        onMounted(() => this.syncSelect());
+        onPatched(() => this.syncSelect());
 
         this.openPickings = (type) => {
             const warehouseId = this.state.selectedWarehouseId;
@@ -146,6 +155,16 @@ export class WarehouseOps extends Component {
     selectWarehouse(ev) {
         this.state.selectedWarehouseId = parseInt(ev.target.value);
         storeWarehouseId(this.state.selectedWarehouseId);
+    }
+
+    syncSelect() {
+        const el = this.warehouseSelect.el;
+        if (el && this.state.selectedWarehouseId != null) {
+            const value = String(this.state.selectedWarehouseId);
+            if (el.value !== value) {
+                el.value = value;
+            }
+        }
     }
 
     static template = "barcode_scanner.WarehouseOps";
