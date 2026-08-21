@@ -14,7 +14,12 @@ export const barcodeService = {
                 return false;
             }
             return (
-                element.matches('input, textarea, [contenteditable="true"]') ||
+                // `select` is included so the focus-keeping capture below never
+                // steals focus from a focused native dropdown -- otherwise a
+                // <select> (the warehouse/location selector) "tried to open but
+                // closed at once" because keepFocus() yanked focus back to the
+                // hidden capture input the moment the dropdown opened.
+                element.matches('input, textarea, select, [contenteditable="true"]') ||
                 element.isContentEditable
             );
         }
