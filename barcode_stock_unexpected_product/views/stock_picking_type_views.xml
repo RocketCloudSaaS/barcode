@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_picking_type_form_inherit_barcode" model="ir.ui.view">
+        <field name="name">stock.picking.type.form.inherit.barcode</field>
+        <field name="model">stock.picking.type</field>
+        <field name="inherit_id" ref="stock.view_picking_type_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet/notebook" position="inside">
+                <page name="barcode" string="Barcode" invisible="code != 'internal'">
+                    <group name="barcode">
+                        <field name="allow_insert_new_line" />
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
