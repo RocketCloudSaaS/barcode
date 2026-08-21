@@ -6,12 +6,19 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 
-// Remember the operator's warehouse choice for the length of the session, so
-// entering a picking list and coming back (which re-runs loadData) no longer
-// resets it to the active company's default.
+// Remember the operator's warehouse choice across in-app navigation. The
+// module-level variable is the RELIABLE layer: navigation is a client-side
+// (SPA) screen swap, so WarehouseOps remounts and re-runs loadData, but this
+// variable does NOT reset -- and unlike web storage it can't be blocked by a
+// private-mode webview (sessionStorage alone silently failed there). Web
+// storage is only a best-effort bonus so the pick also survives a full reload.
 const WAREHOUSE_STORAGE_KEY = "barcode.warehouse_ops.selected_id";
+let lastSelectedWarehouseId = null;
 
 function readStoredWarehouseId() {
+    if (lastSelectedWarehouseId) {
+        return lastSelectedWarehouseId;
+    }
     try {
         const value = sessionStorage.getItem(WAREHOUSE_STORAGE_KEY);
         return value ? parseInt(value, 10) : null;
@@ -21,13 +28,14 @@ function readStoredWarehouseId() {
 }
 
 function storeWarehouseId(id) {
+    lastSelectedWarehouseId = id || null;
     try {
         if (id) {
             sessionStorage.setItem(WAREHOUSE_STORAGE_KEY, String(id));
         }
     } catch {
-        // sessionStorage blocked (locked-down webview/private mode): silently
-        // fall back to the default preselect, no persistence.
+        // Web storage blocked: the module-level variable above still carries
+        // the pick across in-app navigation for this session.
     }
 }
 
