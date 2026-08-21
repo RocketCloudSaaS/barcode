@@ -381,11 +381,11 @@ the <tt class="docutils literal">barcode_parsers</tt> registry, without patching
 GS1-128 barcodes, whether written with parenthesised application
 identifiers (<tt class="docutils literal"><span class="pre">(01)...(10)...</span></tt>) or as raw FNC1-separated data, are
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
-(21), production/pack/best-before/expiry dates (11/13/15/16/17), count
+(21), production/pack/best-before/ expiry dates (11/13/15/16/17), count
 (30/37), net weight and other measures (310n–360n, with the variable
 weight used as the quantity), amounts payable (390n–393n), SSCC (00) and
 location GLNs (410/413/414).</p>
-<p>What each application identifier means is read from <strong>Odoo's own GS1
+<p>What each application identifier means is read from <strong>Odoo’s own GS1
 nomenclature</strong> (<tt class="docutils literal">barcode.nomenclature</tt> and its rules, as shipped by
 the standard <em>Barcode - GS1 Nomenclature</em> module), so a rule added or
 adapted in Settings applies to the scanner too. Identifiers the
@@ -468,13 +468,13 @@ the barcode app opens.</p>
 <p>So to teach the scanner a new application identifier, add a rule under
 <em>Inventory → Configuration → Barcode Nomenclatures</em> — no code change. A
 rule whose <em>Type</em> is one the app understands (product, lot, quantity,
-weighted product, priced product, package, package type, expiration date,
-best before date, pack date, location, destination location) lands on the
-matching field above; the value of any other rule is still available in
-<tt class="docutils literal">ais</tt>.</p>
+weighted product, priced product, package, package type, expiration
+date, best before date, pack date, location, destination location) lands
+on the matching field above; the value of any other rule is still
+available in <tt class="docutils literal">ais</tt>.</p>
 <p>Identifiers the nomenclature does not define keep working through the
-ones built into the module, and if the nomenclature cannot be read at all
-the module falls back to them entirely.</p>
+ones built into the module, and if the nomenclature cannot be read at
+all the module falls back to them entirely.</p>
 </div>
 <div class="section" id="scanners-that-drop-the-separator">
 <h3><a class="toc-backref" href="#toc-entry-3">Scanners that drop the separator</a></h3>
@@ -489,8 +489,8 @@ identifier, never inside an alphanumeric one and never at a catch-all
 range. That reads a real pallet label —
 <tt class="docutils literal"><span class="pre">(01)…(3103)002497(10)534343(30)02(15)261006</span></tt> — exactly as printed,
 where a naive scan cuts the lot number in half and turns the rest into a
-quantity. Two alphanumeric values in a row with nothing between them stay
-ambiguous, which is why GS1 does not allow it.</p>
+quantity. Two alphanumeric values in a row with nothing between them
+stay ambiguous, which is why GS1 does not allow it.</p>
 </div>
 <div class="section" id="misreads-are-refused">
 <h3><a class="toc-backref" href="#toc-entry-4">Misreads are refused</a></h3>
@@ -506,8 +506,8 @@ ambiguous, which is why GS1 does not allow it.</p>
 unit: the piece count (AI 30/37), or the measure — a net weight, say —
 when the product is stocked in that kind of unit. Weighing that choice
 needs the unit the product is stocked in, so it lives in
-<tt class="docutils literal">barcode_gs1_stock</tt>, which installs itself as soon as both modules are
-there;</li>
+<tt class="docutils literal">barcode_gs1_stock</tt>, which installs itself as soon as both modules
+are there;</li>
 <li>the lot or serial is looked up for the scanned product and preselected
 in the move wizard; on a receipt an unknown lot opens the create-lot
 flow with the name and, when <tt class="docutils literal">product_expiry</tt> is installed, the
