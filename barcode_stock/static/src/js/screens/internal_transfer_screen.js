@@ -6,6 +6,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
+import {user} from "@web/core/user";
 import {useService} from "@web/core/utils/hooks";
 
 export class InternalTransferScreen extends Component {
@@ -15,6 +16,9 @@ export class InternalTransferScreen extends Component {
         this.notification = useService("notification");
         this.barcodeScannerState = useService("barcodeScannerState");
         const params = this.props.params || {};
+        const responsible =
+            params.responsible ||
+            (user.userId ? {id: user.userId, name: user.name} : null);
         const initialLines = JSON.parse(JSON.stringify(params.lines || []));
         for (const line of initialLines) {
             if (!line.lots) {
@@ -24,7 +28,7 @@ export class InternalTransferScreen extends Component {
         this.state = useState({
             origin_location: params.origin_location || null,
             destination_location: params.destination_location || null,
-            responsible: params.responsible || null,
+            responsible,
             lines: initialLines,
             picking_id: null,
             isCheckingAvailability: false,
@@ -44,7 +48,7 @@ export class InternalTransferScreen extends Component {
                 nextParams.origin_location?.id !== this.state.origin_location?.id;
             this.state.origin_location = nextParams.origin_location || null;
             this.state.destination_location = nextParams.destination_location || null;
-            this.state.responsible = nextParams.responsible || null;
+            this.state.responsible = nextParams.responsible || this.state.responsible;
             const nextLines = JSON.parse(JSON.stringify(nextParams.lines || []));
             for (const line of nextLines) {
                 if (!line.lots) {
@@ -71,11 +75,9 @@ export class InternalTransferScreen extends Component {
         // reported "not found") while a manual paste worked.
         const locationDomain = barcodeMatchDomain(barcode);
         const locations = locationDomain
-            ? await this.inventory.searchRead(
-                  "stock.location",
-                  locationDomain,
-                  ["display_name"]
-              )
+            ? await this.inventory.searchRead("stock.location", locationDomain, [
+                  "display_name",
+              ])
             : [];
         if (locations.length) {
             const location = locations[0];
