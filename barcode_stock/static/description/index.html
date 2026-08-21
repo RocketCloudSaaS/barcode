@@ -431,15 +431,16 @@ scan or search products to add transfer lines.</p>
 <h3><a class="toc-backref" href="#toc-entry-5">Quantities from the barcode</a></h3>
 <p>A scan normally counts as one unit. When the barcode states a quantity —
 as a GS1 label does, with <tt class="docutils literal">barcode_gs1</tt> installed — that quantity is
-taken instead, in the product's own unit of measure:</p>
+taken instead, in the product’s own unit of measure:</p>
 <ul class="simple">
 <li>a label that states a <strong>measure</strong> (a net weight, for instance) is the
-quantity when the product is stocked in that kind of unit, converted if
-needed: 2.497 kg on the label becomes 2.497 for a product in kilograms
-and 2497 for one in grams;</li>
+quantity when the product is stocked in that kind of unit, converted
+if needed: 2.497 kg on the label becomes 2.497 for a product in
+kilograms and 2497 for one in grams;</li>
 <li>when the product is <em>not</em> stocked that way — a box counted in units —
-the <strong>piece count</strong> on the label is the quantity, and a single unit when
-the label states no count. A weight never turns into a number of units.</li>
+the <strong>piece count</strong> on the label is the quantity, and a single unit
+when the label states no count. A weight never turns into a number of
+units.</li>
 </ul>
 </div>
 <div class="section" id="quick-info">

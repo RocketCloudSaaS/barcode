@@ -33,7 +33,7 @@ the ``barcode_parsers`` registry, without patching the base. Scanned
 GS1-128 barcodes, whether written with parenthesised application
 identifiers (``(01)...(10)...``) or as raw FNC1-separated data, are
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
-(21), production/pack/best-before/expiry dates (11/13/15/16/17), count
+(21), production/pack/best-before/ expiry dates (11/13/15/16/17), count
 (30/37), net weight and other measures (310n–360n, with the variable
 weight used as the quantity), amounts payable (390n–393n), SSCC (00) and
 location GLNs (410/413/414).
@@ -118,14 +118,14 @@ the barcode app opens.
 So to teach the scanner a new application identifier, add a rule under
 *Inventory → Configuration → Barcode Nomenclatures* — no code change. A
 rule whose *Type* is one the app understands (product, lot, quantity,
-weighted product, priced product, package, package type, expiration date,
-best before date, pack date, location, destination location) lands on the
-matching field above; the value of any other rule is still available in
-``ais``.
+weighted product, priced product, package, package type, expiration
+date, best before date, pack date, location, destination location) lands
+on the matching field above; the value of any other rule is still
+available in ``ais``.
 
 Identifiers the nomenclature does not define keep working through the
-ones built into the module, and if the nomenclature cannot be read at all
-the module falls back to them entirely.
+ones built into the module, and if the nomenclature cannot be read at
+all the module falls back to them entirely.
 
 Scanners that drop the separator
 --------------------------------
@@ -142,8 +142,8 @@ identifier, never inside an alphanumeric one and never at a catch-all
 range. That reads a real pallet label —
 ``(01)…(3103)002497(10)534343(30)02(15)261006`` — exactly as printed,
 where a naive scan cuts the lot number in half and turns the rest into a
-quantity. Two alphanumeric values in a row with nothing between them stay
-ambiguous, which is why GS1 does not allow it.
+quantity. Two alphanumeric values in a row with nothing between them
+stay ambiguous, which is why GS1 does not allow it.
 
 Misreads are refused
 --------------------
@@ -161,8 +161,8 @@ What the warehouse app does with it (with ``barcode_stock`` installed):
   unit: the piece count (AI 30/37), or the measure — a net weight, say —
   when the product is stocked in that kind of unit. Weighing that choice
   needs the unit the product is stocked in, so it lives in
-  ``barcode_gs1_stock``, which installs itself as soon as both modules are
-  there;
+  ``barcode_gs1_stock``, which installs itself as soon as both modules
+  are there;
 - the lot or serial is looked up for the scanned product and preselected
   in the move wizard; on a receipt an unknown lot opens the create-lot
   flow with the name and, when ``product_expiry`` is installed, the
