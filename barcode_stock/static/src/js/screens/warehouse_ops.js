@@ -6,6 +6,31 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 
+// Remember the operator's warehouse choice for the length of the session, so
+// entering a picking list and coming back (which re-runs loadData) no longer
+// resets it to the active company's default.
+const WAREHOUSE_STORAGE_KEY = "barcode.warehouse_ops.selected_id";
+
+function readStoredWarehouseId() {
+    try {
+        const value = sessionStorage.getItem(WAREHOUSE_STORAGE_KEY);
+        return value ? parseInt(value, 10) : null;
+    } catch {
+        return null;
+    }
+}
+
+function storeWarehouseId(id) {
+    try {
+        if (id) {
+            sessionStorage.setItem(WAREHOUSE_STORAGE_KEY, String(id));
+        }
+    } catch {
+        // sessionStorage blocked (locked-down webview/private mode): silently
+        // fall back to the default preselect, no persistence.
+    }
+}
+
 export class WarehouseOps extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
@@ -81,13 +106,22 @@ export class WarehouseOps extends Component {
             delivery: warehouseMap[w.id]?.outgoing || 0,
         }));
         if (this.state.warehouses.length) {
-            // Preselect the warehouse of the active company, not just the first
-            // in the list (which was rarely the operator's own).
-            const currentCompanyId = this.company.currentCompany?.id;
-            const active = this.state.warehouses.find(
-                (w) => w.companyId === currentCompanyId
-            );
-            this.state.selectedWarehouseId = (active || this.state.warehouses[0]).id;
+            // Keep the operator's own pick across navigation within the session;
+            // only fall back to the active company's warehouse (never just the
+            // first, which was rarely theirs) when there is no valid stored one.
+            const storedId = readStoredWarehouseId();
+            const stored = this.state.warehouses.find((w) => w.id === storedId);
+            if (stored) {
+                this.state.selectedWarehouseId = stored.id;
+            } else {
+                const currentCompanyId = this.company.currentCompany?.id;
+                const active = this.state.warehouses.find(
+                    (w) => w.companyId === currentCompanyId
+                );
+                this.state.selectedWarehouseId = (
+                    active || this.state.warehouses[0]
+                ).id;
+            }
         }
     }
 
@@ -103,6 +137,7 @@ export class WarehouseOps extends Component {
 
     selectWarehouse(ev) {
         this.state.selectedWarehouseId = parseInt(ev.target.value);
+        storeWarehouseId(this.state.selectedWarehouseId);
     }
 
     static template = "barcode_scanner.WarehouseOps";
