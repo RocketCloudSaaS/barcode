@@ -5,11 +5,11 @@
 
 <!-- /!\ do not modify above this line -->
 
-Core barcode scanning application for warehouse operations.
+Barcode scanning framework for Odoo: a domain-agnostic base you build operations on.
 
 This repository hosts the **Barcode** suite: a fast, full-screen scanning
-experience for warehouse and back-office operations, built as a set of modules
-you compose.
+experience built as a set of modules you compose. The base carries no domain of
+its own; each feature module brings one.
 
 - **`barcode_scanner` is the base**: the client action, the scanner input, the
   registries, the feedback and the ORM wrapper. It carries no business logic, so

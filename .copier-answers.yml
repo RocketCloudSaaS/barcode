@@ -17,7 +17,7 @@ odoo_version: 18.0
 org_name: RocketCloudSaaS
 org_slug: RocketCloudSaaS
 rebel_module_groups: []
-repo_description: Core barcode scanning application for warehouse operations
+repo_description: "Barcode scanning framework for Odoo: a domain-agnostic base you build operations on"
 repo_name: Barcode
 repo_slug: barcode
 repo_website: https://github.com/RocketCloudSaaS/barcode
