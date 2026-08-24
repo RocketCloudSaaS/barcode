@@ -12,7 +12,7 @@ patch(InternalTransferScreen.prototype, {
         }
         const result = await this.inventory.call(
             "stock.picking",
-            "_barcode_scanner_check_insert_new_line_allowed",
+            "barcode_scanner_check_insert_new_line_allowed",
             [origin, destination]
         );
         if (result?.allowed === false) {

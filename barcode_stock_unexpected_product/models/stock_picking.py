@@ -9,7 +9,7 @@ class StockPicking(models.Model):
     _inherit = "stock.picking"
 
     @api.model
-    def _barcode_scanner_check_insert_new_line_allowed(
+    def barcode_scanner_check_insert_new_line_allowed(
         self, origin_location_id, destination_location_id
     ):
         """Whether the scanner may add a new/unlisted product line for an
@@ -39,12 +39,26 @@ class StockPicking(models.Model):
         )
         return {
             "allowed": allowed,
-            "error": "" if allowed else _("Adding a new product line from the scanner is not allowed for this operation type."),
+            "error": ""
+            if allowed
+            else _(
+                "Adding a new product line from the scanner is not allowed for this operation type."
+            ),
         }
 
     @api.model
-    def _barcode_scanner_add_line_to_picking(self, picking_id, product_id, quantity, lot_id=False, location_id=False, location_dest_id=False):
-        return self.barcode_scanner_add_line_to_picking(picking_id, product_id, quantity, lot_id, location_id, location_dest_id)
+    def _barcode_scanner_add_line_to_picking(
+        self,
+        picking_id,
+        product_id,
+        quantity,
+        lot_id=False,
+        location_id=False,
+        location_dest_id=False,
+    ):
+        return self.barcode_scanner_add_line_to_picking(
+            picking_id, product_id, quantity, lot_id, location_id, location_dest_id
+        )
 
     @api.model
     def barcode_scanner_add_line_to_picking(
@@ -162,7 +176,7 @@ class StockPicking(models.Model):
     def action_barcode_scanner_internal_transfer(
         self, origin_location_id, destination_location_id, responsible_id, lines
     ):
-        verdict = self._barcode_scanner_check_insert_new_line_allowed(
+        verdict = self.barcode_scanner_check_insert_new_line_allowed(
             origin_location_id, destination_location_id
         )
         if not verdict["allowed"]:
