@@ -1,7 +1,7 @@
 {
     "name": "Barcode GS1",
     "version": "18.0.1.0.0",
-    "category": "Inventory/Logistics",
+    "category": "Hidden",
     "summary": "GS1 barcode parsing (GS1-128, application identifiers)",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
