@@ -49,17 +49,25 @@ patch(PickingScreen.prototype, {
                     ? normalized.lot.id
                     : false;
             try {
-                await this.inventory.call(
+                const added = await this.inventory.call(
                     "stock.picking",
                     "barcode_scanner_add_line_to_picking",
                     [this.state.picking.id, product.id, normalized.quantity, lotId]
                 );
+                // The added line is picked in full, so it only shows up in
+                // the "Done" tab: hand the move over for the screen to follow
+                // it there once the reload below brings it in.
+                const productRef = [product.id, product.display_name];
+                const addedMove = added?.move_id
+                    ? {id: added.move_id, product_id: productRef}
+                    : null;
                 this.setLastScanContext({
                     barcode,
                     source,
                     tone: "success",
                     message: _t("Product added to transfer."),
                     quantity: normalized.quantity,
+                    move: addedMove,
                 });
                 this.feedback.success({
                     notify: true,
