@@ -2737,6 +2737,46 @@
     white-space: nowrap;
 }
 
+// One line of the Quick Info stock lists: a name on the left, the quantity on
+// the right. Both halves used to reuse `.ilx-kw-value`, which ellipsizes on a
+// single line -- so on a PDA the product name was cut mid-word AND the number
+// itself got clipped, which is the one thing the operator scanned to find out.
+.ilx-kw-stock-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--ilx-outline-variant, #f0f0f0);
+
+    &:last-child {
+        border-bottom: 0;
+    }
+}
+
+.ilx-kw-stock-row__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.85rem;
+    color: var(--ilx-on-surface);
+    // A product display name carries its internal reference in brackets before
+    // the description, so there is nothing to gain from cutting the tail: wrap
+    // it instead. `anywhere` covers references long enough to overflow alone.
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.ilx-kw-stock-row__qty {
+    flex: 0 0 auto;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ilx-on-surface);
+    // Never shrink and never ellipsize the number.
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .ilx-kw-select-wrapper {
     position: relative;
     display: flex;
