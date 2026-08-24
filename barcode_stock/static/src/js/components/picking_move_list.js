@@ -2,10 +2,11 @@
 
 import {Component} from "@odoo/owl";
 import {PickingMoveCard} from "./picking_move_card";
+import {isMovePending} from "@barcode_stock/js/utils/move_progress";
 
 export class PickingMoveList extends Component {
     showMove(move) {
-        return move.quantity == 0 || move.qty_done_total < move.quantity;
+        return isMovePending(move);
     }
 
     getMoveStats(move) {

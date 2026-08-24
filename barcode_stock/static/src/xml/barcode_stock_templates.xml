@@ -172,6 +172,7 @@
                     <t t-if="state.activeTab === 'done'">
                         <PickingDoneList
                             lines="state.moveLines"
+                            highlightedMoveId="state.highlightedMoveId"
                             onDeleteLine="deleteMoveLine"
                         />
                     </t>
@@ -1387,6 +1388,7 @@
         <button
             type="button"
             class="ilx-kw-picking-card ilx-picking-done-card"
+            t-att-class="props.highlighted ? 'ilx-kw-picking-card ilx-picking-done-card is-highlighted' : 'ilx-kw-picking-card ilx-picking-done-card'"
             t-on-click="() => props.onDelete(props.line.id)"
             style="border: none; text-align: left; width: 100%; cursor: pointer;"
         >
@@ -1442,7 +1444,11 @@
     <t t-name="barcode_scanner.PickingDoneList" owl="1">
         <t t-if="doneLines.length">
             <t t-foreach="doneLines" t-as="line" t-key="line.id">
-                <PickingDoneCard line="line" onDelete="props.onDeleteLine" />
+                <PickingDoneCard
+                    line="line"
+                    highlighted="props.highlightedMoveId === line.move_id[0]"
+                    onDelete="props.onDeleteLine"
+                />
             </t>
         </t>
         <t t-else="">
@@ -1624,18 +1630,14 @@
                                                     t-as="item"
                                                     t-key="item.locationId"
                                                 >
-                                                    <div
-                                                        style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;"
-                                                    >
+                                                    <div class="ilx-kw-stock-row">
                                                         <span
-                                                            class="ilx-kw-value"
-                                                            style="font-size: 0.85rem;"
+                                                            class="ilx-kw-stock-row__name"
                                                         ><t
                                                                 t-esc="item.locationName"
                                                             /></span>
                                                         <span
-                                                            class="ilx-kw-value"
-                                                            style="font-weight: 600; font-size: 0.85rem;"
+                                                            class="ilx-kw-stock-row__qty"
                                                         ><t
                                                                 t-esc="item.quantity"
                                                             /></span>
@@ -1667,18 +1669,14 @@
                                                         t-as="item"
                                                         t-key="item.locationId"
                                                     >
-                                                        <div
-                                                            style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;"
-                                                        >
+                                                        <div class="ilx-kw-stock-row">
                                                             <span
-                                                                class="ilx-kw-value"
-                                                                style="font-size: 0.85rem;"
+                                                                class="ilx-kw-stock-row__name"
                                                             ><t
                                                                     t-esc="item.locationName"
                                                                 /></span>
                                                             <span
-                                                                class="ilx-kw-value"
-                                                                style="font-weight: 600; font-size: 0.85rem;"
+                                                                class="ilx-kw-stock-row__qty"
                                                             ><t
                                                                     t-esc="item.quantity"
                                                                 /></span>
@@ -1745,18 +1743,14 @@
                                                     t-as="item"
                                                     t-key="item.productId"
                                                 >
-                                                    <div
-                                                        style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;"
-                                                    >
+                                                    <div class="ilx-kw-stock-row">
                                                         <span
-                                                            class="ilx-kw-value"
-                                                            style="font-size: 0.85rem;"
+                                                            class="ilx-kw-stock-row__name"
                                                         ><t
                                                                 t-esc="item.productName"
                                                             /></span>
                                                         <span
-                                                            class="ilx-kw-value"
-                                                            style="font-weight: 600; font-size: 0.85rem;"
+                                                            class="ilx-kw-stock-row__qty"
                                                         ><t
                                                                 t-esc="item.quantity"
                                                             /></span>
