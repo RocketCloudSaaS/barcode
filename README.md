@@ -21,6 +21,10 @@ you compose.
   and `barcode_stock` disagree on what a weight means, so `barcode_gs1_stock`
   decides). They install themselves once both sides are there, so neither module
   has to know about the other and you can install either alone.
+- **Extension modules** sharpen an operation you already run (recognising a
+  product's alternate barcodes, putting a product the transfer never listed on
+  it) by patching the feature module they extend, so what they change stays
+  optional and the base is left alone.
 
 Install the base plus whatever you actually use. See
 [ROADMAP.md](ROADMAP.md) for what each module does in detail and what is planned
@@ -41,6 +45,8 @@ addon | version | maintainers | summary
 [barcode_gs1_stock](barcode_gs1_stock/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Use the measure on a GS1 label as the quantity picked
 [barcode_scanner](barcode_scanner/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Base scanning framework: client action, registries, scanner input and hooks
 [barcode_stock](barcode_stock/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Warehouse operations (receipts, deliveries, internal transfers) for the Barcode suite
+[barcode_stock_product_multi_barcode](barcode_stock_product_multi_barcode/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) | Recognize alternate product barcodes in the warehouse app
+[barcode_stock_unexpected_product](barcode_stock_unexpected_product/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) | Allow adding unexpected products to transfers via scanner
 
 [//]: # (end addons)
 
