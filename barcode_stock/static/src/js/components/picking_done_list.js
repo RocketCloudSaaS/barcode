@@ -13,5 +13,6 @@ PickingDoneList.template = "barcode_scanner.PickingDoneList";
 PickingDoneList.components = {PickingDoneCard};
 PickingDoneList.props = {
     lines: {type: Array},
+    highlightedMoveId: {type: [Number, "null"], optional: true},
     onDeleteLine: Function,
 };

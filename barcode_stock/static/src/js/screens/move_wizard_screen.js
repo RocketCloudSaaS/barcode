@@ -629,12 +629,16 @@ export class MoveWizardScreen extends Component {
             locationDestId:
                 this.state.destLocation?.id || this.state.move.location_dest_id[0],
         });
+        // Hand the move back so the picking screen opens on the tab that
+        // now holds it: still "To Do" while quantity is missing, "Done" once
+        // this confirmation completed it.
         this.store.navigate(
             "picking",
             {
                 pickingId: this.pickingId,
                 listParams: this.listParams,
                 reloadToken: Date.now(),
+                focusMoveId: this.moveId,
             },
             {replace: true}
         );

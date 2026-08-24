@@ -12,6 +12,7 @@ import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list";
 import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {tabForMove} from "@barcode_stock/js/utils/move_progress";
 
 export class PickingScreen extends Component {
     setup() {
@@ -63,6 +64,9 @@ export class PickingScreen extends Component {
                         user_id: responsible.id,
                     });
                 }
+                // A move confirmed in the wizard comes back as the move
+                // to focus, so the reload below lands on its tab.
+                this.state.highlightedMoveId = this.focusMoveId;
                 await this.loadData({force: true});
                 if (responsible && responsible.id) {
                     this.state.activeTab = "info";
@@ -86,6 +90,8 @@ export class PickingScreen extends Component {
                 nextProps.reloadToken || nextProps.params?.reloadToken;
 
             if (currentId !== nextId || currentReloadToken !== nextReloadToken) {
+                this.state.highlightedMoveId =
+                    nextProps.focusMoveId || nextProps.params?.focusMoveId || null;
                 await this.loadData({force: true});
             }
         });
@@ -93,6 +99,10 @@ export class PickingScreen extends Component {
 
     get pickingId() {
         return this.props.pickingId || this.props.params?.pickingId;
+    }
+
+    get focusMoveId() {
+        return this.props.focusMoveId || this.props.params?.focusMoveId || null;
     }
 
     get listParams() {
@@ -214,9 +224,25 @@ export class PickingScreen extends Component {
             timestamp: Date.now(),
         };
         this.state.highlightedMoveId = move?.id || null;
-        if (move) {
-            this.state.activeTab = "todo";
+        this.focusScannedMove();
+    }
+
+    /**
+     * Show the tab that actually holds the highlighted move. A move still
+     * pending lives in "To Do"; once it is fully picked only "Done" lists it,
+     * so switching to "To Do" after every scan left the operator in front of a
+     * list without the line the notification had just confirmed.
+     */
+    focusScannedMove() {
+        const moveId = this.state.highlightedMoveId;
+        if (!moveId) {
+            return;
         }
+        const move = this.state.moves.find((candidate) => candidate.id === moveId);
+        if (!move) {
+            return;
+        }
+        this.state.activeTab = tabForMove(move);
     }
 
     async loadData({force = false} = {}) {
@@ -241,6 +267,9 @@ export class PickingScreen extends Component {
                 .replace(" ", "T")
                 .slice(0, 16);
         }
+        // The scanned line may have just become complete, which moves it from
+        // one tab to the other; decide again on the data that was just read.
+        this.focusScannedMove();
     }
 
     setTab(tab) {
@@ -352,6 +381,7 @@ export class PickingScreen extends Component {
             body: "Are you sure you want to cancel reservations?",
             confirm: async () => {
                 try {
+                    this.state.highlightedMoveId = null;
                     await this.inventory.write(
                         "stock.move.line",
                         this.state.moveLines.map((ml) => ml.id),
@@ -420,6 +450,9 @@ export class PickingScreen extends Component {
             title: "Confirm deletion",
             body: "Are you sure you want to delete this movement?",
             confirm: async () => {
+                // Undoing a confirmation voids the scan that produced it, so
+                // the reload below must not chase the line to another tab.
+                this.state.highlightedMoveId = null;
                 await this.barcodeScannerSync.resetMoveLine(moveLineId, {
                     immediate: true,
                 });
@@ -705,6 +738,7 @@ barcodeScreens.add("picking", {
         pickingId: params.pickingId,
         listParams: params.listParams || null,
         reloadToken: params.reloadToken || null,
+        focusMoveId: params.focusMoveId || null,
         params,
     }),
 });
