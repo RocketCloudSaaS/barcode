@@ -172,6 +172,7 @@
                     <t t-if="state.activeTab === 'done'">
                         <PickingDoneList
                             lines="state.moveLines"
+                            highlightedMoveId="state.highlightedMoveId"
                             onDeleteLine="deleteMoveLine"
                         />
                     </t>
@@ -1387,6 +1388,7 @@
         <button
             type="button"
             class="ilx-kw-picking-card ilx-picking-done-card"
+            t-att-class="props.highlighted ? 'ilx-kw-picking-card ilx-picking-done-card is-highlighted' : 'ilx-kw-picking-card ilx-picking-done-card'"
             t-on-click="() => props.onDelete(props.line.id)"
             style="border: none; text-align: left; width: 100%; cursor: pointer;"
         >
@@ -1442,7 +1444,11 @@
     <t t-name="barcode_scanner.PickingDoneList" owl="1">
         <t t-if="doneLines.length">
             <t t-foreach="doneLines" t-as="line" t-key="line.id">
-                <PickingDoneCard line="line" onDelete="props.onDeleteLine" />
+                <PickingDoneCard
+                    line="line"
+                    highlighted="props.highlightedMoveId === line.move_id[0]"
+                    onDelete="props.onDeleteLine"
+                />
             </t>
         </t>
         <t t-else="">
