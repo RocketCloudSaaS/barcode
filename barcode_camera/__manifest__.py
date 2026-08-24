@@ -1,7 +1,7 @@
 {
     "name": "Barcode Camera",
     "version": "18.0.1.0.0",
-    "category": "Inventory/Logistics",
+    "category": "Hidden",
     "summary": "Mobile camera barcode scanner (EAN13) for the Barcode suite",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
