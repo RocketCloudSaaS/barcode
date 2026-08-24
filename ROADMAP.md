@@ -36,6 +36,8 @@ about the other and you can install either alone.
 | [`barcode_camera`](barcode_camera) | Available | Scan barcodes using the device camera |
 | [`barcode_gs1`](barcode_gs1) | Available | GS1 barcode parsing (GS1-128, application identifiers) |
 | [`barcode_gs1_stock`](barcode_gs1_stock) | Available | Bridge: the measure on a GS1 label as the quantity picked |
+| [`barcode_stock_product_multi_barcode`](barcode_stock_product_multi_barcode) | Available | Recognise a product's alternate barcodes in the warehouse app |
+| [`barcode_stock_unexpected_product`](barcode_stock_unexpected_product) | Available | Add a product the transfer never listed from the scanner |
 | `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
 | `barcode_scrap` | Planned | Scrap damaged or lost goods from the scanner |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
@@ -80,6 +82,20 @@ picked, in the unit the product is stocked in. It is the piece of the puzzle
 neither side can hold on its own: the parser does not know how a product is
 stocked, and the warehouse app does not know GS1. Installs itself once both are
 installed.
+
+### barcode_stock_product_multi_barcode
+
+Lets the warehouse app resolve a scan against every barcode a product carries,
+not just its main one, by bridging `product_multi_barcode` into the scanning
+flow. Warehouses that receive the same article under a supplier code and an
+internal one stop having to relabel it.
+
+### barcode_stock_unexpected_product
+
+Puts a product the transfer never listed onto it, straight from the scan, for
+the operation types where a warehouse allows it. What arrives is not always
+what was planned; this records the difference instead of forcing a detour
+through the back office.
 
 ### barcode_inventory
 
