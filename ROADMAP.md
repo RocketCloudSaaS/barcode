@@ -1,8 +1,8 @@
 # Roadmap
 
 This repository hosts the **Barcode** suite for Odoo: a set of modules built
-around a fast, full-screen barcode scanning experience for warehouse and
-back-office operations.
+around a fast, full-screen barcode scanning experience. The base belongs to no
+domain in particular; each feature module brings one.
 
 The suite is designed to be **modular**: `barcode_scanner` is the base
 framework — the scanning engine every other module plugs into — and each
