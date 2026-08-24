@@ -1742,7 +1742,8 @@
     color: var(--ilx-on-surface);
 }
 
-.ilx-picking-move-card.is-highlighted {
+.ilx-picking-move-card.is-highlighted,
+.ilx-picking-done-card.is-highlighted {
     box-shadow: 0 0 0 2px var(--ilx-primary-container), var(--barcode-shadow-soft);
 }
 
