@@ -20,6 +20,7 @@
             "barcode_scanner/static/src/xml/barcode_scanner_templates.xml",
             "barcode_scanner/static/src/js/registries.js",
             "barcode_scanner/static/src/js/barcode_parser.js",
+            "barcode_scanner/static/src/js/utils/scan_match.js",
             "barcode_scanner/static/src/js/barcode.js",
             "barcode_scanner/static/src/js/api.js",
             "barcode_scanner/static/src/js/router.js",
