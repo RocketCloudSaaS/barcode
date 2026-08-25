@@ -7,7 +7,7 @@ import {useService} from "@web/core/utils/hooks";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
 
 export class QuickInfoScreen extends Component {
     setup() {

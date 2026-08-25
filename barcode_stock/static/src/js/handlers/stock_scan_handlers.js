@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import {barcodeScanHandlers} from "@barcode_scanner/js/registries";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
 
 /**
  * Home-screen scan recognition for stock. Isolated in its own file so it can be

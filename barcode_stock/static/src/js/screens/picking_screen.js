@@ -11,7 +11,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
 import {tabForMove} from "@barcode_stock/js/utils/move_progress";
 
 export class PickingScreen extends Component {

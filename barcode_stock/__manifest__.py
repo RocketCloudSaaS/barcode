@@ -21,7 +21,6 @@
         "web.assets_backend": [
             "barcode_stock/static/src/scss/picking_filters.scss",
             "barcode_stock/static/src/xml/barcode_stock_templates.xml",
-            "barcode_stock/static/src/js/utils/scan_match.js",
             "barcode_stock/static/src/js/utils/move_progress.js",
             "barcode_stock/static/src/js/services/barcode_scanner_state.js",
             "barcode_stock/static/src/js/services/barcode_scanner_sync.js",

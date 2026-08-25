@@ -7,7 +7,7 @@ import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
 
 export class ProductSelectorScreen extends Component {
     setup() {
