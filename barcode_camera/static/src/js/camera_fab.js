@@ -2,16 +2,21 @@
 
 import {Component, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
+import {registry} from "@web/core/registry";
 import {scanBarcode} from "@web/core/barcode/barcode_dialog";
 import {barcodeAppWidgets} from "@barcode_scanner/js/registries";
 
-// Routes where the camera button is offered.
+// Routes where the camera button is offered. The built-ins cover the warehouse
+// app; feature modules add their own routes into the `barcode_camera_routes`
+// registry (value = route name) so the camera reaches their screens without
+// this module having to know about them.
 const CAMERA_ROUTES = new Set([
     "picking_list",
     "picking",
     "internal_transfer",
     "quick_info",
 ]);
+const extraCameraRoutes = registry.category("barcode_camera_routes");
 
 /**
  * A floating action button that opens the device camera to scan a barcode and
@@ -32,7 +37,11 @@ export class CameraFab extends Component {
     }
 
     get isVisible() {
-        return CAMERA_ROUTES.has(this.router.currentRoute?.name) && !this.state.scanning;
+        const route = this.router.currentRoute?.name;
+        if (!route || this.state.scanning) {
+            return false;
+        }
+        return CAMERA_ROUTES.has(route) || extraCameraRoutes.getAll().includes(route);
     }
 
     async onScanClick() {
