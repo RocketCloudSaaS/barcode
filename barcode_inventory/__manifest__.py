@@ -18,7 +18,9 @@
     "assets": {
         "web.assets_backend": [
             "barcode_inventory/static/src/xml/inventory_templates.xml",
+            "barcode_inventory/static/src/js/camera_routes.js",
             "barcode_inventory/static/src/js/screens/inventory_location_screen.js",
+            "barcode_inventory/static/src/js/screens/inventory_product_selector_screen.js",
             "barcode_inventory/static/src/js/screens/inventory_count_screen.js",
             "barcode_inventory/static/src/js/tiles/inventory_menu_tiles.js",
         ],

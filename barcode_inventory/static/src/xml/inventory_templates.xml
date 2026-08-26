@@ -77,39 +77,15 @@
             </header>
 
             <main class="ilx-emp-v2-main">
-                <!-- Add a product by hand, like the back office: search by name
-                     or barcode and tap to add it to the count. -->
-                <div class="ilx-emp-v2-search-box">
+                <!-- Tap to add a product by hand, like the back office. -->
+                <button
+                    class="ilx-emp-v2-search-box"
+                    style="width:100%; border:none; text-align:left; cursor:pointer;"
+                    t-on-click="addProduct"
+                >
                     <i class="fa fa-plus ilx-emp-v2-search-icon" />
-                    <input
-                        type="text"
-                        class="ilx-emp-v2-search-input"
-                        placeholder="Scan, or search a product to add..."
-                        t-att-value="state.productSearch"
-                        t-on-input="searchProducts"
-                    />
-                </div>
-                <div t-if="state.productResults.length" class="ilx-emp-v2-list">
-                    <t
-                        t-foreach="state.productResults"
-                        t-as="prod"
-                        t-key="prod.id"
-                    >
-                        <div
-                            class="ilx-emp-v2-card"
-                            t-on-click="() => this.addManualProduct(prod)"
-                        >
-                            <div class="ilx-emp-v2-info">
-                                <span class="ilx-emp-v2-name">
-                                    <t t-esc="prod.display_name" />
-                                </span>
-                            </div>
-                            <div class="ilx-emp-v2-status">
-                                <i class="fa fa-plus-circle ilx-emp-v2-icon-chevron" />
-                            </div>
-                        </div>
-                    </t>
-                </div>
+                    <span style="color:#8a8a8a;">Scan, or add a product...</span>
+                </button>
 
                 <h2 class="ilx-emp-v2-section-title">
                     COUNT — SCAN OR TYPE THE COUNTED QTY
@@ -156,15 +132,18 @@
                                 </div>
                                 <div
                                     class="ilx-emp-v2-status"
-                                    style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;"
+                                    style="display:flex; flex-direction:row; align-items:center; gap:10px;"
                                 >
+                                    <div
+                                        style="display:flex; flex-direction:column; align-items:center; gap:2px;"
+                                    >
                                     <input
                                         type="number"
                                         inputmode="decimal"
                                         min="0"
                                         step="0.01"
                                         class="ilx-emp-v2-search-input"
-                                        style="width:90px; text-align:right; padding:6px 8px;"
+                                        style="width:90px; text-align:center; padding:6px 8px;"
                                         t-att-placeholder="line.theoretical_qty"
                                         t-att-value="line.counted"
                                         t-on-input="(ev) => this.setCounted(line, ev.target.value)"
@@ -178,9 +157,10 @@
                                             />
                                         </span>
                                     </t>
+                                    </div>
                                     <button
                                         class="btn btn-link p-0"
-                                        style="color:#b42318; font-size:0.8rem;"
+                                        style="color:#b42318; font-size:1rem;"
                                         t-on-click="() => this.removeLine(line)"
                                     >
                                         <i class="fa fa-trash" />
@@ -192,7 +172,7 @@
                             t-if="state.lines.length === 0"
                             class="text-center p-4"
                             style="color: #666;"
-                        >No stock here yet — scan or search a product to add it.</div>
+                        >No stock here yet — scan or add a product.</div>
                     </t>
                 </div>
             </main>
@@ -208,6 +188,61 @@
                     <t t-else="">Apply Adjustment (<t t-esc="countedLines.length" />)</t>
                 </button>
             </footer>
+        </div>
+    </t>
+
+    <t t-name="barcode_inventory.InventoryProductSelectorScreen">
+        <div class="ilx-emp-v2-screen">
+            <header class="ilx-emp-v2-header">
+                <button class="ilx-emp-v2-back-btn" t-on-click="goBack">
+                    <i class="fa fa-arrow-left" />
+                </button>
+                <h1 class="ilx-emp-v2-header-title">Add Product</h1>
+            </header>
+
+            <main class="ilx-emp-v2-main">
+                <div class="ilx-emp-v2-search-box">
+                    <i class="fa fa-search ilx-emp-v2-search-icon" />
+                    <input
+                        type="text"
+                        class="ilx-emp-v2-search-input"
+                        placeholder="Scan or search a product..."
+                        t-att-value="state.search"
+                        t-on-input="onSearchInput"
+                    />
+                </div>
+
+                <h2 class="ilx-emp-v2-section-title">PRODUCTS</h2>
+                <div class="ilx-emp-v2-list">
+                    <t t-if="state.loading">
+                        <div class="text-center p-4">Loading products...</div>
+                    </t>
+                    <t t-else="">
+                        <t t-foreach="state.results" t-as="prod" t-key="prod.id">
+                            <div
+                                class="ilx-emp-v2-card"
+                                t-on-click="() => this.pickProduct(prod)"
+                            >
+                                <div class="ilx-emp-v2-info">
+                                    <span class="ilx-emp-v2-name">
+                                        <t t-esc="prod.display_name" />
+                                    </span>
+                                </div>
+                                <div class="ilx-emp-v2-status">
+                                    <i
+                                        class="fa fa-plus-circle ilx-emp-v2-icon-chevron"
+                                    />
+                                </div>
+                            </div>
+                        </t>
+                        <div
+                            t-if="state.results.length === 0"
+                            class="text-center p-4"
+                            style="color: #666;"
+                        >No products found.</div>
+                    </t>
+                </div>
+            </main>
         </div>
     </t>
 

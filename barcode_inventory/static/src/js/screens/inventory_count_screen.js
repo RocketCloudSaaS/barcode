@@ -12,11 +12,14 @@ import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
 /**
  * Count step of an inventory adjustment. Shows the location's current on-hand
  * stock as theoretical lines; the operator counts by scanning (GS1 lot/serial
- * and quantity are used when present), by searching a product by hand -- like
- * the back office, so a product not yet in the location can be added -- and by
- * typing the counted quantity. Lot/serial-tracked lines expose a lot field
- * (autocompleting existing lots; the server resolves or creates it by name).
- * Applying builds and closes a stock_inventory adjustment group server-side.
+ * and quantity are used when present), by adding a product from the "+" product
+ * selector -- like the back office, so a product not yet in the location can be
+ * added -- and by typing the counted quantity. Lot/serial-tracked lines expose
+ * a lot field (autocompleting existing lots; the server resolves or creates it
+ * by name). Applying builds and closes a stock_inventory adjustment group.
+ *
+ * The count in progress survives the round-trip to the product selector: it is
+ * carried through the navigation params and restored on the way back.
  */
 export class InventoryCountScreen extends Component {
     setup() {
@@ -29,8 +32,6 @@ export class InventoryCountScreen extends Component {
             lines: [],
             loading: true,
             applying: false,
-            productSearch: "",
-            productResults: [],
         });
 
         useBarcodeHandler({
@@ -40,9 +41,23 @@ export class InventoryCountScreen extends Component {
         });
 
         onWillStart(async () => {
-            this.state.locationId = this.props.params?.locationId || null;
-            this.state.locationName = this.props.params?.locationName || "";
-            await this.loadLines();
+            const params = this.props.params || {};
+            this.state.locationId = params.locationId || null;
+            this.state.locationName = params.locationName || "";
+            if (Array.isArray(params.lines)) {
+                // Coming back from the product selector: restore the count.
+                this.state.lines = params.lines.map((l) => ({...l}));
+                this._seq = this.state.lines.reduce(
+                    (max, l) => Math.max(max, l._id || 0),
+                    0
+                );
+                this.state.loading = false;
+                if (params.addProduct) {
+                    await this.addOrIncrement(params.addProduct, null, 0);
+                }
+            } else {
+                await this.loadLines();
+            }
         });
     }
 
@@ -96,33 +111,24 @@ export class InventoryCountScreen extends Component {
         await this.addOrIncrement(product, lotName, qty);
     }
 
-    // --- manual product search (like the back office) -------------------------
+    // --- add a product from the "+" selector ----------------------------------
 
-    async searchProducts(ev) {
-        const term = ev.target.value;
-        this.state.productSearch = term;
-        if (!term || term.length < 2) {
-            this.state.productResults = [];
-            return;
-        }
-        this.state.productResults = await this.inventory.searchRead(
-            "product.product",
-            ["|", ["name", "ilike", term], ["barcode", "ilike", term]],
-            ["id", "display_name", "tracking", "uom_id"],
-            {limit: 20}
-        );
-    }
-
-    async addManualProduct(product) {
-        this.state.productSearch = "";
-        this.state.productResults = [];
-        // Manual add carries no lot; a tracked product gets an editable lot line.
-        await this.addOrIncrement(product, null, 0, {focusLot: true});
+    addProduct() {
+        this.store.navigate("inventory_product_selector", {
+            locationId: this.state.locationId,
+            locationName: this.state.locationName,
+            lines: this.state.lines.map((l) => ({...l})),
+            // Products already counted here are shown as lines: keep them out of
+            // the "+" picker, which is for adding what is NOT in the location.
+            excludeProductIds: [
+                ...new Set(this.state.lines.map((l) => l.product_id)),
+            ],
+        });
     }
 
     // --- shared add/increment -------------------------------------------------
 
-    async addOrIncrement(product, lotName, qty, options = {}) {
+    async addOrIncrement(product, lotName, qty) {
         const key = this.lineKey(product.id, lotName);
         const line = this.state.lines.find(
             (l) => this.lineKey(l.product_id, l.lot_name) === key

@@ -149,6 +149,9 @@ class StockInventory(models.Model):
         name = _("Barcode count: %(loc)s", loc=location.display_name)
         if reason:
             name = "%s (%s)" % (name, reason)
+        # Same flow as the back office: create the adjustment group, begin it,
+        # set the counted quantities and apply. No special mail handling -- the
+        # standard flow keeps its creation chatter note and sends no email.
         group = self.create(
             {
                 "name": name,
