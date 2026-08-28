@@ -7,7 +7,7 @@ import {useService} from "@web/core/utils/hooks";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {barcodeMatchDomain, barcodeMatchAnyDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class QuickInfoScreen extends Component {
     setup() {
@@ -234,10 +234,16 @@ export class QuickInfoScreen extends Component {
     }
 
     async lookupAndShow(barcode, parsedData = null) {
-        const productCode = parsedData?.value || barcode;
         const lotName = parsedData?.lot || parsedData?.serial || null;
         try {
-            const productDomain = barcodeMatchDomain(productCode);
+            // A GS1 GTIN has several equivalent forms; match every candidate so
+            // the product is found whichever variant it is stored under.
+            const candidates = [
+                ...(parsedData?.productCodes || []),
+                parsedData?.value,
+                barcode,
+            ];
+            const productDomain = barcodeMatchAnyDomain(candidates);
             const products = productDomain
                 ? await this.inventory.searchRead(
                       "product.product",

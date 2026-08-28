@@ -23,3 +23,28 @@ export function barcodeMatchDomain(value, field = "barcode") {
     const escaped = term.replace(/([\\%_])/g, "\\$1");
     return [[field, "=ilike", escaped]];
 }
+
+/**
+ * Match ANY of several candidate codes the same tolerant way. A GS1 scan yields
+ * a GTIN that has several equivalent forms (14/13/12-digit variants); the
+ * product's stored barcode may be any one of them, so matching only the first
+ * variant misses the others. This ORs a tolerant leaf per candidate.
+ *
+ * Accepts strings and/or arrays of strings, de-duplicates, and drops empties.
+ * Returns a searchRead-ready domain, or null when there is nothing to match.
+ */
+export function barcodeMatchAnyDomain(values, field = "barcode") {
+    const terms = [];
+    for (const v of [].concat(values ?? [])) {
+        const term = String(v ?? "").trim();
+        if (term && !terms.includes(term)) {
+            terms.push(term);
+        }
+    }
+    if (!terms.length) {
+        return null;
+    }
+    const leaves = terms.map((t) => [field, "=ilike", t.replace(/([\\%_])/g, "\\$1")]);
+    // OR the leaves together: N leaves need N-1 leading "|" operators.
+    return Array(leaves.length - 1).fill("|").concat(leaves);
+}
