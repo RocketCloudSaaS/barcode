@@ -1,0 +1,16 @@
+<odoo>
+    <record id="group_barcode_inventory_user" model="res.groups">
+        <field name="name">Barcode Inventory User</field>
+        <field name="category_id" ref="base.module_category_inventory" />
+        <!--
+            Applying an inventory count writes stock.quant.inventory_quantity,
+            which Odoo restricts to Inventory administrators
+            (stock.group_stock_manager). Grant it here so an operator assigned to
+            this group can adjust stock from the scanner.
+        -->
+        <field
+            name="implied_ids"
+            eval="[(4, ref('stock.group_stock_manager'))]"
+        />
+    </record>
+</odoo>
