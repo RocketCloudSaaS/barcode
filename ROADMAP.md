@@ -38,7 +38,7 @@ about the other and you can install either alone.
 | [`barcode_gs1_stock`](barcode_gs1_stock) | Available | Bridge: the measure on a GS1 label as the quantity picked |
 | [`barcode_stock_product_multi_barcode`](barcode_stock_product_multi_barcode) | Available | Recognise a product's alternate barcodes in the warehouse app |
 | [`barcode_stock_unexpected_product`](barcode_stock_unexpected_product) | Available | Add a product the transfer never listed from the scanner |
-| `barcode_inventory` | Planned | Inventory adjustments and stock counts by barcode |
+| [`barcode_inventory`](barcode_inventory) | Available | Inventory adjustments and stock counts by barcode |
 | `barcode_scrap` | Planned | Scrap damaged or lost goods from the scanner |
 | `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |
@@ -99,8 +99,13 @@ through the back office.
 
 ### barcode_inventory
 
-Perform inventory adjustments and cycle/stock counts directly from the scanner,
-updating on-hand quantities by scanning products and locations.
+Run inventory adjustments and stock counts from the scanner: pick or scan an
+internal location, count its products by scanning — reading the lot/serial and
+quantity from a GS1 label when present, and letting a lot/serial product hold
+several lines, one per number — then apply. Each count is recorded as a
+`stock_inventory` adjustment group (draft → in progress → done), so it leaves a
+traceable, auditable record with its own move lines, using Odoo's native
+on-hand adjustment.
 
 ### barcode_scrap
 
