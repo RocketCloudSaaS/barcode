@@ -5,7 +5,7 @@
     "summary": "Mobile camera barcode scanner (EAN13) for the Barcode suite",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
