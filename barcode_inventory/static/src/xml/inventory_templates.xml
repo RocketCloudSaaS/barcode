@@ -90,7 +90,10 @@
                 <h2 class="ilx-emp-v2-section-title">
                     COUNT — SCAN OR TYPE THE COUNTED QTY
                 </h2>
-                <div class="ilx-emp-v2-list">
+                <!-- Bottom padding so the last line can scroll clear of the
+                     floating camera button (fixed, bottom-right), which would
+                     otherwise sit on top of that line's delete button. -->
+                <div class="ilx-emp-v2-list" style="padding-bottom: 6rem;">
                     <t t-if="state.loading">
                         <div class="text-center p-4">Loading stock...</div>
                     </t>
