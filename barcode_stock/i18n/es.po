@@ -1386,3 +1386,73 @@ msgstr "Fecha personalizada"
 #: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
 msgid "Quick filters"
 msgstr "Filtros rápidos"
+
+#. module: barcode_stock
+#: model:ir.model.fields,field_description:barcode_stock.field_res_users__barcode_default_filters
+msgid "Barcode Default Filters"
+msgstr "Filtros por defecto del código de barras"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Destination location"
+msgstr "Ubicación de destino"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/location_selector_screen.js:0
+msgid "No location matches “%(code)s”."
+msgstr "Ninguna ubicación coincide con «%(code)s»."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "No operation found for “%(code)s”."
+msgstr "No se ha encontrado ninguna operación para «%(code)s»."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/product_selector_screen.js:0
+msgid "No product matches “%(code)s”."
+msgstr "Ningún producto coincide con «%(code)s»."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "On Hand"
+msgstr "Disponible"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/picking_list_screen.js:0
+msgid "Operation opened from scan."
+msgstr "Operación abierta desde el escaneo."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/js/screens/move_wizard_screen.js:0
+msgid "Scanned barcode is not a product of this operation."
+msgstr "El código de barras escaneado no es un producto de esta operación."
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Select source"
+msgstr "Seleccionar origen"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Source location"
+msgstr "Ubicación de origen"
+
+#. module: barcode_stock
+#. odoo-javascript
+#: code:addons/barcode_stock/static/src/xml/barcode_stock_templates.xml:0
+msgid "Stock by Location ("
+msgstr "Stock por ubicación ("
+
+#. module: barcode_stock
+#: model:ir.model,name:barcode_stock.model_res_users
+msgid "User"
+msgstr "Usuario"
