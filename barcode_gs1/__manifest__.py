@@ -5,7 +5,7 @@
     "summary": "GS1 barcode parsing (GS1-128, application identifiers)",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",

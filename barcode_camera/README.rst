@@ -82,16 +82,13 @@ Contributors
 Maintainers
 -----------
 
-.. |maintainer-antoniodavid| image:: https://github.com/antoniodavid.png?size=40px
-    :target: https://github.com/antoniodavid
-    :alt: antoniodavid
 .. |maintainer-szalatyzuzanna| image:: https://github.com/szalatyzuzanna.png?size=40px
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
 Current maintainers:
 
-|maintainer-antoniodavid| |maintainer-szalatyzuzanna| 
+|maintainer-szalatyzuzanna| 
 
 This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_camera>`_ project on GitHub.
 

@@ -40,11 +40,12 @@ Available addons
 ----------------
 addon | version | maintainers | summary
 --- | --- | --- | ---
-[barcode_camera](barcode_camera/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Mobile camera barcode scanner (EAN13) for the Barcode suite
-[barcode_gs1](barcode_gs1/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | GS1 barcode parsing (GS1-128, application identifiers)
-[barcode_gs1_stock](barcode_gs1_stock/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Use the measure on a GS1 label as the quantity picked
-[barcode_scanner](barcode_scanner/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Base scanning framework: client action, registries, scanner input and hooks
-[barcode_stock](barcode_stock/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Warehouse operations (receipts, deliveries, internal transfers) for the Barcode suite
+[barcode_camera](barcode_camera/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Mobile camera barcode scanner (EAN13) for the Barcode suite
+[barcode_gs1](barcode_gs1/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | GS1 barcode parsing (GS1-128, application identifiers)
+[barcode_gs1_stock](barcode_gs1_stock/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Use the measure on a GS1 label as the quantity picked
+[barcode_inventory](barcode_inventory/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Inventory adjustments and stock counts by barcode, on top of stock_inventory
+[barcode_scanner](barcode_scanner/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Base scanning framework: client action, registries, scanner input and hooks
+[barcode_stock](barcode_stock/) | 18.0.1.0.0 | [![szalatyzuzanna](https://github.com/szalatyzuzanna.png?size=30px)](https://github.com/szalatyzuzanna) | Warehouse operations (receipts, deliveries, internal transfers) for the Barcode suite
 [barcode_stock_product_multi_barcode](barcode_stock_product_multi_barcode/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) | Recognize alternate product barcodes in the warehouse app
 [barcode_stock_unexpected_product](barcode_stock_unexpected_product/) | 18.0.1.0.0 | [![antoniodavid](https://github.com/antoniodavid.png?size=30px)](https://github.com/antoniodavid) | Allow adding unexpected products to transfers via scanner
 
