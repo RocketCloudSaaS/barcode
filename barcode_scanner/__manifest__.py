@@ -5,7 +5,7 @@
     "summary": "Base scanning framework: client action, registries, scanner input and hooks",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "web",
