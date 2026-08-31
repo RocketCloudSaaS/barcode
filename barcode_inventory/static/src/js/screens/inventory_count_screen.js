@@ -7,7 +7,7 @@ import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match";
+import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match";
 
 /**
  * Count step of an inventory adjustment. Shows the location's current on-hand
@@ -90,8 +90,17 @@ export class InventoryCountScreen extends Component {
     // --- scanning -------------------------------------------------------------
 
     async onBarcodeScanned(barcode, parsed) {
-        const code = parsed?.gtin || parsed?.value || barcode;
-        const domain = barcodeMatchDomain(code);
+        // Match the product the same tolerant, all-candidates way the picking and
+        // transfer screens do: a GS1 GTIN has several equivalent variant forms,
+        // and the parser's value can differ from the raw scan, so try every
+        // candidate (variants, gtin, value) AND the raw barcode.
+        const candidates = [
+            ...(parsed?.productCodes || []),
+            parsed?.gtin,
+            parsed?.value,
+            barcode,
+        ];
+        const domain = barcodeMatchAnyDomain(candidates);
         const products = domain
             ? await this.inventory.searchRead(
                   "product.product",
@@ -100,9 +109,10 @@ export class InventoryCountScreen extends Component {
               )
             : [];
         if (!products.length) {
-            this.inventory.notify(_t("No product matches “%(code)s”.", {code}), {
-                type: "warning",
-            });
+            this.inventory.notify(
+                _t("No product matches “%(code)s”.", {code: parsed?.value || barcode}),
+                {type: "warning"}
+            );
             return;
         }
         const product = products[0];
@@ -118,10 +128,16 @@ export class InventoryCountScreen extends Component {
             locationId: this.state.locationId,
             locationName: this.state.locationName,
             lines: this.state.lines.map((l) => ({...l})),
-            // Products already counted here are shown as lines: keep them out of
-            // the "+" picker, which is for adding what is NOT in the location.
+            // Keep out of the "+" picker only the untracked products already
+            // counted (those can have a single line). Lot/serial-tracked
+            // products stay pickable: the operator legitimately needs several
+            // lines for the same product, one per lot/serial number.
             excludeProductIds: [
-                ...new Set(this.state.lines.map((l) => l.product_id)),
+                ...new Set(
+                    this.state.lines
+                        .filter((l) => (l.tracking || "none") === "none")
+                        .map((l) => l.product_id)
+                ),
             ],
         });
     }
@@ -137,6 +153,9 @@ export class InventoryCountScreen extends Component {
             if (qty) {
                 line.counted = String((parseFloat(line.counted) || 0) + qty);
             }
+            // The scanned line may be far down a long list: flag it so the
+            // operator sees what the scan just changed, and bring it into view.
+            this.flashLine(line);
             return;
         }
         const tracking = product.tracking || "none";
@@ -154,10 +173,33 @@ export class InventoryCountScreen extends Component {
             counted: qty ? String(qty) : null,
             isNew: true,
         };
-        this.state.lines.push(newLine);
+        // Put a freshly scanned/added product at the TOP, where the operator is
+        // looking, instead of appending it out of sight at the bottom.
+        this.state.lines.unshift(newLine);
+        this.flashLine(newLine);
         if (tracking !== "none" && !newLine.lot_fixed) {
             await this.loadLotOptions(newLine);
         }
+    }
+
+    /**
+     * Draw the operator's eye to the line a scan just added or changed: mark it
+     * highlighted for a moment and scroll it into view. Purely visual; it never
+     * changes the counted data.
+     */
+    flashLine(line) {
+        line._flash = true;
+        clearTimeout(line._flashTimer);
+        line._flashTimer = setTimeout(() => {
+            line._flash = false;
+        }, 1500);
+        // Scroll after the DOM has the (re)ordered line.
+        requestAnimationFrame(() => {
+            const el = document.getElementById(`inv-count-line-${line._id}`);
+            if (el) {
+                el.scrollIntoView({behavior: "smooth", block: "nearest"});
+            }
+        });
     }
 
     // --- lot handling ---------------------------------------------------------

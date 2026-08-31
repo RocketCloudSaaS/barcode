@@ -96,7 +96,11 @@
                     </t>
                     <t t-else="">
                         <t t-foreach="state.lines" t-as="line" t-key="line._id">
-                            <div class="ilx-emp-v2-card">
+                            <div
+                                class="ilx-emp-v2-card"
+                                t-att-id="'inv-count-line-' + line._id"
+                                t-attf-style="transition: background-color .4s ease; {{ line._flash ? 'background-color:#fff5cc; box-shadow:0 0 0 2px #ffd54a inset;' : '' }}"
+                            >
                                 <div class="ilx-emp-v2-info">
                                     <span class="ilx-emp-v2-name">
                                         <t t-esc="line.product_name" />

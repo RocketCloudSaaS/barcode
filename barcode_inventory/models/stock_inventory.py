@@ -49,21 +49,29 @@ class StockInventory(models.Model):
         }
 
     @api.model
-    def _barcode_resolve_lot(self, product, lot_name):
+    def _barcode_resolve_lot(self, product, lot_name, company=None):
         """Find an existing lot/serial by name for the product, or create one.
 
         The scan carries a lot *name* (from a GS1 label or typed in), never a
         database id, so resolution and creation happen server-side where the
         access rights and the name+product uniqueness live.
+
+        The lot is created in ``company`` -- the company of the location being
+        counted -- not in the operator's current company. A shared product
+        (``company_id`` unset) counted in another company's location would
+        otherwise get a lot in the wrong company and Odoo rejects the adjustment
+        with an "Incompatible companies" error.
         """
         lot_name = (lot_name or "").strip()
         if not lot_name:
             return self.env["stock.lot"]
+        lot_company = product.company_id or company or self.env.company
         Lot = self.env["stock.lot"]
         lot = Lot.search(
             [
                 ("product_id", "=", product.id),
                 ("name", "=ilike", lot_name),
+                ("company_id", "in", [lot_company.id, False]),
             ],
             limit=1,
         )
@@ -73,19 +81,21 @@ class StockInventory(models.Model):
             {
                 "name": lot_name,
                 "product_id": product.id,
-                "company_id": self.env.company.id,
+                "company_id": lot_company.id,
             }
         )
 
     @api.model
-    def _barcode_prepare_count_lines(self, lines):
+    def _barcode_prepare_count_lines(self, lines, location=None):
         """Validate the scanned count lines and resolve products and lots.
 
         Returns a list of ``(product, lot, counted_qty)`` tuples. Raises a
         ``UserError`` the scanner surfaces to the operator when a line is not
         applicable (unknown product, missing lot on a tracked product, a serial
-        counted as more than one unit).
+        counted as more than one unit). Lots are resolved/created in the
+        location's company (see ``_barcode_resolve_lot``).
         """
+        company = location.company_id if location else None
         prepared = []
         for line in lines or []:
             product = (
@@ -103,7 +113,9 @@ class StockInventory(models.Model):
                 )
             lot = self.env["stock.lot"]
             if product.tracking != "none":
-                lot = self._barcode_resolve_lot(product, line.get("lot_name"))
+                lot = self._barcode_resolve_lot(
+                    product, line.get("lot_name"), company=company
+                )
                 if not lot:
                     raise UserError(
                         _(
@@ -144,7 +156,7 @@ class StockInventory(models.Model):
         if not location:
             raise UserError(_("The selected location is no longer valid."))
 
-        prepared = self._barcode_prepare_count_lines(lines)
+        prepared = self._barcode_prepare_count_lines(lines, location=location)
 
         name = _("Barcode count: %(loc)s", loc=location.display_name)
         if reason:
