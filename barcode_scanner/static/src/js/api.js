@@ -11,7 +11,7 @@ export const barcodeApiService = {
                     return await orm.call(model, method, args, kwargs);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while calling the server.";
+                        error.message || "An error occurred while calling the server.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -22,7 +22,7 @@ export const barcodeApiService = {
                     return await orm.searchRead(model, domain, fields, options);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while fetching data.";
+                        error.message || "An error occurred while fetching data.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -33,7 +33,7 @@ export const barcodeApiService = {
                     return await orm.readGroup(model, domain, fields, groupby, options);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while grouping data.";
+                        error.message || "An error occurred while grouping data.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -44,7 +44,7 @@ export const barcodeApiService = {
                     return await orm.read(model, ids, fields);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while reading records.";
+                        error.message || "An error occurred while reading records.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -55,7 +55,7 @@ export const barcodeApiService = {
                     return await orm.write(model, ids, data);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while saving records.";
+                        error.message || "An error occurred while saving records.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -66,7 +66,7 @@ export const barcodeApiService = {
                     return await orm.create(model, data);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while creating records.";
+                        error.message || "An error occurred while creating records.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
@@ -77,7 +77,7 @@ export const barcodeApiService = {
                     return await orm.unlink(model, ids);
                 } catch (error) {
                     const message =
-                        error.data?.message || error.message || "An error occurred while deleting records.";
+                        error.message || "An error occurred while deleting records.";
                     notification.add(message, {type: "danger"});
                     throw error;
                 }
