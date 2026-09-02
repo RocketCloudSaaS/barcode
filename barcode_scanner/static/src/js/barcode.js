@@ -59,15 +59,23 @@ function isEditable(element) {
     );
 }
 
-// Real editable targets the user is deliberately typing into: we must not steal
-// focus from these, so their own keyboard shows and they can type.
+// Real interactive targets the user is deliberately operating: we must not steal
+// focus from these, so their own keyboard shows and they can type -- and native
+// pop-ups (a <select> dropdown, a date picker) can open. Such a control steals
+// focus the instant it is clicked, which our keep-focus guard would otherwise
+// yank straight back, closing it before it opens (the desktop "the lot picker /
+// date field trembles but won't open" bug); matching them here leaves them
+// alone. The hidden barcode-capture input is a text input too, so exclude it
+// explicitly -- focus must always return to it.
 function isUserEditable(element) {
     if (!element || element.nodeType !== 1) {
         return false;
     }
+    if (element.classList && element.classList.contains("o-barcode-input")) {
+        return false;
+    }
     return element.matches(
-        'input:not([type]), input[type="text"], textarea, [contenteditable], ' +
-            '[type="email"], [type="number"], [type="password"], [type="tel"], [type="search"]'
+        "input, textarea, select, [contenteditable]"
     );
 }
 
