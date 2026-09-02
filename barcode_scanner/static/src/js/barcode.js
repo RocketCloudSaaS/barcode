@@ -221,14 +221,15 @@ export const barcodeService = {
             // readonly for the soft-keyboard trick and the chars never reach its
             // value. The PDA keeps its own path: keyBuffer stays empty there, so
             // its terminating Enter still falls through to checkBarcode below.
-            if (
-                !typingInUserField &&
-                ev.key.length === 1 &&
-                !ev.ctrlKey &&
-                !ev.metaKey &&
-                !ev.altKey
-            ) {
-                keyBuffer += ev.key;
+            if (!typingInUserField && !isSpecialKey && !isEndCharacter) {
+                // Mirror Odoo core: capture ctrl/alt-modified keys too, because a
+                // GS1 label carries its group separator (FNC1) that way. A raw
+                // 0x1D arrives as its own single char; the common Ctrl+] form is
+                // mapped to the real FNC1 so variable-length AIs (lot/serial) stay
+                // delimited and the lot parses on desktop as it does on the PDA.
+                // Stray modifier-key names (Control/Alt/Shift) are stripped by
+                // emit()'s cleanup.
+                keyBuffer += ev.ctrlKey && ev.key === "]" ? GS1_FNC1 : ev.key;
                 clearTimeout(keyBufferTimer);
                 keyBufferTimer = setTimeout(
                     flushKeyBuffer,
