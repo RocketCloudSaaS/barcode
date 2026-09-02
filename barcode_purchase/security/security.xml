@@ -1,0 +1,15 @@
+<odoo>
+    <record id="group_barcode_purchase_user" model="res.groups">
+        <field name="name">Barcode Purchase User</field>
+        <field name="category_id" ref="base.module_category_inventory" />
+        <!--
+            Creating and confirming a purchase.order from the scanner needs the
+            Purchase user rights. Grant them here so an operator assigned to this
+            group can raise a purchase order from the barcode app.
+        -->
+        <field
+            name="implied_ids"
+            eval="[(4, ref('purchase.group_purchase_user'))]"
+        />
+    </record>
+</odoo>
