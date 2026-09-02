@@ -39,8 +39,8 @@ about the other and you can install either alone.
 | [`barcode_stock_product_multi_barcode`](barcode_stock_product_multi_barcode) | Available | Recognise a product's alternate barcodes in the warehouse app |
 | [`barcode_stock_unexpected_product`](barcode_stock_unexpected_product) | Available | Add a product the transfer never listed from the scanner |
 | [`barcode_inventory`](barcode_inventory) | Available | Inventory adjustments and stock counts by barcode |
+| [`barcode_purchase`](barcode_purchase) | Available | Create and confirm purchase orders by barcode |
 | `barcode_scrap` | Planned | Scrap damaged or lost goods from the scanner |
-| `barcode_purchase` | Planned | Purchase order receiving driven by barcode |
 | `barcode_quality` | Planned | Quality checks integrated into the scanning flow |
 
 ## Details
@@ -107,16 +107,21 @@ several lines, one per number — then apply. Each count is recorded as a
 traceable, auditable record with its own move lines, using Odoo's native
 on-hand adjustment.
 
+### barcode_purchase
+
+Raise purchase orders from the scanner: pick a vendor, a destination location
+and a responsible employee, add the products by scanning — reading the
+lot/serial and quantity from a GS1 label when present — then create the order
+and, when asked, confirm it, which raises the incoming picking. The scanned
+destination and lots are written onto that receipt; a lot/serial product with no
+lot yet leaves the order in draft instead of confirming a receipt that would be
+blocked.
+
 ### barcode_scrap
 
 Scrap goods without leaving the scanner: scan the product and the location it is
 being written off from, state the quantity and the reason, and the scrap order is
 created and validated on the spot.
-
-### barcode_purchase
-
-Drive purchase order receiving from the scanner: match incoming goods against
-purchase orders and confirm receptions by barcode.
 
 ### barcode_quality
 
