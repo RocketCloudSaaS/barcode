@@ -90,6 +90,11 @@ export const barcodeService = {
         let fbEl = null;
         let fbTimer = null;
         let active = false;
+        // Desktop keyboard-wedge (USB scanner / Chrome barcode extension) buffer.
+        // Real keystrokes accumulate here; the PDA laser never uses it -- its keys
+        // arrive as "Unidentified" IME text, flushed via the input event instead.
+        let keyBuffer = "";
+        let keyBufferTimer = null;
 
         // Focus the hidden capture input WITHOUT raising the Android soft
         // keyboard: Chrome never shows the keyboard for a focus() on a readonly
@@ -157,6 +162,25 @@ export const barcodeService = {
             }
         }
 
+        // Emit a desktop keyboard-wedge scan gathered in keyBuffer, and clear the
+        // capture input too so the same code is never also emitted by checkBarcode
+        // from the input value.
+        function flushKeyBuffer(ev) {
+            const buf = keyBuffer;
+            keyBuffer = "";
+            clearTimeout(keyBufferTimer);
+            keyBufferTimer = null;
+            if (barcodeInput) {
+                barcodeInput.value = "";
+            }
+            if (buf.replace(/[\r\n]/g, "").length >= 3) {
+                if (ev) {
+                    ev.preventDefault();
+                }
+                emit(buf);
+            }
+        }
+
         function onKeyDown(ev) {
             if (!ev.key || ev.key === "Unidentified") {
                 // IME character noise: the real text is in barcodeInput.value.
@@ -181,21 +205,53 @@ export const barcodeService = {
             const isSpecialKey =
                 !["Control", "Alt"].includes(ev.key) && (ev.key.length > 1 || ev.metaKey);
             const isEndCharacter = /(Enter|Tab)/.test(ev.key);
+
+            // Don't capture while the user is deliberately typing into a real
+            // field (search boxes, quantity/lot inputs).
+            const target = ev.target;
+            const typingInUserField =
+                target !== barcodeInput &&
+                isEditable(target) &&
+                !(target.dataset && target.dataset.enableBarcode);
+
+            // Desktop keyboard-wedge: a real printable key never comes from the
+            // PDA laser (that arrives as "Unidentified" above), so gather real
+            // keys into keyBuffer and flush on Enter/Tab or a short pause. We read
+            // ev.key directly, so it works even while the capture input is briefly
+            // readonly for the soft-keyboard trick and the chars never reach its
+            // value. The PDA keeps its own path: keyBuffer stays empty there, so
+            // its terminating Enter still falls through to checkBarcode below.
+            if (
+                !typingInUserField &&
+                ev.key.length === 1 &&
+                !ev.ctrlKey &&
+                !ev.metaKey &&
+                !ev.altKey
+            ) {
+                keyBuffer += ev.key;
+                clearTimeout(keyBufferTimer);
+                keyBufferTimer = setTimeout(
+                    flushKeyBuffer,
+                    barcodeService.maxTimeBetweenKeysInMs
+                );
+            }
+
             if (isSpecialKey && !isEndCharacter) {
                 return;
             }
-
-            const target = ev.target;
-            if (
-                target !== barcodeInput &&
-                isEditable(target) &&
-                !(target.dataset && target.dataset.enableBarcode)
-            ) {
+            if (typingInUserField) {
                 return;
             }
 
             if (isEndCharacter) {
-                checkBarcode(ev);
+                // A desktop wedge scan ends here (flush the buffer); a PDA/IME scan
+                // has its text in the input value (checkBarcode). keyBuffer is
+                // always empty on the PDA, so it never changes that path.
+                if (keyBuffer) {
+                    flushKeyBuffer(ev);
+                } else {
+                    checkBarcode(ev);
+                }
             }
         }
 
@@ -308,6 +364,9 @@ export const barcodeService = {
             timeout = null;
             clearTimeout(readonlyTimer);
             readonlyTimer = null;
+            clearTimeout(keyBufferTimer);
+            keyBufferTimer = null;
+            keyBuffer = "";
             clearTimeout(fbTimer);
             fbTimer = null;
             document.removeEventListener("focusout", onFocusOut, true);
