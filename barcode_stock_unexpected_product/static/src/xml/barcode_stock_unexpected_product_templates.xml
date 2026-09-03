@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-inherit="barcode_scanner.PickingScreen" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('ilx-kw-bottom-nav')]" position="inside">
+            <button
+                t-if="canAddManualLine"
+                class="ilx-kw-nav-item flex-1"
+                t-on-click="openManualLineSelector"
+            >
+                <div class="ilx-kw-nav-pill"><i class="fa fa-plus" /></div>
+                <span>Add a line</span>
+            </button>
+        </xpath>
+    </t>
+    <t
+        t-inherit="barcode_scanner.ProductSelectorScreen"
+        t-inherit-mode="extension"
+        owl="1"
+    >
+        <xpath expr="//div[hasclass('ilx-mw-v2-qty-row')]" position="before">
+            <div
+                t-if="props.params?.mode === 'manual_line' and state.selectedProduct?.tracking !== 'none'"
+                class="ilx-v2-field-group"
+            >
+                <label class="ilx-v2-label">Lot or serial</label>
+                <select class="ilx-mw-v2-input" t-model="state.lotId">
+                    <option value="">Select lot or serial</option>
+                    <t t-foreach="state.lots" t-as="lot" t-key="lot.id">
+                        <option t-att-value="lot.id"><t t-esc="lot.name" /></option>
+                    </t>
+                </select>
+            </div>
+        </xpath>
+    </t>
+
+    <t t-inherit="barcode_scanner.PickingScreen" t-inherit-mode="extension" owl="1">
+        <xpath expr="//PickingMoveList" position="attributes">
+            <attribute
+                name="onDeleteManual"
+            >(moveId) => this.deleteManualMove(moveId)</attribute>
+        </xpath>
+    </t>
+    <t t-inherit="barcode_scanner.PickingMoveList" t-inherit-mode="extension" owl="1">
+        <xpath expr="//PickingMoveCard" position="attributes">
+            <attribute name="onDeleteManual">props.onDeleteManual</attribute>
+        </xpath>
+    </t>
+    <t t-inherit="barcode_scanner.PickingMoveCard" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('ilx-kw-picking-card-status')]" position="inside">
+            <span
+                t-if="props.move.is_manually"
+                class="ilx-manual-delete-btn"
+                t-on-click.stop="() => props.onDeleteManual(props.move.id)"
+                title="Delete manual line"
+                style="cursor: pointer; color: #d32f2f; font-size: 1rem;"
+            ><i class="fa fa-trash" /></span>
+        </xpath>
+    </t>
+</templates>
