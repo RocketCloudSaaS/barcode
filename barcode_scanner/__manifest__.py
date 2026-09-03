@@ -32,6 +32,9 @@
             "barcode_scanner/static/src/js/hooks/use_inventory.js",
             "barcode_scanner/static/src/js/screens/main_screen.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_scanner/static/tests/**/*",
+        ],
     },
     "installable": True,
     "application": True,
