@@ -2,3 +2,8 @@ from . import test_scanner_gate
 from . import test_scanner_add_line
 from . import test_stock_picking_type
 from . import test_stock_picking_type_view
+from . import test_manual_line_authorization
+from . import test_manual_line_pending
+from . import test_manual_line_availability
+from . import test_manual_line_tracking
+from . import test_manual_line_regression

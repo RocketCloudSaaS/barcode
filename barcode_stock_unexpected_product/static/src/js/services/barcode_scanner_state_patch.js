@@ -26,6 +26,25 @@ patch(BarcodeScannerState.prototype, {
                 // Ignore - fallback to main barcodes
             }
         }
+        const pickingTypeId = this.picking?.picking_type_id?.[0];
+        if (pickingTypeId) {
+            const [pickingType] = await this.orm.read(
+                "stock.picking.type",
+                [pickingTypeId],
+                ["allow_insert_new_line"]
+            );
+            this.pickingTypeAllowInsertNewLine =
+                pickingType?.allow_insert_new_line || false;
+        } else {
+            this.pickingTypeAllowInsertNewLine = false;
+        }
         return result;
+    },
+
+    getSnapshot() {
+        return {
+            ...super.getSnapshot(...arguments),
+            pickingTypeAllowInsertNewLine: this.pickingTypeAllowInsertNewLine || false,
+        };
     },
 });
