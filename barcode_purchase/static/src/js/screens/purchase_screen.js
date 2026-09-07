@@ -9,7 +9,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {
     barcodeMatchDomain,
     barcodeMatchAnyDomain,
-} from "@barcode_scanner/js/utils/scan_match";
+} from "@barcode_purchase/js/utils/scan_match";
 
 /**
  * Create a purchase order from the scanner: pick a vendor, a destination

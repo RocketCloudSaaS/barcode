@@ -8,7 +8,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
 import {
     barcodeMatchDomain,
     barcodeMatchAnyDomain,
-} from "@barcode_scanner/js/utils/scan_match";
+} from "@barcode_purchase/js/utils/scan_match";
 
 /**
  * Pick a product to add to the purchase order. Scanning a product barcode adds
