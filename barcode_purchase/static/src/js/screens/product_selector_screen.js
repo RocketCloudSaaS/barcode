@@ -9,6 +9,7 @@ import {
     barcodeMatchDomain,
     barcodeMatchAnyDomain,
 } from "@barcode_purchase/js/utils/scan_match";
+import {recordImageUrl} from "@barcode_purchase/js/utils/avatar";
 
 /**
  * Pick a product to add to the purchase order. Scanning a product barcode adds
@@ -62,18 +63,35 @@ export class PurchaseProductSelectorScreen extends Component {
 
     async loadProducts() {
         // Odoo 18: purchasable goods are type "consu".
+        // `bin_size` keeps the images themselves off the wire -- see
+        // recordImageUrl.
         this.state.products = await this.inventory.searchRead(
             "product.product",
             [["type", "=", "consu"], ["purchase_ok", "=", true]],
-            ["display_name", "image_128", "standard_price", "tracking", "default_code"]
+            [
+                "display_name",
+                "image_128",
+                "standard_price",
+                "tracking",
+                "default_code",
+                "write_date",
+            ],
+            {context: {bin_size: true}}
         );
         this.state.products = this.state.products.map((p) => {
-            if (!p.image_128 || String(p.image_128).length < 50) {
-                p.image_128 = false;
-            }
+            p.image_url = recordImageUrl("product.product", p);
             return p;
         });
         this.state.loading = false;
+    }
+
+    /**
+     * Should the image fail anyway -- no session, no network, a filestore that
+     * lost the file -- fall back to the initial rather than leave a broken
+     * image in the list.
+     */
+    onImageError(record) {
+        record.image_url = false;
     }
 
     get filteredProducts() {

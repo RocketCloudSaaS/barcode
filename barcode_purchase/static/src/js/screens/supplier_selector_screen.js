@@ -5,6 +5,11 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {recordImageUrl} from "@barcode_purchase/js/utils/avatar";
+
+// `bin_size` keeps the images themselves off the wire -- see recordImageUrl.
+const AVATAR_FIELDS = ["name", "image_128", "city", "country_id", "write_date"];
+const AVATAR_OPTIONS = {context: {bin_size: true}};
 
 /**
  * Pick the vendor for a purchase order. Scanning a partner barcode selects it
@@ -37,23 +42,19 @@ export class SupplierSelectorScreen extends Component {
         const suppliers = await this.inventory.searchRead(
             "res.partner",
             [["barcode", "=", barcode]],
-            ["name", "image_128", "city", "country_id"]
+            AVATAR_FIELDS,
+            AVATAR_OPTIONS
         );
         if (suppliers.length) {
-            this.state.selectedSupplier = this._sanitize(suppliers[0]);
+            this.state.selectedSupplier = this._withImage(suppliers[0]);
             this.confirmSelection();
             return;
         }
         this.state.search = barcode;
     }
 
-    _sanitize(partner) {
-        if (
-            !partner.image_128 ||
-            String(partner.image_128).length < 50
-        ) {
-            partner.image_128 = false;
-        }
+    _withImage(partner) {
+        partner.image_url = recordImageUrl("res.partner", partner);
         return partner;
     }
 
@@ -61,9 +62,10 @@ export class SupplierSelectorScreen extends Component {
         const suppliers = await this.inventory.searchRead(
             "res.partner",
             [["supplier_rank", ">", 0]],
-            ["name", "image_128", "city", "country_id"]
+            AVATAR_FIELDS,
+            AVATAR_OPTIONS
         );
-        this.state.suppliers = suppliers.map((s) => this._sanitize(s));
+        this.state.suppliers = suppliers.map((s) => this._withImage(s));
         this.state.loading = false;
     }
 
@@ -77,6 +79,15 @@ export class SupplierSelectorScreen extends Component {
                 sup.name.toLowerCase().includes(s) ||
                 (sup.city && sup.city.toLowerCase().includes(s))
         );
+    }
+
+    /**
+     * Should the image fail anyway -- no session, no network, a filestore that
+     * lost the file -- fall back to the initial rather than leave a broken
+     * image in the list.
+     */
+    onImageError(record) {
+        record.image_url = false;
     }
 
     selectSupplier(supplier) {

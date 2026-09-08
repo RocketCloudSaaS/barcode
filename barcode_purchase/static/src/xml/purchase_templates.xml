@@ -224,9 +224,10 @@
                             >
                                 <div class="ilx-emp-v2-avatar-wrapper">
                                     <div class="ilx-emp-v2-avatar">
-                                        <t t-if="sup.image_128">
+                                        <t t-if="sup.image_url">
                                             <img
-                                                t-att-src="'data:image/png;base64,' + sup.image_128"
+                                                t-att-src="sup.image_url"
+                                                t-on-error="() => this.onImageError(sup)"
                                             />
                                         </t>
                                         <t t-else="">
@@ -320,9 +321,10 @@
                             >
                                 <div class="ilx-emp-v2-avatar-wrapper">
                                     <div class="ilx-emp-v2-avatar">
-                                        <t t-if="user.image_128">
+                                        <t t-if="user.image_url">
                                             <img
-                                                t-att-src="'data:image/png;base64,' + user.image_128"
+                                                t-att-src="user.image_url"
+                                                t-on-error="() => this.onImageError(user)"
                                             />
                                         </t>
                                         <t t-else="">
@@ -500,9 +502,10 @@
                             >
                                 <div class="ilx-emp-v2-avatar-wrapper">
                                     <div class="ilx-emp-v2-avatar">
-                                        <t t-if="product.image_128">
+                                        <t t-if="product.image_url">
                                             <img
-                                                t-att-src="'data:image/png;base64,' + product.image_128"
+                                                t-att-src="product.image_url"
+                                                t-on-error="() => this.onImageError(product)"
                                             />
                                         </t>
                                         <t t-else="">

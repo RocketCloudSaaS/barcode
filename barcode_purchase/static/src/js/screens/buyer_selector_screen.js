@@ -5,6 +5,7 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {recordImageUrl} from "@barcode_purchase/js/utils/avatar";
 
 /**
  * Pick the buyer for a purchase order -- Odoo's native `user_id` on
@@ -48,18 +49,28 @@ export class BuyerSelectorScreen extends Component {
     }
 
     async loadUsers() {
+        // `bin_size` keeps the images themselves off the wire -- see
+        // recordImageUrl.
         const users = await this.inventory.searchRead(
             "res.users",
             [["share", "=", false]],
-            ["name", "login", "image_128"]
+            ["name", "login", "image_128", "write_date"],
+            {context: {bin_size: true}}
         );
         this.state.users = users.map((u) => {
-            if (!u.image_128 || String(u.image_128).length < 50) {
-                u.image_128 = false;
-            }
+            u.image_url = recordImageUrl("res.users", u);
             return u;
         });
         this.state.loading = false;
+    }
+
+    /**
+     * Should the image fail anyway -- no session, no network, a filestore that
+     * lost the file -- fall back to the initial rather than leave a broken
+     * image in the list.
+     */
+    onImageError(record) {
+        record.image_url = false;
     }
 
     get filteredUsers() {

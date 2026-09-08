@@ -20,6 +20,7 @@
             "barcode_purchase/static/src/scss/purchase.scss",
             "barcode_purchase/static/src/xml/purchase_templates.xml",
             "barcode_purchase/static/src/js/utils/scan_match.js",
+            "barcode_purchase/static/src/js/utils/avatar.js",
             "barcode_purchase/static/src/js/camera_routes.js",
             "barcode_purchase/static/src/js/screens/supplier_selector_screen.js",
             "barcode_purchase/static/src/js/screens/buyer_selector_screen.js",
