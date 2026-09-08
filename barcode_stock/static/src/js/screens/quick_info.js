@@ -66,7 +66,6 @@ export class QuickInfoScreen extends Component {
                     "tracking",
                     "type",
                     "is_storable",
-                    "image_128",
                     "qty_available",
                     "uom_id",
                 ]

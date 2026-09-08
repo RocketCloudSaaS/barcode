@@ -7,6 +7,7 @@ import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {recordImageUrl} from "@barcode_stock/js/utils/avatar";
 import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
 
 export class ProductSelectorScreen extends Component {
@@ -35,12 +36,16 @@ export class ProductSelectorScreen extends Component {
     async onBarcodeScanned(barcode, parsedData) {
         const searchCode = parsedData?.value || barcode;
         const domain = barcodeMatchDomain(searchCode);
+        // No image here: the scanned product goes straight to confirmSelection,
+        // nothing renders it, and it would cost a full base64 image.
         const products = domain
-            ? await this.inventory.searchRead(
-                  "product.product",
-                  domain,
-                  ["name", "image_128", "standard_price", "tracking", "default_code", "type"]
-              )
+            ? await this.inventory.searchRead("product.product", domain, [
+                  "name",
+                  "standard_price",
+                  "tracking",
+                  "default_code",
+                  "type",
+              ])
             : [];
         if (products.length) {
             this.state.selectedProduct = products[0];
@@ -56,26 +61,36 @@ export class ProductSelectorScreen extends Component {
         );
     }
 
+    /**
+     * Should the image fail anyway -- no session, no network, a filestore that
+     * lost the file -- fall back to the initial rather than leave a broken
+     * image in the list.
+     */
+    onImageError(record) {
+        record.image_url = false;
+    }
+
     async loadProducts() {
         const domain = [["type", "=", "consu"]];
-        let products = await this.inventory.searchRead("product.product", domain, [
-            "name",
-            "image_128",
-            "standard_price",
-            "tracking",
-            "default_code",
-            "type",
-        ]);
+        // `bin_size` keeps the images themselves off the wire -- see
+        // recordImageUrl.
+        let products = await this.inventory.searchRead(
+            "product.product",
+            domain,
+            [
+                "name",
+                "image_128",
+                "standard_price",
+                "tracking",
+                "default_code",
+                "type",
+                "write_date",
+            ],
+            {context: {bin_size: true}}
+        );
 
         products = products.map((prod) => {
-            if (
-                !prod.image_128 ||
-                prod.image_128 === "False" ||
-                prod.image_128 === "false" ||
-                String(prod.image_128).length < 50
-            ) {
-                prod.image_128 = false;
-            }
+            prod.image_url = recordImageUrl("product.product", prod);
             return prod;
         });
 

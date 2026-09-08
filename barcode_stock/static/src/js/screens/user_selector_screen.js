@@ -6,6 +6,7 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {recordImageUrl} from "@barcode_stock/js/utils/avatar";
 
 const DEFAULT_RETURN_ROUTE = "internal_transfer";
 
@@ -39,22 +40,27 @@ export class UserSelectorScreen extends Component {
         return {...(this.props.params?.returnParams || {})};
     }
 
+    /**
+     * Should the image fail anyway -- no session, no network, a filestore that
+     * lost the file -- fall back to the initial rather than leave a broken
+     * image in the list.
+     */
+    onImageError(record) {
+        record.image_url = false;
+    }
+
     async loadUsers() {
+        // `bin_size` keeps the images themselves off the wire -- see
+        // recordImageUrl.
         let users = await this.inventory.searchRead(
             "res.users",
             [["share", "=", false]],
-            ["name", "login", "image_128"]
+            ["name", "login", "image_128", "write_date"],
+            {context: {bin_size: true}}
         );
 
         users = users.map((user) => {
-            if (
-                !user.image_128 ||
-                user.image_128 === "False" ||
-                user.image_128 === "false" ||
-                String(user.image_128).length < 50
-            ) {
-                user.image_128 = false;
-            }
+            user.image_url = recordImageUrl("res.users", user);
             return user;
         });
 
