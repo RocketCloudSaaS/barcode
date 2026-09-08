@@ -163,10 +163,12 @@ export class PurchaseScreen extends Component {
     }
 
     /**
-     * Products tracked by lot/serial can't be received without a lot. When the
-     * operator asked to auto-confirm but a tracked line has no lot yet, we still
-     * create the order but leave it in draft and say why, instead of confirming
-     * an order that can't be received.
+     * Lines of a lot/serial-tracked product the operator could not give a lot
+     * for. The order is confirmed anyway: a vendor's lot or serial is usually
+     * unknown until the goods turn up, and it belongs on the receipt, not on the
+     * order -- the screen has no way to type one either, only a GS1 label
+     * carries it. The receipt still cannot be validated until somebody enters
+     * it, so these lines get named in the message.
      */
     _trackedLinesMissingLot() {
         return this.state.lines.filter(
@@ -225,39 +227,80 @@ export class PurchaseScreen extends Component {
         };
 
         this.state.saving = true;
+        let poId = null;
         try {
             const poIds = await this.inventory.create("purchase.order", [values]);
-            const poId = poIds[0];
+            poId = poIds[0];
 
-            // Move the scanned destination and lots onto the incoming picking
-            // once it exists, then optionally confirm.
-            const missingLot = this._trackedLinesMissingLot();
-            const confirm = this.state.autoValidate && !missingLot.length;
-            if (this.state.autoValidate && missingLot.length) {
-                const names = missingLot.map((l) => l.product_name).join(", ");
-                this.inventory.notify(
-                    _t("Order saved as draft: a lot/serial is needed first for ") +
-                        names,
-                    {type: "warning"}
-                );
-            }
-            if (confirm) {
+            // Confirm when asked, then move the scanned destination and lots
+            // onto the picking the confirmation raised.
+            const missingLot = this.state.autoValidate
+                ? this._trackedLinesMissingLot()
+                : [];
+            if (this.state.autoValidate) {
                 await this.inventory.call("purchase.order", "button_confirm", [poId]);
                 await this._applyDestinationAndLots(poId);
             }
-
-            this.inventory.notify(_t("Purchase order created successfully."), {
-                type: "success",
-            });
+            await this._notifyOutcome(poId, missingLot);
             this.store.navigate("main");
         } catch (error) {
             console.error(error);
-            this.inventory.notify(_t("Purchase order could not be created."), {
-                type: "danger",
-            });
+            // The order may well exist and only the confirmation have failed:
+            // say so, so the operator goes looking for it in the back office
+            // instead of raising the same order twice.
+            const message = poId
+                ? _t("The order was created but not confirmed. Check it in Purchase.")
+                : _t("Purchase order could not be created.");
+            this.inventory.notify(message, {type: "danger"});
         } finally {
             this.state.saving = false;
         }
+    }
+
+    /**
+     * Say what actually happened, by order number and by the state the server
+     * ended up in. A confirmation does not always confirm: with two-step
+     * validation the order lands on "To Approve" and raises no receipt. The old
+     * single "created successfully" made every outcome look identical, so nobody
+     * could tell a confirmed order from one still waiting in the back office.
+     */
+    async _notifyOutcome(poId, missingLot) {
+        const [po] = await this.inventory.read("purchase.order", [poId], [
+            "name",
+            "state",
+        ]);
+        const name = po?.name || "";
+        const pending = missingLot.map((line) => line.product_name).join(", ");
+        if (["purchase", "done"].includes(po?.state)) {
+            if (pending) {
+                this.inventory.notify(
+                    _t(
+                        "%s confirmed -- set the lot/serial of %s on the receipt.",
+                        name,
+                        pending
+                    ),
+                    {type: "warning"}
+                );
+                return;
+            }
+            this.inventory.notify(_t("Purchase order %s confirmed.", name), {
+                type: "success",
+            });
+            return;
+        }
+        if (po?.state === "to approve") {
+            this.inventory.notify(
+                _t("Purchase order %s created -- it is waiting for approval.", name),
+                {type: "warning"}
+            );
+            return;
+        }
+        this.inventory.notify(
+            this.state.autoValidate
+                ? _t("Purchase order %s was created but is still a draft.", name)
+                : _t("Purchase order %s saved as a draft.", name),
+            {type: this.state.autoValidate ? "warning" : "success"}
+        );
     }
 
     /**
@@ -265,10 +308,18 @@ export class PurchaseScreen extends Component {
      * destination on it and drop the scanned lots onto the matching move lines,
      * so a GS1 receipt lands complete instead of losing its lot -- the gap the
      * reference implementation left open.
+     *
+     * Every scanned line became its own purchase order line, and purchase_stock
+     * keeps `purchase_line_id` out of the move merge, so each order line has its
+     * own move: the lots are routed through it and no move line is written twice.
+     * Matching by product alone sent every lot of a product to that product's
+     * first move line, so scanning two lots or serials of the same product kept
+     * only the last one.
      */
     async _applyDestinationAndLots(poId) {
         const [po] = await this.inventory.read("purchase.order", [poId], [
             "picking_ids",
+            "order_line",
         ]);
         const pickingIds = po?.picking_ids || [];
         if (!pickingIds.length) {
@@ -279,25 +330,98 @@ export class PurchaseScreen extends Component {
                 location_dest_id: this.state.destinationLocation.id,
             });
         }
-        const linesWithLot = this.state.lines.filter((l) => l.lot_name);
-        if (!linesWithLot.length) {
+        if (!this.state.lines.some((line) => line.lot_name)) {
             return;
         }
-        const moveLines = await this.inventory.searchRead(
-            "stock.move.line",
+        const orderLineIds = await this._orderLineIdPerScannedLine(po.order_line || []);
+        const moves = await this.inventory.searchRead(
+            "stock.move",
             [["picking_id", "in", pickingIds]],
-            ["product_id"]
+            ["product_id", "purchase_line_id", "move_line_ids"]
         );
-        for (const line of linesWithLot) {
-            const target = moveLines.find(
-                (ml) => ml.product_id && ml.product_id[0] === line.product_id
+        const written = new Set();
+        const missed = [];
+        for (const [index, line] of this.state.lines.entries()) {
+            if (!line.lot_name) {
+                continue;
+            }
+            const moveLineId = this._freeMoveLineFor(
+                moves,
+                orderLineIds[index],
+                line.product_id,
+                written
             );
-            if (target) {
-                await this.inventory.write("stock.move.line", [target.id], {
-                    lot_name: line.lot_name,
-                });
+            if (!moveLineId) {
+                missed.push(`${line.product_name} (${line.lot_name})`);
+                continue;
+            }
+            written.add(moveLineId);
+            await this.inventory.write("stock.move.line", [moveLineId], {
+                lot_name: line.lot_name,
+            });
+        }
+        // Rather than overwrite a lot that is already on the receipt, say which
+        // ones the operator still has to enter there by hand.
+        if (missed.length) {
+            this.inventory.notify(
+                _t("Set these lots on the receipt by hand: ") + missed.join(", "),
+                {type: "warning"}
+            );
+        }
+    }
+
+    /**
+     * The order lines were created from `state.lines` in order, so the k-th
+     * order line of a product is the k-th scanned line of that product -- an
+     * order inside a product that id ordering preserves whatever `_order` does.
+     * Returns the order line id for each scanned line, by position.
+     */
+    async _orderLineIdPerScannedLine(orderLineIds) {
+        const perProduct = new Map();
+        if (orderLineIds.length) {
+            const orderLines = await this.inventory.read(
+                "purchase.order.line",
+                orderLineIds,
+                ["product_id"]
+            );
+            for (const orderLine of [...orderLines].sort((a, b) => a.id - b.id)) {
+                const productId = orderLine.product_id && orderLine.product_id[0];
+                if (!perProduct.has(productId)) {
+                    perProduct.set(productId, []);
+                }
+                perProduct.get(productId).push(orderLine.id);
             }
         }
+        return this.state.lines.map(
+            (line) => perProduct.get(line.product_id)?.shift() || null
+        );
+    }
+
+    /**
+     * A free move line of the order line's own move -- falling back to the
+     * product's moves when there is no `purchase_line_id` to go by, and never a
+     * move line another scanned lot already claimed.
+     */
+    _freeMoveLineFor(moves, orderLineId, productId, written) {
+        const ownMoves = orderLineId
+            ? moves.filter(
+                  (move) =>
+                      move.purchase_line_id &&
+                      move.purchase_line_id[0] === orderLineId
+              )
+            : [];
+        const candidates = ownMoves.length
+            ? ownMoves
+            : moves.filter(
+                  (move) => move.product_id && move.product_id[0] === productId
+              );
+        for (const move of candidates) {
+            const free = (move.move_line_ids || []).find((id) => !written.has(id));
+            if (free) {
+                return free;
+            }
+        }
+        return null;
     }
 
     static template = "barcode_purchase.PurchaseScreen";

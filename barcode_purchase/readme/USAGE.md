@@ -18,9 +18,16 @@ From the Barcode app home screen, tap **Purchase Orders**.
 
 With **Validate automatically** ticked, the order is confirmed on create, which
 raises the incoming picking; the scanned destination and any scanned lots are
-written onto that picking. If a lot/serial-tracked product still has no lot, the
-order is left as a **draft** instead (a receipt would be blocked without the
-lot), and the screen says which product needs one.
+written onto that picking.
+
+A lot/serial-tracked product does not hold the order back: only a GS1 label
+carries a lot, and a vendor's lot is usually unknown until the goods turn up, so
+the order is confirmed either way and the message names the products whose
+lot/serial still has to be entered on the receipt.
+
+That message names the order and the state it ended in, because a confirmation
+does not always confirm: with two-step validation the order lands on **To
+Approve** and raises no receipt until somebody approves it in the back office.
 
 Creating and confirming a purchase order requires **Purchase** rights (the module
 ships a *Barcode Purchase User* group that grants them).
