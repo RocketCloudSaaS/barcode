@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {imageUrl} from "@web/core/utils/urls";
 
 /**

@@ -1,11 +1,9 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {barcodeMatchDomain} from "@barcode_purchase/js/utils/scan_match";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {barcodeMatchDomain} from "@barcode_purchase/js/utils/scan_match.esm";
 
 /**
  * Pick the destination location for a purchase receipt. The candidate list is
