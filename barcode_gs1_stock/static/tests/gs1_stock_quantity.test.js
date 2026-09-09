@@ -1,8 +1,8 @@
 /** @odoo-module **/
 
 import {describe, expect, test} from "@odoo/hoot";
-import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state";
-import "@barcode_gs1_stock/js/gs1_stock_quantity";
+import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
+import "@barcode_gs1_stock/js/gs1_stock_quantity.esm";
 
 // Units of measure as a stock database holds them: `factor` is how many of the
 // unit make one unit of its category's reference (a kilogram is 1000 grams).
