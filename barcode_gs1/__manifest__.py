@@ -13,9 +13,9 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "barcode_gs1/static/src/js/gs1_nomenclature.js",
-            "barcode_gs1/static/src/js/gs1_parser.js",
-            "barcode_gs1/static/src/js/gs1_startup.js",
+            "barcode_gs1/static/src/js/gs1_nomenclature.esm.js",
+            "barcode_gs1/static/src/js/gs1_parser.esm.js",
+            "barcode_gs1/static/src/js/gs1_startup.esm.js",
         ],
         "web.assets_unit_tests": [
             "barcode_gs1/static/tests/**/*",
