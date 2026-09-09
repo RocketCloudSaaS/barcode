@@ -1,16 +1,14 @@
-/** @odoo-module **/
-
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
-import "@barcode_scanner/js/services/feedback_service";
+import "@barcode_scanner/js/services/feedback_service.esm";
 
 import {
     barcodeScreens,
     barcodeAppWidgets,
     barcodeStartupTasks,
-} from "@barcode_scanner/js/registries";
+} from "@barcode_scanner/js/registries.esm";
 
 export class BarcodeScannerApp extends Component {
     setup() {
