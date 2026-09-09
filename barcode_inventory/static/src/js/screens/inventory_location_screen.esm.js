@@ -1,13 +1,11 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
 
 /**
  * First step of an inventory adjustment: pick or scan the internal location to
