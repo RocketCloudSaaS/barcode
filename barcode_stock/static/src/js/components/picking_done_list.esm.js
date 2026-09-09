@@ -1,5 +1,5 @@
 import {Component} from "@odoo/owl";
-import {PickingDoneCard} from "./picking_done_card";
+import {PickingDoneCard} from "./picking_done_card.esm";
 
 export class PickingDoneList extends Component {
     get doneLines() {
