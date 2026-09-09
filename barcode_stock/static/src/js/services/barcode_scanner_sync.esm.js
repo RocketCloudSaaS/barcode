@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {registry} from "@web/core/registry";
 import {Mutex} from "@web/core/utils/concurrency";
 import {debounce} from "@web/core/utils/timing";
