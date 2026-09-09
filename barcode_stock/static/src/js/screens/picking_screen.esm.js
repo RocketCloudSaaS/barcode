@@ -1,18 +1,16 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab";
-import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list";
-import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match";
-import {tabForMove} from "@barcode_stock/js/utils/move_progress";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab.esm";
+import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list.esm";
+import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
+import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {tabForMove} from "@barcode_stock/js/utils/move_progress.esm";
 
 export class PickingScreen extends Component {
     setup() {

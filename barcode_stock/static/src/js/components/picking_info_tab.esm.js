@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {Component, markup} from "@odoo/owl";
 
 export class PickingInfoTab extends Component {

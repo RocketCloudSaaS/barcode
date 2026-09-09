@@ -1,10 +1,8 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
 import {Component, onMounted, onPatched, onWillStart, useRef, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 
 // Remember the operator's warehouse choice across in-app navigation. The
 // module-level variable is the RELIABLE layer: navigation is a client-side
