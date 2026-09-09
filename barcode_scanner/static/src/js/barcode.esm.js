@@ -1,9 +1,7 @@
-/** @odoo-module **/
-
 import {EventBus} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {session} from "@web/session";
-import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
+import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
 
 /**
  * Barcode capture for the scanning SPA, built for the Munbyn Android PDAs used
@@ -135,6 +133,38 @@ export const barcodeService = {
                 input.readOnly = false;
             }, 50);
         }
+
+        // --- Permanent scan feedback: a centred toast showing the full code the
+        // PDA just read, then fading out, so a misread or dead scan is obvious. ---
+        function makeFeedbackEl() {
+            const el = document.createElement("div");
+            el.setAttribute(
+                "style",
+                "position:fixed;top:10px;left:50%;transform:translateX(-50%);" +
+                    "z-index:2147483646;max-width:92vw;box-sizing:border-box;" +
+                    "padding:8px 14px;border-radius:9px;background:rgba(20,20,20,.92);" +
+                    "color:#fff;font:600 13px/1.3 monospace;white-space:normal;" +
+                    "word-break:break-all;pointer-events:none;" +
+                    "opacity:0;transition:opacity .2s ease;" +
+                    "box-shadow:0 2px 10px rgba(0,0,0,.45);"
+            );
+            return el;
+        }
+
+        function showScanFeedback(received) {
+            if (!fbEl) {
+                return;
+            }
+            fbEl.textContent = String(received || "").replace(NON_PRINTABLE, "·");
+            fbEl.style.opacity = "1";
+            clearTimeout(fbTimer);
+            fbTimer = setTimeout(() => {
+                if (fbEl) {
+                    fbEl.style.opacity = "0";
+                }
+            }, 2500);
+        }
+        // --- end scan feedback ---
 
         function emit(raw) {
             const received = String(raw || "")
@@ -314,38 +344,6 @@ export const barcodeService = {
             );
             return el;
         }
-
-        // --- Permanent scan feedback: a centred toast showing the full code the
-        // PDA just read, then fading out, so a misread or dead scan is obvious. ---
-        function makeFeedbackEl() {
-            const el = document.createElement("div");
-            el.setAttribute(
-                "style",
-                "position:fixed;top:10px;left:50%;transform:translateX(-50%);" +
-                    "z-index:2147483646;max-width:92vw;box-sizing:border-box;" +
-                    "padding:8px 14px;border-radius:9px;background:rgba(20,20,20,.92);" +
-                    "color:#fff;font:600 13px/1.3 monospace;white-space:normal;" +
-                    "word-break:break-all;pointer-events:none;" +
-                    "opacity:0;transition:opacity .2s ease;" +
-                    "box-shadow:0 2px 10px rgba(0,0,0,.45);"
-            );
-            return el;
-        }
-
-        function showScanFeedback(received) {
-            if (!fbEl) {
-                return;
-            }
-            fbEl.textContent = String(received || "").replace(NON_PRINTABLE, "·");
-            fbEl.style.opacity = "1";
-            clearTimeout(fbTimer);
-            fbTimer = setTimeout(() => {
-                if (fbEl) {
-                    fbEl.style.opacity = "0";
-                }
-            }, 2500);
-        }
-        // --- end scan feedback ---
 
         function activate() {
             if (active) {
