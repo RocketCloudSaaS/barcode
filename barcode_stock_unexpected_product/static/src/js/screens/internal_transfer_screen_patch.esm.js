@@ -1,7 +1,5 @@
-/** @odoo-module **/
-
 import {patch} from "@web/core/utils/patch";
-import {InternalTransferScreen} from "@barcode_stock/js/screens/internal_transfer_screen";
+import {InternalTransferScreen} from "@barcode_stock/js/screens/internal_transfer_screen.esm";
 
 patch(InternalTransferScreen.prototype, {
     async isInsertNewLineAllowed() {

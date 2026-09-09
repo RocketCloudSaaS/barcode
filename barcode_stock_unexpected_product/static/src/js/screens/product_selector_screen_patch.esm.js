@@ -1,5 +1,4 @@
-/** @odoo-module **/
-import {ProductSelectorScreen} from "@barcode_stock/js/screens/product_selector_screen";
+import {ProductSelectorScreen} from "@barcode_stock/js/screens/product_selector_screen.esm";
 import {patch} from "@web/core/utils/patch";
 patch(ProductSelectorScreen.prototype, {
     async confirmSelection() {
