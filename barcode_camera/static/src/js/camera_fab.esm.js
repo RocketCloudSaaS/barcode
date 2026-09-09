@@ -1,10 +1,8 @@
-/** @odoo-module **/
-
 import {Component, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {registry} from "@web/core/registry";
 import {scanBarcode} from "@web/core/barcode/barcode_dialog";
-import {barcodeAppWidgets} from "@barcode_scanner/js/registries";
+import {barcodeAppWidgets} from "@barcode_scanner/js/registries.esm";
 
 // Routes where the camera button is offered. The built-ins cover the warehouse
 // app; feature modules add their own routes into the `barcode_camera_routes`
