@@ -11,10 +11,10 @@
     "data": ["views/stock_picking_type_views.xml"],
     "assets": {
         "web.assets_backend": [
-            "barcode_stock_unexpected_product/static/src/js/services/barcode_scanner_state_patch.js",
-            "barcode_stock_unexpected_product/static/src/js/screens/picking_screen_patch.js",
-            "barcode_stock_unexpected_product/static/src/js/screens/internal_transfer_screen_patch.js",
-            "barcode_stock_unexpected_product/static/src/js/screens/product_selector_screen_patch.js",
+            "barcode_stock_unexpected_product/static/src/js/services/barcode_scanner_state_patch.esm.js",
+            "barcode_stock_unexpected_product/static/src/js/screens/picking_screen_patch.esm.js",
+            "barcode_stock_unexpected_product/static/src/js/screens/internal_transfer_screen_patch.esm.js",
+            "barcode_stock_unexpected_product/static/src/js/screens/product_selector_screen_patch.esm.js",
         ]
     },
     "installable": True,
