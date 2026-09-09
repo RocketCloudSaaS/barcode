@@ -1,6 +1,4 @@
-/** @odoo-module **/
-
-import {barcodeParsers} from "@barcode_scanner/js/registries";
+import {barcodeParsers} from "@barcode_scanner/js/registries.esm";
 
 /**
  * Built-in EAN13 parser. Registered last (high sequence) so it acts as the
