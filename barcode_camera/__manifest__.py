@@ -14,7 +14,7 @@
         "web.assets_backend": [
             "barcode_camera/static/src/scss/barcode_camera.scss",
             "barcode_camera/static/src/xml/camera_fab.xml",
-            "barcode_camera/static/src/js/camera_fab.js",
+            "barcode_camera/static/src/js/camera_fab.esm.js",
         ],
     },
     "installable": True,
