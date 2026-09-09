@@ -1,11 +1,9 @@
-/** @odoo-module **/
-
-import {barcodeParsers} from "@barcode_scanner/js/registries";
+import {barcodeParsers} from "@barcode_scanner/js/registries.esm";
 import {
     compileGs1Rule,
     getGs1Nomenclature,
     hasValidCheckDigit,
-} from "@barcode_gs1/js/gs1_nomenclature";
+} from "@barcode_gs1/js/gs1_nomenclature.esm";
 
 const GS1_SEPARATOR = String.fromCharCode(29); // FNC1 (<GS>, 0x1D)
 
