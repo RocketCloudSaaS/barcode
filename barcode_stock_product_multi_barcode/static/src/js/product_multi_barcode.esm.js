@@ -1,7 +1,5 @@
-/** @odoo-module **/
-
 import {patch} from "@web/core/utils/patch";
-import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state";
+import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 
 /**
  * Recognize every barcode a product carries in the warehouse app.
