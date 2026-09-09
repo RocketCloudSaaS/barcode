@@ -13,7 +13,7 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "barcode_stock_product_multi_barcode/static/src/js/product_multi_barcode.js",
+            "barcode_stock_product_multi_barcode/static/src/js/product_multi_barcode.esm.js",
         ],
         "web.assets_unit_tests": [
             "barcode_stock_product_multi_barcode/static/tests/**/*",

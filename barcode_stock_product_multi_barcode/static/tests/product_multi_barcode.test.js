@@ -1,8 +1,8 @@
 /** @odoo-module **/
 
 import {describe, expect, test} from "@odoo/hoot";
-import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state";
-import "@barcode_stock_product_multi_barcode/js/product_multi_barcode";
+import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
+import "@barcode_stock_product_multi_barcode/js/product_multi_barcode.esm";
 
 // A product with a main barcode and two alternates, on a move of a picking.
 const PRODUCT = {id: 40, barcode: "2300001000008", display_name: "SunPaper 100"};
