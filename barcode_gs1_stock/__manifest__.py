@@ -13,7 +13,7 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "barcode_gs1_stock/static/src/js/gs1_stock_quantity.js",
+            "barcode_gs1_stock/static/src/js/gs1_stock_quantity.esm.js",
         ],
         "web.assets_unit_tests": [
             "barcode_gs1_stock/static/tests/**/*",

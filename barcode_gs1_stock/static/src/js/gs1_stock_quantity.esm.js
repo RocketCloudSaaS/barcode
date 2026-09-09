@@ -1,8 +1,6 @@
-/** @odoo-module **/
-
 import {patch} from "@web/core/utils/patch";
-import {barcodeStartupTasks} from "@barcode_scanner/js/registries";
-import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state";
+import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
+import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 
 /**
  * Read the quantity of a GS1 scan the way the warehouse means it.
