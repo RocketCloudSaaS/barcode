@@ -1,12 +1,10 @@
-/** @odoo-module **/
-
 import {Component, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {user} from "@web/core/user";
 import {imageUrl} from "@web/core/utils/urls";
-import {useBarcodeDispatcher} from "@barcode_scanner/js/hooks/use_barcode_dispatcher";
-import {barcodeMenuTiles, barcodeScreens} from "@barcode_scanner/js/registries";
+import {useBarcodeDispatcher} from "@barcode_scanner/js/hooks/use_barcode_dispatcher.esm";
+import {barcodeMenuTiles, barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
 export class MainScreen extends Component {
     setup() {

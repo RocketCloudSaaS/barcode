@@ -1,9 +1,7 @@
-/** @odoo-module **/
-
 import {EventBus} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {session} from "@web/session";
-import {parseBarcode} from "@barcode_scanner/js/barcode_parser";
+import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
 
 /**
  * Barcode capture for the scanning SPA, built for the Munbyn Android PDAs used
