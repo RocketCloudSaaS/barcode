@@ -1,9 +1,7 @@
-/** @odoo-module **/
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
-import {barcodeScreens} from "@barcode_scanner/js/registries";
-
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
