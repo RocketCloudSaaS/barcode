@@ -1,15 +1,13 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {Component, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {
     barcodeMatchDomain,
     barcodeMatchAnyDomain,
-} from "@barcode_purchase/js/utils/scan_match";
+} from "@barcode_purchase/js/utils/scan_match.esm";
 
 /**
  * Create a purchase order from the scanner: pick a vendor, a destination

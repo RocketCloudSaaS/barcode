@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 /**
  * Tolerant barcode matching, kept local to barcode_purchase.
  *

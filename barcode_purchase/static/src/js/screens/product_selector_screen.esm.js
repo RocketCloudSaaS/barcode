@@ -1,15 +1,13 @@
-/** @odoo-module **/
-
-import {barcodeScreens} from "@barcode_scanner/js/registries";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {
     barcodeMatchDomain,
     barcodeMatchAnyDomain,
-} from "@barcode_purchase/js/utils/scan_match";
-import {recordImageUrl} from "@barcode_purchase/js/utils/avatar";
+} from "@barcode_purchase/js/utils/scan_match.esm";
+import {recordImageUrl} from "@barcode_purchase/js/utils/avatar.esm";
 
 /**
  * Pick a product to add to the purchase order. Scanning a product barcode adds
