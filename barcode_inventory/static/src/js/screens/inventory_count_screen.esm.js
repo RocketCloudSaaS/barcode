@@ -5,7 +5,7 @@ import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
-import {barcodeMatchAnyDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 /**
  * Count step of an inventory adjustment. Shows the location's current on-hand
