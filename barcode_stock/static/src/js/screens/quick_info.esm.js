@@ -5,7 +5,7 @@ import {useService} from "@web/core/utils/hooks";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {barcodeMatchDomain, barcodeMatchAnyDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchDomain, barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 export class QuickInfoScreen extends Component {
     setup() {
@@ -64,7 +64,6 @@ export class QuickInfoScreen extends Component {
                     "tracking",
                     "type",
                     "is_storable",
-                    "image_128",
                     "qty_available",
                     "uom_id",
                 ]
