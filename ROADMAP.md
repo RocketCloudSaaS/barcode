@@ -110,12 +110,13 @@ on-hand adjustment.
 ### barcode_purchase
 
 Raise purchase orders from the scanner: pick a vendor, a destination location
-and a responsible employee, add the products by scanning — reading the
-lot/serial and quantity from a GS1 label when present — then create the order
-and, when asked, confirm it, which raises the incoming picking. The scanned
-destination and lots are written onto that receipt; a lot/serial product with no
-lot yet leaves the order in draft instead of confirming a receipt that would be
-blocked.
+and a buyer, add the products by scanning — reading the lot/serial and quantity
+from a GS1 label when present — then create the order and, when asked, confirm
+it, which raises the incoming picking. The scanned destination and lots are
+written onto that receipt, each lot on its own move line. A lot/serial product
+does not hold the order back: the lot belongs on the receipt, not on the order,
+so the order is confirmed either way and the closing message names both the
+order and what still needs a lot.
 
 ### barcode_scrap
 
