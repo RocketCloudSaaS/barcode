@@ -9,7 +9,7 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.e
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab.esm";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list.esm";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 import {tabForMove} from "@barcode_stock/js/utils/move_progress.esm";
 
 export class PickingScreen extends Component {

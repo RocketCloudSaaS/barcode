@@ -6,7 +6,7 @@ import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {recordImageUrl} from "@barcode_stock/js/utils/avatar.esm";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 export class ProductSelectorScreen extends Component {
     setup() {
