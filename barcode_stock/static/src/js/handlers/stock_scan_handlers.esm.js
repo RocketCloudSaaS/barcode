@@ -1,5 +1,5 @@
 import {barcodeScanHandlers} from "@barcode_scanner/js/registries.esm";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 /**
  * Home-screen scan recognition for stock. Isolated in its own file so it can be
