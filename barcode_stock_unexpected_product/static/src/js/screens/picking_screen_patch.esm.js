@@ -1,5 +1,5 @@
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
-import {barcodeMatchDomain} from "@barcode_stock/js/utils/scan_match.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 import {_t} from "@web/core/l10n/translation";
 import {patch} from "@web/core/utils/patch";
 
