@@ -10,10 +10,10 @@ class ResUsers(models.Model):
     # Per-operation-type default filters for the Barcode picking list, kept as a
     # JSON map keyed by operation-type code, e.g.
     #   {"incoming": {"activeFilters": ["date"], "filterValues": {"date": "today"}}}
-    # The frontend owns the shape; the server only stores and serves the blob so
+    # The frontend owns the shape; the server only stores and serves the map so
     # the app can apply a user's starred filter automatically on entry.
-    barcode_default_filters = fields.Text(
-        default="{}",
+    barcode_default_filters = fields.Json(
+        default=dict,
     )
 
     @property

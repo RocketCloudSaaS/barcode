@@ -21,7 +21,7 @@ Barcode Stock
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-RocketCloudSaaS%2Fbarcode-lightgray.png?logo=github
-    :target: https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_stock
+    :target: https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_stock
     :alt: RocketCloudSaaS/barcode
 
 |badge1| |badge2| |badge3|
@@ -78,12 +78,13 @@ as a GS1 label does, with ``barcode_gs1`` installed — that quantity is
 taken instead, in the product's own unit of measure:
 
 - a label that states a **measure** (a net weight, for instance) is the
-  quantity when the product is stocked in that kind of unit, converted if
-  needed: 2.497 kg on the label becomes 2.497 for a product in kilograms
-  and 2497 for one in grams;
+  quantity when the product is stocked in that kind of unit, converted
+  if needed: 2.497 kg on the label becomes 2.497 for a product in
+  kilograms and 2497 for one in grams;
 - when the product is *not* stocked that way — a box counted in units —
-  the **piece count** on the label is the quantity, and a single unit when
-  the label states no count. A weight never turns into a number of units.
+  the **piece count** on the label is the quantity, and a single unit
+  when the label states no count. A weight never turns into a number of
+  units.
 
 Quick Info
 ----------
@@ -98,7 +99,7 @@ Bug Tracker
 Bugs are tracked on `GitHub Issues <https://github.com/RocketCloudSaaS/barcode/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
-`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_stock%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_stock%0Aversion:%2017.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -120,17 +121,14 @@ Contributors
 Maintainers
 -----------
 
-.. |maintainer-antoniodavid| image:: https://github.com/antoniodavid.png?size=40px
-    :target: https://github.com/antoniodavid
-    :alt: antoniodavid
 .. |maintainer-szalatyzuzanna| image:: https://github.com/szalatyzuzanna.png?size=40px
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
-Current maintainers:
+Current maintainer:
 
-|maintainer-antoniodavid| |maintainer-szalatyzuzanna| 
+|maintainer-szalatyzuzanna| 
 
-This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_stock>`_ project on GitHub.
+This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_stock>`_ project on GitHub.
 
 You are welcome to contribute.

@@ -6,7 +6,6 @@ from odoo import api, models
 
 class BarcodeNomenclature(models.Model):
     _inherit = "barcode.nomenclature"
-    _description = "Barcode Nomenclature"
 
     @api.model
     def parse_barcode_scanner_barcode(self, barcode):

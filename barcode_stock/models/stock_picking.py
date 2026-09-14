@@ -8,7 +8,6 @@ from odoo.tools.float_utils import float_compare
 
 class StockPicking(models.Model):
     _inherit = "stock.picking"
-    _description = "Stock Picking"
 
     @api.model
     def _barcode_scanner_get_internal_picking_type(
@@ -16,32 +15,28 @@ class StockPicking(models.Model):
     ):
         picking_type_model = self.env["stock.picking.type"]
         warehouse = origin_location.warehouse_id or destination_location.warehouse_id
-        domain = [
-            ("code", "=", "internal"),
-            ("company_id", "=", self.env.company.id),
-        ]
-        picking_type = picking_type_model
-        if warehouse:
-            picking_type = picking_type_model.search(
-                domain + [("warehouse_id", "=", warehouse.id)],
-                limit=1,
-            )
+        # The warehouse's own internal operation type is the canonical target,
+        # returned even when archived (a single-step warehouse keeps it inactive).
+        if warehouse and warehouse.int_type_id:
+            return warehouse.int_type_id
+        # Fall back to any internal type for this company (or a company-shared
+        # one), archived types included so a valid setup is never overlooked.
+        picking_type = picking_type_model.with_context(active_test=False).search(
+            [
+                ("code", "=", "internal"),
+                ("company_id", "in", [self.env.company.id, False]),
+            ],
+            order="warehouse_id, id",
+            limit=1,
+        )
         if not picking_type:
-            picking_type = picking_type_model.search(
-                domain, order="warehouse_id, id", limit=1
-            )
-        if not picking_type:
-            sequence_code = "INTLOG"
-            if warehouse and warehouse.code:
-                sequence_code = f"{warehouse.code}INTL"
-            picking_type = picking_type_model.create(
-                {
-                    "name": _("Internal Transfers"),
-                    "code": "internal",
-                    "sequence_code": sequence_code,
-                    "company_id": self.env.company.id,
-                    "warehouse_id": warehouse.id if warehouse else False,
-                }
+            # A warehouse operation is not the place to create configuration:
+            # the internal operation type must be set up beforehand.
+            raise UserError(
+                _(
+                    "No internal transfer operation type is configured. "
+                    "Please set one up before using barcode transfers."
+                )
             )
         return picking_type
 
@@ -298,7 +293,6 @@ class StockPicking(models.Model):
         )
 
         move_line_model = self.env["stock.move.line"]
-        move_has_qty_picked = "qty_picked" in move_line_model._fields
         move_line_vals_list = []
         for plan in move_plan:
             line = plan["line"]
@@ -328,9 +322,8 @@ class StockPicking(models.Model):
                     "company_id": picking.company_id.id,
                     "lot_id": alloc["lot"].id if alloc["lot"] else False,
                     "lot_name": alloc["lot"].name if alloc["lot"] else False,
+                    "qty_picked": alloc["qty"],
                 }
-                if move_has_qty_picked:
-                    vals["qty_picked"] = alloc["qty"]
                 move_line_vals_list.append(vals)
 
         picking.action_confirm()
@@ -339,8 +332,37 @@ class StockPicking(models.Model):
         picking.do_unreserve()
         move_line_model.create(move_line_vals_list)
         picking.with_context(skip_backorder=True).button_validate()
+
+        # Report requested vs. moved per line so the UI can warn the operator
+        # when only part of the requested quantity was available (allocation is
+        # capped at on-hand stock, and SKIP LOCKED may skip busy quants).
+        moved_by_line = {id(plan["line"]): plan["qty"] for plan in move_plan}
+        line_summary = [
+            {
+                "product_id": line["product"].id,
+                "product_name": line["product"].display_name,
+                "requested_qty": line["qty"],
+                "moved_qty": moved_by_line.get(id(line), 0.0),
+            }
+            for line in prepared_lines
+        ]
+        fully_transferred = all(
+            float_compare(
+                summary["moved_qty"],
+                summary["requested_qty"],
+                precision_rounding=(
+                    self.env["product.product"]
+                    .browse(summary["product_id"])
+                    .uom_id.rounding
+                ),
+            )
+            >= 0
+            for summary in line_summary
+        )
         return {
             "picking_id": picking.id,
             "picking_name": picking.name,
             "state": picking.state,
+            "fully_transferred": fully_transferred,
+            "lines": line_summary,
         }

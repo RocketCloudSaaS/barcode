@@ -1,9 +1,12 @@
+import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
+import {
+    barcodeMatchAnyDomain,
+    barcodeMatchDomain,
+} from "@barcode_scanner/js/utils/scan_match.esm";
+import {_t} from "@web/core/l10n/translation";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {barcodeMatchDomain, barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
-import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 
 export class InternalTransferScreen extends Component {
@@ -69,11 +72,9 @@ export class InternalTransferScreen extends Component {
         // reported "not found") while a manual paste worked.
         const locationDomain = barcodeMatchDomain(barcode);
         const locations = locationDomain
-            ? await this.inventory.searchRead(
-                  "stock.location",
-                  locationDomain,
-                  ["display_name"]
-              )
+            ? await this.inventory.searchRead("stock.location", locationDomain, [
+                  "display_name",
+              ])
             : [];
         if (locations.length) {
             const location = locations[0];
@@ -83,7 +84,9 @@ export class InternalTransferScreen extends Component {
                     display_name: location.display_name,
                 };
                 this.notification.add(
-                    "Destination location selected: " + location.display_name,
+                    _t("Destination location selected: %(location)s", {
+                        location: location.display_name,
+                    }),
                     {type: "success"}
                 );
             } else {
@@ -92,7 +95,9 @@ export class InternalTransferScreen extends Component {
                     display_name: location.display_name,
                 };
                 this.notification.add(
-                    "Origin location selected: " + location.display_name,
+                    _t("Origin location selected: %(location)s", {
+                        location: location.display_name,
+                    }),
                     {type: "success"}
                 );
             }
@@ -100,7 +105,7 @@ export class InternalTransferScreen extends Component {
         }
         const productCode = parsedData?.value || barcode;
         if (!productCode) {
-            this.notification.add("Barcode not recognized.", {type: "warning"});
+            this.notification.add(_t("Barcode not recognized."), {type: "warning"});
             return;
         }
         await this.addScannedProduct(productCode, parsedData);
@@ -119,7 +124,7 @@ export class InternalTransferScreen extends Component {
             ? await this.inventory.searchRead("product.product", productDomain)
             : [];
         if (!products.length) {
-            this.notification.add("Product not found.", {
+            this.notification.add(_t("Product not found."), {
                 type: "warning",
             });
             return;
@@ -136,9 +141,12 @@ export class InternalTransferScreen extends Component {
                 ? await this.findAvailableLot(product.id, lotName)
                 : null;
         if (lotName && !lot) {
-            this.notification.add(`Lot ${lotName} is not available here.`, {
-                type: "warning",
-            });
+            this.notification.add(
+                _t("Lot %(lot)s is not available here.", {lot: lotName}),
+                {
+                    type: "warning",
+                }
+            );
         }
         await this.addLine(product, lot?.id || null, lot?.name || null, qty);
     }
@@ -253,7 +261,7 @@ export class InternalTransferScreen extends Component {
 
     selectOriginLocation() {
         this.props.navigate("location_selector", {
-            title: "Select origin location",
+            title: _t("Select origin location"),
             type: "origin_location",
             origin_location: this.state.origin_location,
             destination_location: this.state.destination_location,
@@ -264,7 +272,7 @@ export class InternalTransferScreen extends Component {
 
     selectDestinationLocation() {
         this.props.navigate("location_selector", {
-            title: "Select destination location",
+            title: _t("Select destination location"),
             type: "destination_location",
             origin_location: this.state.origin_location,
             destination_location: this.state.destination_location,
@@ -318,32 +326,34 @@ export class InternalTransferScreen extends Component {
 
     validateForm() {
         if (!this.state.origin_location?.id) {
-            this.notification.add("Please select an origin location.", {
+            this.notification.add(_t("Please select an origin location."), {
                 type: "warning",
             });
             return false;
         }
         if (!this.state.destination_location?.id) {
-            this.notification.add("Please select a destination location.", {
+            this.notification.add(_t("Please select a destination location."), {
                 type: "warning",
             });
             return false;
         }
         if (this.state.origin_location.id === this.state.destination_location.id) {
             this.notification.add(
-                "Origin and destination locations must be different.",
+                _t("Origin and destination locations must be different."),
                 {type: "warning"}
             );
             return false;
         }
         if (!this.state.lines.length) {
-            this.notification.add("Add at least one product.", {type: "warning"});
+            this.notification.add(_t("Add at least one product."), {type: "warning"});
             return false;
         }
         for (const line of this.state.lines) {
             if (!(parseFloat(line.qty) > 0)) {
                 this.notification.add(
-                    `Quantity must be greater than zero for ${line.product_name}.`,
+                    _t("Quantity must be greater than zero for %(product)s.", {
+                        product: line.product_name,
+                    }),
                     {type: "warning"}
                 );
                 return false;
@@ -351,7 +361,9 @@ export class InternalTransferScreen extends Component {
             this.updateLineLotName(line);
             if (line.tracking !== "none" && !line.lot_id) {
                 this.notification.add(
-                    `Please select a lot/serial number for ${line.product_name}.`,
+                    _t("Please select a lot/serial number for %(product)s.", {
+                        product: line.product_name,
+                    }),
                     {type: "warning"}
                 );
                 return false;
@@ -394,7 +406,7 @@ export class InternalTransferScreen extends Component {
                 (line) => !line.available
             );
             if (!unavailableLines.length) {
-                this.notification.add("All products are available.", {
+                this.notification.add(_t("All products are available."), {
                     type: "success",
                 });
                 return;
@@ -408,7 +420,9 @@ export class InternalTransferScreen extends Component {
             this.notification.add(message, {type: "warning"});
         } catch (error) {
             const message =
-                error?.data?.message || error?.message || "Availability check failed.";
+                error?.data?.message ||
+                error?.message ||
+                _t("Availability check failed.");
             this.notification.add(message, {type: "danger"});
         } finally {
             this.state.isCheckingAvailability = false;
@@ -433,13 +447,17 @@ export class InternalTransferScreen extends Component {
             );
             this.state.picking_id = result.picking_id;
             this.notification.add(
-                `Internal transfer ${result.picking_name} validated successfully.`,
+                _t("Internal transfer %(name)s validated successfully.", {
+                    name: result.picking_name,
+                }),
                 {type: "success"}
             );
             this.store.goBack();
         } catch (error) {
             const message =
-                error?.data?.message || error?.message || "Internal transfer failed.";
+                error?.data?.message ||
+                error?.message ||
+                _t("Internal transfer failed.");
             this.notification.add(message, {type: "danger"});
         } finally {
             this.state.isValidating = false;

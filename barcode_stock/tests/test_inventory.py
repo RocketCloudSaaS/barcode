@@ -55,3 +55,43 @@ class TestBarcodeScannerInventory(TransactionCase):
             ),
             15,
         )
+
+    def test_apply_inventory_from_scanner_requires_records(self):
+        with self.assertRaises(UserError):
+            self.env["stock.quant"].action_apply_inventory_from_scanner()
+
+    def test_apply_inventory_from_scanner_applies(self):
+        product = self.env["product.product"].create(
+            {"name": "Scanner Inv Product", "is_storable": True}
+        )
+        self.env["stock.quant"]._update_available_quantity(
+            product, self.stock_location, 3
+        )
+        quant = self.env["stock.quant"].search(
+            [
+                ("product_id", "=", product.id),
+                ("location_id", "=", self.stock_location.id),
+            ],
+            limit=1,
+        )
+        quant.inventory_quantity = 9
+        quant.action_apply_inventory_from_scanner()
+        self.assertEqual(
+            self.env["stock.quant"]._get_available_quantity(
+                product, self.stock_location
+            ),
+            9,
+        )
+
+    def test_apply_inventory_from_scanner_enforces_lot(self):
+        # The scanner path enforces the same lot requirement as the back office.
+        quant = self.env["stock.quant"].create(
+            {
+                "product_id": self.product_lot.id,
+                "location_id": self.stock_location.id,
+                "quantity": 0,
+            }
+        )
+        quant.inventory_quantity = 5
+        with self.assertRaises(UserError):
+            quant.action_apply_inventory_from_scanner()

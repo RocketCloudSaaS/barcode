@@ -181,8 +181,7 @@ export class BarcodeScannerState extends Reactive {
             // the ones already reserved on this picking (lotsById would
             // otherwise hold just those, so a scanned lot resolved to null and
             // the manual dropdown came up empty).
-            const needsAllLots =
-                type.use_existing_lots && trackedProductIds.length > 0;
+            const needsAllLots = type.use_existing_lots && trackedProductIds.length > 0;
 
             this.useExistingLots = type.use_existing_lots;
             this.useCreateLots = type.use_create_lots;
@@ -583,10 +582,7 @@ export class BarcodeScannerState extends Reactive {
     }) {
         const wantedLotName = (lotName || "").trim().toUpperCase();
         const matchingLines = this.moveLines.filter((line) => {
-            if (
-                line.move_id?.[0] !== moveId ||
-                line.product_id?.[0] !== productId
-            ) {
+            if (line.move_id?.[0] !== moveId || line.product_id?.[0] !== productId) {
                 return false;
             }
             if (sameLotId(line.lot_id?.[0], lotId)) {
@@ -630,9 +626,7 @@ export class BarcodeScannerState extends Reactive {
             // move the quant reservation onto it (see stock.move.line.write),
             // which is what "I'm moving THIS lot" means.
             if (!targetLine && this.pickingTypeCode !== "incoming") {
-                targetLine = untouched.find(
-                    (line) => normalizeQty(line.quantity) > 0
-                );
+                targetLine = untouched.find((line) => normalizeQty(line.quantity) > 0);
             }
         }
 
@@ -761,9 +755,7 @@ export class BarcodeScannerState extends Reactive {
         // A packaging barcode stands for a whole pack, so scanning it means
         // "packaging.qty units" -- unless the barcode itself states a quantity
         // (a GS1 count or weight), which always takes precedence.
-        const packaging = barcode
-            ? this.indexes.packagingByBarcode?.[barcode]
-            : null;
+        const packaging = barcode ? this.indexes.packagingByBarcode?.[barcode] : null;
         const statedQty = scan?.qty ?? scan?.quantity;
         let quantity = this.scannedQuantity(scan, productUomId);
         if (packaging && (statedQty === null || statedQty === undefined)) {

@@ -1,8 +1,14 @@
+import {
+    Component,
+    onMounted,
+    onPatched,
+    onWillStart,
+    useRef,
+    useState,
+} from "@odoo/owl";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
-import {Component, onMounted, onPatched, onWillStart, useRef, useState} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 // Remember the operator's warehouse choice across in-app navigation. The
 // module-level variable is the RELIABLE layer: navigation is a client-side
@@ -78,11 +84,10 @@ export class WarehouseOps extends Component {
         const domain = allowedCompanyIds.length
             ? [["company_id", "in", allowedCompanyIds]]
             : [];
-        const warehouses = await this.inventory.searchRead(
-            "stock.warehouse",
-            domain,
-            ["name", "company_id"]
-        );
+        const warehouses = await this.inventory.searchRead("stock.warehouse", domain, [
+            "name",
+            "company_id",
+        ]);
         const pickingTypes = await this.inventory.searchRead(
             "stock.picking.type",
             [],
@@ -151,13 +156,17 @@ export class WarehouseOps extends Component {
     }
 
     selectWarehouse(ev) {
-        this.state.selectedWarehouseId = parseInt(ev.target.value);
+        this.state.selectedWarehouseId = parseInt(ev.target.value, 10);
         storeWarehouseId(this.state.selectedWarehouseId);
     }
 
     syncSelect() {
         const el = this.warehouseSelect.el;
-        if (el && this.state.selectedWarehouseId !== null && this.state.selectedWarehouseId !== undefined) {
+        if (
+            el &&
+            this.state.selectedWarehouseId !== null &&
+            this.state.selectedWarehouseId !== undefined
+        ) {
             const value = String(this.state.selectedWarehouseId);
             if (el.value !== value) {
                 el.value = value;

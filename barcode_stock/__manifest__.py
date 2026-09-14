@@ -6,16 +6,14 @@
     "for the Barcode suite",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
         "stock",
         "stock_move_line_qty_picked",
-        "barcodes",
     ],
     "data": [
-        "security/security.xml",
         "views/stock_location_views.xml",
     ],
     "assets": {

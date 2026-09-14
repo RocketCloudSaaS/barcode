@@ -7,7 +7,6 @@ from odoo.exceptions import UserError
 
 class StockQuant(models.Model):
     _inherit = "stock.quant"
-    _description = "Stock Quant"
 
     def action_apply_inventory(self):
         for quant in self:
@@ -24,4 +23,6 @@ class StockQuant(models.Model):
     def action_apply_inventory_from_scanner(self):
         if not self:
             raise UserError(_("No inventory lines to apply."))
-        return self._apply_inventory()
+        # Go through action_apply_inventory so the scanner path enforces the same
+        # guards as the back office (lot requirement plus core's checks).
+        return self.action_apply_inventory()

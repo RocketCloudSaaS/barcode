@@ -1,16 +1,15 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
-import {_t} from "@web/core/l10n/translation";
-import {useService} from "@web/core/utils/hooks";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab.esm";
 import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list.esm";
-import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
+import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {tabForMove} from "@barcode_stock/js/utils/move_progress.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 export class PickingScreen extends Component {
     setup() {
@@ -68,12 +67,15 @@ export class PickingScreen extends Component {
                 await this.loadData({force: true});
                 if (responsible && responsible.id) {
                     this.state.activeTab = "info";
-                    this.inventory.notify(`Responsible set to ${responsible.name}`, {
-                        type: "success",
-                    });
+                    this.inventory.notify(
+                        _t("Responsible set to %(name)s", {name: responsible.name}),
+                        {
+                            type: "success",
+                        }
+                    );
                 }
             } catch (error) {
-                this.inventory.notify("Error loading picking: " + error, {
+                this.inventory.notify(_t("Error loading picking: %(error)s", {error}), {
                     type: "danger",
                 });
             }
@@ -299,11 +301,11 @@ export class PickingScreen extends Component {
                 },
                 {immediate: true}
             );
-            this.inventory.notify("Changes saved successfully", {
+            this.inventory.notify(_t("Changes saved successfully"), {
                 type: "success",
             });
         } catch {
-            this.inventory.notify("Error while saving", {
+            this.inventory.notify(_t("Error while saving"), {
                 type: "danger",
             });
         } finally {
@@ -315,7 +317,7 @@ export class PickingScreen extends Component {
         if (!this.state.picking?.id) return;
 
         if (!this.checkAnyMoveLineWithQty()) {
-            this.inventory.notify("Please add at least one product to validate.", {
+            this.inventory.notify(_t("Please add at least one product to validate."), {
                 type: "danger",
             });
             return;
@@ -361,9 +363,12 @@ export class PickingScreen extends Component {
                 });
             }
         } catch (error) {
-            this.inventory.notify("Validation failed: " + error.message, {
-                type: "danger",
-            });
+            this.inventory.notify(
+                _t("Validation failed: %(error)s", {error: error.message}),
+                {
+                    type: "danger",
+                }
+            );
         } finally {
             this.state.isValidating = false;
         }
@@ -375,8 +380,8 @@ export class PickingScreen extends Component {
 
     async cancelReservation() {
         this.dialog.add(ConfirmationDialog, {
-            title: "Confirm cancel reservations",
-            body: "Are you sure you want to cancel reservations?",
+            title: _t("Confirm cancel reservations"),
+            body: _t("Are you sure you want to cancel reservations?"),
             confirm: async () => {
                 try {
                     this.state.highlightedMoveId = null;
@@ -388,13 +393,16 @@ export class PickingScreen extends Component {
                     await this.inventory.call("stock.picking", "do_unreserve", [
                         [this.pickingId],
                     ]);
-                    this.inventory.notify("Cancel Reservation successfully", {
+                    this.inventory.notify(_t("Cancel Reservation successfully"), {
                         type: "success",
                     });
                 } catch (error) {
-                    this.inventory.notify("Cancel Reservation error: " + error, {
-                        type: "error",
-                    });
+                    this.inventory.notify(
+                        _t("Cancel Reservation error: %(error)s", {error}),
+                        {
+                            type: "error",
+                        }
+                    );
                 }
                 await this._reloadMoves();
             },
@@ -403,21 +411,24 @@ export class PickingScreen extends Component {
 
     async checkAvailability() {
         this.dialog.add(ConfirmationDialog, {
-            title: "Confirm availability check",
-            body: "Are you sure you want to check availability?",
+            title: _t("Confirm availability check"),
+            body: _t("Are you sure you want to check availability?"),
             confirm: async () => {
                 try {
                     await this.inventory.call("stock.picking", "action_assign", [
                         [this.pickingId],
                     ]);
-                    this.inventory.notify("Availability check successful.", {
+                    this.inventory.notify(_t("Availability check successful."), {
                         type: "success",
                     });
                     await this._reloadMoves();
                 } catch (error) {
-                    this.inventory.notify("Availability check error: " + error, {
-                        type: "error",
-                    });
+                    this.inventory.notify(
+                        _t("Availability check error: %(error)s", {error}),
+                        {
+                            type: "error",
+                        }
+                    );
                 }
             },
         });
@@ -425,7 +436,7 @@ export class PickingScreen extends Component {
 
     openMoveWizard(move, defaults = {}) {
         if (move.quantity === 0) {
-            this.inventory.notify("This move has no quantity to process.", {
+            this.inventory.notify(_t("This move has no quantity to process."), {
                 type: "warning",
             });
             return;
@@ -445,8 +456,8 @@ export class PickingScreen extends Component {
 
     async deleteMoveLine(moveLineId) {
         this.dialog.add(ConfirmationDialog, {
-            title: "Confirm deletion",
-            body: "Are you sure you want to delete this movement?",
+            title: _t("Confirm deletion"),
+            body: _t("Are you sure you want to delete this movement?"),
             confirm: async () => {
                 // Undoing a confirmation voids the scan that produced it, so
                 // the reload below must not chase the line to another tab.
@@ -478,7 +489,7 @@ export class PickingScreen extends Component {
 
         await this._reloadMoves();
 
-        this.inventory.notify("Product updated", {
+        this.inventory.notify(_t("Product updated"), {
             type: "success",
         });
     }
@@ -499,11 +510,10 @@ export class PickingScreen extends Component {
         }
         const productDomain = barcodeMatchDomain(barcode);
         const products = productDomain
-            ? await this.inventory.searchRead(
-                  "product.product",
-                  productDomain,
-                  ["display_name", "tracking"]
-              )
+            ? await this.inventory.searchRead("product.product", productDomain, [
+                  "display_name",
+                  "tracking",
+              ])
             : [];
         if (!products.length) {
             this.setLastScanContext({
@@ -511,7 +521,7 @@ export class PickingScreen extends Component {
                 tone: "warning",
                 message: _t("Scanned product was not found."),
             });
-            this.inventory.notify("Product not found", {type: "danger"});
+            this.inventory.notify(_t("Product not found"), {type: "danger"});
             return;
         }
         const product = products[0];
@@ -522,7 +532,7 @@ export class PickingScreen extends Component {
                 tone: "warning",
                 message: _t("This product is not reserved for this picking."),
             });
-            this.inventory.notify("Product not reserved", {
+            this.inventory.notify(_t("Product not reserved"), {
                 type: "warning",
             });
             return;
@@ -667,7 +677,7 @@ export class PickingScreen extends Component {
                     (line.qty_picked || 0) > 0
             );
             if (existingLine) {
-                // newQty is the resulting total, only used for the feedback
+                // NewQty is the resulting total, only used for the feedback
                 // message below. confirmMove()/stageMoveLine() already increment
                 // the existing line by the qtyPicked it receives, so pass the
                 // scanned delta here -- passing the total would add the existing
