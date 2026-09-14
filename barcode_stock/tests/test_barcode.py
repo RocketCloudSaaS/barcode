@@ -60,3 +60,11 @@ class TestBarcodeScannerEAN13(TransactionCase):
         total = sum(d * 3 if i % 2 == 0 else d for i, d in enumerate(digits))
         expected_check = (10 - (total % 10)) % 10
         self.assertEqual(check, expected_check)
+
+    def test_parse_barcode_scanner_barcode(self):
+        result = self.env["barcode.nomenclature"].parse_barcode_scanner_barcode(
+            "5901234123457"
+        )
+        self.assertEqual(result["type"], "ean")
+        self.assertIn("product", result)
+        self.assertIn("qty", result)

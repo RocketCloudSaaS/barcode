@@ -1,5 +1,3 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {
     Component,
     onWillStart,
@@ -8,12 +6,13 @@ import {
     useState,
 } from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {deserializeDateTime} from "@web/core/l10n/dates";
-import {useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
+import {scanBarcode} from "@web/core/barcode/barcode_dialog";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {scanBarcode} from "@web/core/barcode/barcode_dialog";
+import {useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 
 const GROUP_ORDER = ["date", "state"];
 const FILTER_ORDER = ["state", "date"];
@@ -329,7 +328,7 @@ export class PickingListScreen extends Component {
         if (!value) {
             return null;
         }
-        // scheduled_date arrives from the ORM in UTC; deserializeDateTime
+        // Scheduled_date arrives from the ORM in UTC; deserializeDateTime
         // converts it to the user's timezone so that day-based grouping, the
         // date filter and the Today/Tomorrow and Urgent labels line up with the
         // date shown on the picking instead of slipping to the previous day.
@@ -524,8 +523,8 @@ export class PickingListScreen extends Component {
             }
         } catch (error) {
             const msg = error?.message || "";
-            if (msg.includes("cancel") || msg.includes("abort")) {
-            } else {
+            // A user-cancelled/aborted scan is expected; only surface real errors.
+            if (!msg.includes("cancel") && !msg.includes("abort")) {
                 this.feedback.error({
                     notify: true,
                     message: _t("Could not start camera: ") + msg,
@@ -651,7 +650,9 @@ export class PickingListScreen extends Component {
             return !active;
         }
         if (value === "custom:") {
-            return active && typeof current === "string" && current.startsWith("custom:");
+            return (
+                active && typeof current === "string" && current.startsWith("custom:")
+            );
         }
         return active && current === value;
     }
@@ -796,9 +797,9 @@ export class PickingListScreen extends Component {
                 [user.userId],
                 ["barcode_default_filters"]
             );
-            stored = JSON.parse(record?.barcode_default_filters || "{}") || {};
+            stored = record?.barcode_default_filters || {};
         } catch {
-            // A malformed blob or a read hiccup must never keep the list from
+            // A malformed map or a read hiccup must never keep the list from
             // loading: fall back to no default.
             stored = {};
         }
@@ -903,7 +904,7 @@ export class PickingListScreen extends Component {
 
     async persistDefaultFilters() {
         await this.inventory.write("res.users", [user.userId], {
-            barcode_default_filters: JSON.stringify(this.allDefaults),
+            barcode_default_filters: this.allDefaults,
         });
     }
 

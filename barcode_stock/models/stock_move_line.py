@@ -7,7 +7,6 @@ from odoo.exceptions import ValidationError
 
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
-    _description = "Stock Move Line"
 
     validated_on_date = fields.Datetime()
 
