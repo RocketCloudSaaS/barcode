@@ -13,7 +13,6 @@ class ResUsers(models.Model):
     # The frontend owns the shape; the server only stores and serves the blob so
     # the app can apply a user's starred filter automatically on entry.
     barcode_default_filters = fields.Text(
-        string="Barcode Default Filters",
         default="{}",
     )
 
