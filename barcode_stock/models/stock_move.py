@@ -6,7 +6,6 @@ from odoo import api, fields, models
 
 class StockMove(models.Model):
     _inherit = "stock.move"
-    _description = "Stock Move"
 
     qty_done_total = fields.Float(
         compute="_compute_qty_progress",
@@ -39,12 +38,12 @@ class StockMove(models.Model):
         if not ready_moves:
             self._reset_qty_progress()
             return
-        data = self.env["stock.move.line"].read_group(
+        data = self.env["stock.move.line"]._read_group(
             [("move_id", "in", ready_moves.ids)],
-            ["qty_picked:sum"],
             ["move_id"],
+            ["qty_picked:sum"],
         )
-        sums = {d["move_id"][0]: d["qty_picked"] for d in data}
+        sums = {move.id: qty_picked for move, qty_picked in data}
         for move in self:
             done = sums.get(move.id, 0.0)
             move.qty_done_total = done

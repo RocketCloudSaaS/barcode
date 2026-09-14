@@ -1,6 +1,8 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from unittest.mock import patch
+
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
@@ -93,7 +95,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         self.assertFalse(untracked_line["available"])
 
     def test_action_barcode_scanner_internal_transfer_creates_and_validates_picking(
-        self
+        self,
     ):
         result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
             self.stock_location.id,
@@ -260,7 +262,9 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         picking = self.env["stock.picking"].browse(result["picking_id"])
         self.assertEqual(picking.state, "done")
         Quant = self.env["stock.quant"]
-        self.assertEqual(Quant._get_available_quantity(product, parent, strict=False), 0)
+        self.assertEqual(
+            Quant._get_available_quantity(product, parent, strict=False), 0
+        )
         # No negative quant created directly at the parent view location.
         self.assertEqual(Quant._get_available_quantity(product, parent, strict=True), 0)
         self.assertEqual(
@@ -269,6 +273,274 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             ),
             25,
         )
+
+    def test_internal_transfer_requires_origin(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                False,
+                self.destination_location.id,
+                False,
+                [{"product_id": self.untracked_product.id, "qty": 1}],
+            )
+
+    def test_internal_transfer_requires_destination(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                False,
+                False,
+                [{"product_id": self.untracked_product.id, "qty": 1}],
+            )
+
+    def test_internal_transfer_requires_lines(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [],
+            )
+
+    def test_internal_transfer_rejects_invalid_location(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                999999999,
+                self.destination_location.id,
+                False,
+                [{"product_id": self.untracked_product.id, "qty": 1}],
+            )
+
+    def test_internal_transfer_rejects_same_location(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.stock_location.id,
+                False,
+                [{"product_id": self.untracked_product.id, "qty": 1}],
+            )
+
+    def test_internal_transfer_rejects_unknown_product(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [{"product_id": 999999999, "qty": 1}],
+            )
+
+    def test_internal_transfer_rejects_non_positive_qty(self):
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [{"product_id": self.untracked_product.id, "qty": 0}],
+            )
+
+    def test_internal_transfer_rejects_lot_of_other_product(self):
+        other_lot = self.env["stock.lot"].create(
+            {
+                "name": "LOT-OTHER-001",
+                "product_id": self.untracked_product.id
+                if self.untracked_product.tracking != "none"
+                else self.tracked_product.id,
+                "company_id": self.company.id,
+            }
+        )
+        # A lot that exists but does not belong to the scanned product.
+        wrong_lot = self.env["stock.lot"].create(
+            {
+                "name": "LOT-WRONG-001",
+                "product_id": self.untracked_product.id,
+                "company_id": self.company.id,
+            }
+        )
+        self.assertTrue(other_lot)
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [
+                    {
+                        "product_id": self.tracked_product.id,
+                        "qty": 1,
+                        "lot_id": wrong_lot.id,
+                    }
+                ],
+            )
+
+    def test_internal_transfer_serial_one_unit_at_a_time(self):
+        serial_product = self.env["product.product"].create(
+            {
+                "name": "Serial Internal Product",
+                "is_storable": True,
+                "tracking": "serial",
+            }
+        )
+        serial_lot = self.env["stock.lot"].create(
+            {
+                "name": "SER-INT-001",
+                "product_id": serial_product.id,
+                "company_id": self.company.id,
+            }
+        )
+        self.env["stock.quant"]._update_available_quantity(
+            serial_product, self.stock_location, 1, lot_id=serial_lot
+        )
+        with self.assertRaises(UserError):
+            self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                self.stock_location.id,
+                self.destination_location.id,
+                False,
+                [
+                    {
+                        "product_id": serial_product.id,
+                        "qty": 2,
+                        "lot_id": serial_lot.id,
+                    }
+                ],
+            )
+
+    def test_internal_transfer_requires_configured_operation_type(self):
+        # When neither the warehouse nor a company search yields an internal
+        # operation type, the transfer is refused instead of creating one. Use
+        # warehouse-less locations (so warehouse.int_type_id cannot supply one)
+        # and stub the fallback search empty (an unlink would hit stock_rule FKs).
+        src = self.env["stock.location"].create(
+            {"name": "No-Type Src", "usage": "internal"}
+        )
+        dest = self.env["stock.location"].create(
+            {"name": "No-Type Dest", "usage": "internal"}
+        )
+        self.env["stock.quant"]._update_available_quantity(
+            self.untracked_product, src, 5
+        )
+        PickingType = type(self.env["stock.picking.type"])
+        empty = self.env["stock.picking.type"].browse()
+        with patch.object(PickingType, "search", return_value=empty):
+            with self.assertRaises(UserError):
+                self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+                    src.id,
+                    dest.id,
+                    False,
+                    [{"product_id": self.untracked_product.id, "qty": 1}],
+                )
+
+    def test_internal_picking_type_falls_back_to_company_search(self):
+        # Warehouse-less locations skip warehouse.int_type_id, so the company
+        # search supplies the internal operation type (archived ones included).
+        src = self.env["stock.location"].create(
+            {"name": "Fallback Src", "usage": "internal"}
+        )
+        dest = self.env["stock.location"].create(
+            {"name": "Fallback Dest", "usage": "internal"}
+        )
+        self.assertFalse(src.warehouse_id)
+        picking_type = self.env[
+            "stock.picking"
+        ]._barcode_scanner_get_internal_picking_type(src, dest)
+        self.assertEqual(picking_type.code, "internal")
+
+    def test_internal_transfer_stops_once_requested_qty_is_met(self):
+        parent = self.env["stock.location"].create(
+            {
+                "name": "Stop Parent",
+                "usage": "internal",
+                "location_id": self.stock_location.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_a = self.env["stock.location"].create(
+            {
+                "name": "Stop Child A",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_b = self.env["stock.location"].create(
+            {
+                "name": "Stop Child B",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        product = self.env["product.product"].create(
+            {"name": "Stop Product", "is_storable": True}
+        )
+        self.env["stock.quant"]._update_available_quantity(product, child_a, 10)
+        self.env["stock.quant"]._update_available_quantity(product, child_b, 10)
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            parent.id,
+            self.destination_location.id,
+            False,
+            [{"product_id": product.id, "qty": 5}],
+        )
+        picking = self.env["stock.picking"].browse(result["picking_id"])
+        self.assertEqual(picking.state, "done")
+        self.assertTrue(result["fully_transferred"])
+
+    def test_internal_transfer_skips_fully_reserved_quant(self):
+        parent = self.env["stock.location"].create(
+            {
+                "name": "Res Parent",
+                "usage": "internal",
+                "location_id": self.stock_location.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_a = self.env["stock.location"].create(
+            {
+                "name": "Res Child A",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        child_b = self.env["stock.location"].create(
+            {
+                "name": "Res Child B",
+                "usage": "internal",
+                "location_id": parent.id,
+                "company_id": self.company.id,
+            }
+        )
+        product = self.env["product.product"].create(
+            {"name": "Reserved Product", "is_storable": True}
+        )
+        self.env["stock.quant"]._update_available_quantity(product, child_a, 5)
+        self.env["stock.quant"]._update_available_quantity(product, child_b, 5)
+        # Reserve all of child_a through an outgoing picking, leaving no free qty.
+        out = self.env["stock.picking"].create(
+            {
+                "picking_type_id": self.env.ref("stock.picking_type_out").id,
+                "location_id": child_a.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        self.env["stock.move"].create(
+            {
+                "name": product.display_name,
+                "product_id": product.id,
+                "product_uom_qty": 5,
+                "product_uom": product.uom_id.id,
+                "picking_id": out.id,
+                "location_id": child_a.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        out.action_confirm()
+        out.action_assign()
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            parent.id,
+            self.destination_location.id,
+            False,
+            [{"product_id": product.id, "qty": 3}],
+        )
+        picking = self.env["stock.picking"].browse(result["picking_id"])
+        self.assertEqual(picking.state, "done")
 
 
 class TestStockMoveQtyProgress(TransactionCase):
@@ -316,10 +588,7 @@ class TestStockMoveQtyProgress(TransactionCase):
     def test_reset_qty_progress(self):
         picking, move = self._create_assigned_picking(10)
         move_line = move.move_line_ids[0]
-        if "qty_picked" in move_line._fields:
-            move_line.qty_picked = 5
-        else:
-            move_line.quantity = 5
+        move_line.qty_picked = 5
         move._compute_qty_progress()
         self.assertGreater(move.qty_done_total, 0)
         move._reset_qty_progress()
@@ -330,10 +599,7 @@ class TestStockMoveQtyProgress(TransactionCase):
     def test_qty_remaining_computation(self):
         picking, move = self._create_assigned_picking(10)
         move_line = move.move_line_ids[0]
-        if "qty_picked" in move_line._fields:
-            move_line.qty_picked = 3
-        else:
-            move_line.quantity = 3
+        move_line.qty_picked = 3
         move._compute_qty_progress()
         self.assertEqual(move.qty_done_total, 3)
         self.assertEqual(move.qty_remaining, 7)
@@ -341,10 +607,7 @@ class TestStockMoveQtyProgress(TransactionCase):
     def test_is_fully_picked_when_qty_remaining_zero_or_less(self):
         picking, move = self._create_assigned_picking(10)
         move_line = move.move_line_ids[0]
-        if "qty_picked" in move_line._fields:
-            move_line.qty_picked = 10
-        else:
-            move_line.quantity = 10
+        move_line.qty_picked = 10
         move._compute_qty_progress()
         self.assertTrue(move.is_fully_picked)
         self.assertEqual(move.qty_remaining, 0)
@@ -352,13 +615,60 @@ class TestStockMoveQtyProgress(TransactionCase):
     def test_is_fully_picked_false_when_partial(self):
         picking, move = self._create_assigned_picking(10)
         move_line = move.move_line_ids[0]
-        if "qty_picked" in move_line._fields:
-            move_line.qty_picked = 4
-        else:
-            move_line.quantity = 4
+        move_line.qty_picked = 4
         move._compute_qty_progress()
         self.assertFalse(move.is_fully_picked)
         self.assertEqual(move.qty_remaining, 6)
+
+    def _draft_move(self, qty=10):
+        picking = self.env["stock.picking"].create(
+            {
+                "picking_type_id": self.picking_type_out.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        move = self.env["stock.move"].create(
+            {
+                "name": self.product.display_name,
+                "product_id": self.product.id,
+                "product_uom_qty": qty,
+                "product_uom": self.product.uom_id.id,
+                "picking_id": picking.id,
+                "location_id": self.stock_location.id,
+                "location_dest_id": self.customer_location.id,
+            }
+        )
+        return picking, move
+
+    def test_qty_progress_reset_in_install_mode(self):
+        _, move = self._draft_move()
+        move.with_context(install_mode=True)._compute_qty_progress()
+        self.assertEqual(move.qty_done_total, 0)
+        self.assertFalse(move.is_fully_picked)
+
+    def test_qty_progress_reset_without_ready_moves(self):
+        _, move = self._draft_move()  # draft picking, never assigned
+        move._compute_qty_progress()
+        self.assertEqual(move.qty_done_total, 0)
+        self.assertEqual(move.qty_remaining, 0)
+
+    def test_upsert_move_line_creates_then_updates(self):
+        _, move = self._draft_move()
+        vals = {
+            "product_id": self.product.id,
+            "product_uom_id": self.product.uom_id.id,
+            "location_id": self.stock_location.id,
+            "location_dest_id": self.customer_location.id,
+            "quantity": 2,
+        }
+        line = move._upsert_move_line(dict(vals))
+        self.assertTrue(line.exists())
+        self.assertEqual(line.move_id, move)
+        # The same identifying fields update the existing line, not create a new.
+        line2 = move._upsert_move_line(dict(vals, quantity=7))
+        self.assertEqual(line2, line)
+        self.assertEqual(line.quantity, 7)
 
 
 class TestStockMoveLine(TransactionCase):

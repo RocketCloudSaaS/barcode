@@ -125,9 +125,9 @@
                     >
                         <i class="fa fa-info-circle me-1" /> Information
                         <div
-                            t-if="state.activeTab === 'info'"
-                            class="ilx-kw-tab-indicator"
-                        />
+                        t-if="state.activeTab === 'info'"
+                        class="ilx-kw-tab-indicator"
+                    />
                     </button>
                     <button
                         t-att-class="state.activeTab === 'todo' ? 'ilx-kw-tab active' : 'ilx-kw-tab'"
@@ -135,9 +135,9 @@
                     >
                         <i class="fa fa-list me-1" /> To Do
                         <div
-                            t-if="state.activeTab === 'todo'"
-                            class="ilx-kw-tab-indicator"
-                        />
+                        t-if="state.activeTab === 'todo'"
+                        class="ilx-kw-tab-indicator"
+                    />
                     </button>
                     <button
                         t-att-class="state.activeTab === 'done' ? 'ilx-kw-tab active' : 'ilx-kw-tab'"
@@ -145,9 +145,9 @@
                     >
                         <i class="fa fa-check-circle me-1" /> Done
                         <div
-                            t-if="state.activeTab === 'done'"
-                            class="ilx-kw-tab-indicator"
-                        />
+                        t-if="state.activeTab === 'done'"
+                        class="ilx-kw-tab-indicator"
+                    />
                     </button>
                 </div>
 
@@ -185,7 +185,9 @@
                         t-on-click="savePicking"
                         t-att-disabled="state.isSaving"
                     >
-                        <div class="ilx-kw-nav-pill"><i class="fa fa-save" /></div>
+                        <div class="ilx-kw-nav-pill">
+                            <i class="fa fa-save" />
+                        </div>
                         <span>SAVE</span>
                     </button>
 
@@ -194,9 +196,9 @@
                         t-on-click="validatePicking"
                         t-att-disabled="state.isValidating"
                     >
-                        <div class="ilx-kw-nav-pill"><i
-                                class="fa fa-check-circle"
-                            /></div>
+                        <div class="ilx-kw-nav-pill">
+                            <i class="fa fa-check-circle" />
+                        </div>
                         <span>VALIDATE</span>
                     </button>
 
@@ -206,7 +208,9 @@
                         t-if="pendingMovesCount > 0"
                         t-att-disabled="state.isValidating"
                     >
-                        <div class="ilx-kw-nav-pill"><i class="fa fa-times" /></div>
+                        <div class="ilx-kw-nav-pill">
+                            <i class="fa fa-times" />
+                        </div>
                         <span>Cancel reservation</span>
                     </button>
 
@@ -216,7 +220,9 @@
                         t-on-click="checkAvailability"
                         t-att-disabled="state.isValidating"
                     >
-                        <div class="ilx-kw-nav-pill"><i class="fa fa-refresh" /></div>
+                        <div class="ilx-kw-nav-pill">
+                            <i class="fa fa-refresh" />
+                        </div>
                         <span>AVAILABILITY</span>
                     </button>
                 </div>
@@ -240,15 +246,15 @@
                             <div class="ilx-kw-group-indicator" />
                             <h2 class="ilx-kw-group-title">
                                 <t t-esc="component.getGroupLevelLabel(level)" />: <t
-                                    t-esc="groupKey"
-                                />
+                                t-esc="groupKey"
+                            />
                             </h2>
                         </div>
                         <div class="ilx-kw-group-actions">
                             <span class="ilx-kw-group-badge">
                                 <t
-                                    t-esc="component.countGroupEntries(groups[groupKey])"
-                                /> Items
+                                t-esc="component.countGroupEntries(groups[groupKey])"
+                            /> Items
                             </span>
                         </div>
                     </div>
@@ -267,12 +273,14 @@
                                 >
                                     <div class="ilx-kw-picking-card-top">
                                         <div class="ilx-kw-picking-card-info">
-                                            <span class="ilx-kw-picking-code"><t
-                                                    t-esc="p.name"
-                                                /></span>
-                                            <h3 class="ilx-kw-picking-partner"><t
+                                            <span class="ilx-kw-picking-code">
+                                                <t t-esc="p.name" />
+                                            </span>
+                                            <h3 class="ilx-kw-picking-partner">
+                                                <t
                                                     t-esc="component.getPartnerName(p)"
-                                                /></h3>
+                                                />
+                                            </h3>
                                         </div>
                                         <div
                                             class="ilx-kw-picking-card-status-col"
@@ -296,9 +304,9 @@
                                     <div class="ilx-kw-picking-card-bottom">
                                         <div class="ilx-kw-picking-meta-left">
                                             <i class="fa fa-cubes ilx-kw-meta-icon" />
-                                            <span class="ilx-kw-meta-text"><t
-                                                    t-esc="component.getSkuSummary(p)"
-                                                /></span>
+                                            <span class="ilx-kw-meta-text">
+                                                <t t-esc="component.getSkuSummary(p)" />
+                                            </span>
                                         </div>
 
                                         <div class="ilx-kw-picking-meta-right">
@@ -306,16 +314,18 @@
                                                 <span
                                                     class="ilx-kw-meta-text text-danger"
                                                 ><i
-                                                        class="fa fa-exclamation-triangle me-1"
-                                                    />Urgent</span>
+                                                    class="fa fa-exclamation-triangle me-1"
+                                                />Urgent</span>
                                             </t>
                                             <t t-else="">
                                                 <i
                                                     class="fa fa-clock-o ilx-kw-meta-icon"
                                                 />
-                                                <span class="ilx-kw-meta-text"><t
+                                                <span class="ilx-kw-meta-text">
+                                                    <t
                                                         t-esc="component.getScheduleSummary(p)"
-                                                    /></span>
+                                                    />
+                                                </span>
                                             </t>
                                         </div>
                                     </div>
@@ -367,7 +377,8 @@
                                 t-att-class="{active: state.openMenu === 'filters', 'has-value': state.activeFilters.length}"
                                 t-on-click="() => this.toggleMenu('filters')"
                             >
-                                <i class="fa fa-filter" /> <span>Filters</span>
+                                <i class="fa fa-filter" />
+                                <span>Filters</span>
                                 <span
                                     t-if="state.activeFilters.length"
                                     class="ilx-kw-tool-count"
@@ -381,7 +392,8 @@
                                 t-att-class="{active: state.openMenu === 'group', 'has-value': state.groupByLevels.length}"
                                 t-on-click="() => this.toggleMenu('group')"
                             >
-                                <i class="fa fa-layer-group" /> <span>Group by</span>
+                                <i class="fa fa-layer-group" />
+                                <span>Group by</span>
                                 <i class="fa fa-caret-down" />
                             </button>
                             <div class="ilx-kw-tool-spacer" />
@@ -397,7 +409,10 @@
                                 />
                             </button>
 
-                            <div class="ilx-kw-menu" t-if="state.openMenu === 'filters'">
+                            <div
+                                class="ilx-kw-menu"
+                                t-if="state.openMenu === 'filters'"
+                            >
                                 <div class="ilx-kw-menu-section">
                                     <div class="ilx-kw-menu-title">Quick filters</div>
                                     <button
@@ -409,7 +424,8 @@
                                         <i
                                             class="fa"
                                             t-att-class="isReadyQuickActive ? 'fa-check-square-o' : 'fa-square-o'"
-                                        /> <span t-esc="readyStateLabel" />
+                                        />
+                                        <span t-esc="readyStateLabel" />
                                     </button>
                                 </div>
                                 <div class="ilx-kw-menu-section">
@@ -423,7 +439,8 @@
                                         <i
                                             class="fa"
                                             t-att-class="!state.activeFilters.includes('state') ? 'fa-dot-circle-o' : 'fa-circle-o'"
-                                        /> <span>All</span>
+                                        />
+                                        <span>All</span>
                                     </button>
                                     <t
                                         t-foreach="Object.entries(state.stateLabels)"
@@ -439,7 +456,8 @@
                                             <i
                                                 class="fa"
                                                 t-att-class="(state.activeFilters.includes('state') &amp;&amp; state.filterValues.state === entry[0]) ? 'fa-dot-circle-o' : 'fa-circle-o'"
-                                            /> <span t-esc="entry[1]" />
+                                            />
+                                            <span t-esc="entry[1]" />
                                         </button>
                                     </t>
                                 </div>
@@ -459,7 +477,8 @@
                                             <i
                                                 class="fa"
                                                 t-att-class="isDateOptionSelected(opt.value) ? 'fa-dot-circle-o' : 'fa-circle-o'"
-                                            /> <span t-esc="opt.label" />
+                                            />
+                                            <span t-esc="opt.label" />
                                         </button>
                                     </t>
                                     <div
@@ -479,7 +498,11 @@
                             <div class="ilx-kw-menu" t-if="state.openMenu === 'group'">
                                 <div class="ilx-kw-menu-section">
                                     <div class="ilx-kw-menu-title">Group by</div>
-                                    <t t-foreach="groupOrder" t-as="group" t-key="group">
+                                    <t
+                                        t-foreach="groupOrder"
+                                        t-as="group"
+                                        t-key="group"
+                                    >
                                         <button
                                             type="button"
                                             class="ilx-kw-menu-option"
@@ -489,7 +512,8 @@
                                             <i
                                                 class="fa"
                                                 t-att-class="state.groupByLevels.includes(group) ? 'fa-check-square-o' : 'fa-square-o'"
-                                            /> <span t-esc="groupLabels[group] || group" />
+                                            />
+                                            <span t-esc="groupLabels[group] || group" />
                                         </button>
                                     </t>
                                 </div>
@@ -500,11 +524,17 @@
                             class="ilx-kw-facets"
                             t-if="state.activeFilters.length || state.groupByLevels.length"
                         >
-                            <t t-foreach="state.activeFilters" t-as="filter" t-key="filter">
+                            <t
+                                t-foreach="state.activeFilters"
+                                t-as="filter"
+                                t-key="filter"
+                            >
                                 <span class="ilx-kw-facet">
                                     <span class="ilx-kw-facet-text"><t
-                                            t-esc="filterLabels[filter]"
-                                        />: <t t-esc="getFilterDisplayValue(filter)" /></span>
+                                        t-esc="filterLabels[filter]"
+                                    />: <t
+                                        t-esc="getFilterDisplayValue(filter)"
+                                    /></span>
                                     <button
                                         type="button"
                                         class="ilx-kw-facet-remove"
@@ -514,11 +544,16 @@
                                     </button>
                                 </span>
                             </t>
-                            <t t-foreach="state.groupByLevels" t-as="group" t-key="group">
+                            <t
+                                t-foreach="state.groupByLevels"
+                                t-as="group"
+                                t-key="group"
+                            >
                                 <span class="ilx-kw-facet ilx-kw-facet--group">
-                                    <span class="ilx-kw-facet-text"><i
-                                            class="fa fa-layer-group"
-                                        /> <t t-esc="groupLabels[group] || group" /></span>
+                                    <span class="ilx-kw-facet-text">
+                                        <i class="fa fa-layer-group" />
+                                        <t t-esc="groupLabels[group] || group" />
+                                    </span>
                                     <button
                                         type="button"
                                         class="ilx-kw-facet-remove"
@@ -609,9 +644,9 @@
                                 </div>
 
                                 <div class="ilx-emp-v2-info">
-                                    <span class="ilx-emp-v2-name"><t
-                                            t-esc="user.name"
-                                        /></span>
+                                    <span class="ilx-emp-v2-name">
+                                        <t t-esc="user.name" />
+                                    </span>
                                     <span class="ilx-emp-v2-role">
                                         <t t-esc="user.login" />
                                     </span>
@@ -679,9 +714,8 @@
                                 <div
                                     style="font-size: 0.875rem; color: var(--ilx-on-surface-variant, #6b7280); margin-top: 2px;"
                                 >
-                                    <i class="fa fa-cube" /> <t
-                                        t-esc="state.move?.product_id?.[1]"
-                                    />
+                                    <i class="fa fa-cube" />
+                                    <t t-esc="state.move?.product_id?.[1]" />
                                 </div>
                             </div>
                             <div class="ilx-mw-v2-badge-todo">
@@ -696,9 +730,9 @@
                         </div>
                         <div class="ilx-mw-v2-progress-labels">
                             <span><t t-esc="doneQty" /> Picked</span>
-                            <span><strong><t
-                                        t-esc="demandQty"
-                                    /> Required</strong></span>
+                            <span>
+                                <strong><t t-esc="demandQty" /> Required</strong>
+                            </span>
                         </div>
                     </div>
 
@@ -724,9 +758,9 @@
                         </div>
 
                         <div class="ilx-v2-field-group">
-                            <label class="ilx-v2-label"><t
-                                    t-esc="lotFieldLabel"
-                                /></label>
+                            <label class="ilx-v2-label">
+                                <t t-esc="lotFieldLabel" />
+                            </label>
                             <t t-if="canUseExistingLot and state.mode === 'pick'">
                                 <div class="ilx-mw-v2-input-box">
                                     <i class="fa fa-barcode ilx-mw-v2-input-icon" />
@@ -819,18 +853,18 @@
                                 class="ilx-tx-v2-select-card"
                                 t-on-click="selectSourceLocation"
                             >
-                                <div class="ilx-tx-v2-icon"><i
-                                        class="fa fa-map-marker"
-                                    /></div>
+                                <div class="ilx-tx-v2-icon">
+                                    <i class="fa fa-map-marker" />
+                                </div>
                                 <div class="ilx-tx-v2-text">
-                                    <t t-if="state.sourceLocation"><t
-                                            t-esc="state.sourceLocation.display_name"
-                                        /></t>
+                                    <t t-if="state.sourceLocation">
+                                        <t t-esc="state.sourceLocation.display_name" />
+                                    </t>
                                     <t t-else="">Select source</t>
                                 </div>
-                                <div class="ilx-tx-v2-chevron"><i
-                                        class="fa fa-chevron-down"
-                                    /></div>
+                                <div class="ilx-tx-v2-chevron">
+                                    <i class="fa fa-chevron-down" />
+                                </div>
                             </div>
                         </div>
                         <div class="ilx-v2-field-group">
@@ -839,18 +873,18 @@
                                 class="ilx-tx-v2-select-card"
                                 t-on-click="selectDestLocation"
                             >
-                                <div class="ilx-tx-v2-icon"><i
-                                        class="fa fa-sign-in"
-                                    /></div>
+                                <div class="ilx-tx-v2-icon">
+                                    <i class="fa fa-sign-in" />
+                                </div>
                                 <div class="ilx-tx-v2-text">
-                                    <t t-if="state.destLocation"><t
-                                            t-esc="state.destLocation.display_name"
-                                        /></t>
+                                    <t t-if="state.destLocation">
+                                        <t t-esc="state.destLocation.display_name" />
+                                    </t>
                                     <t t-else="">Select destination</t>
                                 </div>
-                                <div class="ilx-tx-v2-chevron"><i
-                                        class="fa fa-chevron-down"
-                                    /></div>
+                                <div class="ilx-tx-v2-chevron">
+                                    <i class="fa fa-chevron-down" />
+                                </div>
                             </div>
                         </div>
                     </t>
@@ -858,7 +892,8 @@
 
                 <footer class="ilx-v2-footer">
                     <button class="ilx-v2-btn-primary" t-on-click="confirmPick">
-                        <t t-esc="confirmLabel" /> <i class="fa fa-arrow-right ms-2" />
+                        <t t-esc="confirmLabel" />
+                        <i class="fa fa-arrow-right ms-2" />
                     </button>
                     <button class="ilx-v2-btn-secondary" t-on-click="goBack">
                         <t t-esc="backLabel" />
@@ -884,16 +919,18 @@
                         class="ilx-tx-v2-select-card"
                         t-on-click="selectOriginLocation"
                     >
-                        <div class="ilx-tx-v2-icon"><i class="fa fa-map-marker" /></div>
+                        <div class="ilx-tx-v2-icon">
+                            <i class="fa fa-map-marker" />
+                        </div>
                         <div class="ilx-tx-v2-text">
-                            <t t-if="state.origin_location"><t
-                                    t-esc="state.origin_location.display_name"
-                                /></t>
+                            <t t-if="state.origin_location">
+                                <t t-esc="state.origin_location.display_name" />
+                            </t>
                             <t t-else="">Select origin</t>
                         </div>
-                        <div class="ilx-tx-v2-chevron"><i
-                                class="fa fa-chevron-down"
-                            /></div>
+                        <div class="ilx-tx-v2-chevron">
+                            <i class="fa fa-chevron-down" />
+                        </div>
                     </div>
                 </div>
 
@@ -903,32 +940,36 @@
                         class="ilx-tx-v2-select-card"
                         t-on-click="selectDestinationLocation"
                     >
-                        <div class="ilx-tx-v2-icon"><i class="fa fa-sign-in" /></div>
+                        <div class="ilx-tx-v2-icon">
+                            <i class="fa fa-sign-in" />
+                        </div>
                         <div class="ilx-tx-v2-text">
-                            <t t-if="state.destination_location"><t
-                                    t-esc="state.destination_location.display_name"
-                                /></t>
+                            <t t-if="state.destination_location">
+                                <t t-esc="state.destination_location.display_name" />
+                            </t>
                             <t t-else="">Select destination</t>
                         </div>
-                        <div class="ilx-tx-v2-chevron"><i
-                                class="fa fa-chevron-down"
-                            /></div>
+                        <div class="ilx-tx-v2-chevron">
+                            <i class="fa fa-chevron-down" />
+                        </div>
                     </div>
                 </div>
 
                 <div class="ilx-v2-field-group">
                     <div class="ilx-v2-label">RESPONSIBLE</div>
                     <div class="ilx-tx-v2-select-card" t-on-click="selectResponsible">
-                        <div class="ilx-tx-v2-icon"><i class="fa fa-user-o" /></div>
+                        <div class="ilx-tx-v2-icon">
+                            <i class="fa fa-user-o" />
+                        </div>
                         <div class="ilx-tx-v2-text">
-                            <t t-if="state.responsible"><t
-                                    t-esc="state.responsible.name"
-                                /></t>
+                            <t t-if="state.responsible">
+                                <t t-esc="state.responsible.name" />
+                            </t>
                             <t t-else="">Select responsible</t>
                         </div>
-                        <div class="ilx-tx-v2-chevron"><i
-                                class="fa fa-chevron-down"
-                            /></div>
+                        <div class="ilx-tx-v2-chevron">
+                            <i class="fa fa-chevron-down" />
+                        </div>
                     </div>
                 </div>
 
@@ -940,8 +981,8 @@
                         >DETAILED OPERATIONS</div>
                         <div class="ilx-tx-v2-items-badge">
                             <t t-esc="state.lines.length" /> ITEM<t
-                                t-if="state.lines.length !== 1"
-                            >S</t>
+                            t-if="state.lines.length !== 1"
+                        >S</t>
                         </div>
                     </div>
 
@@ -959,9 +1000,9 @@
                                     <i class="fa fa-times" />
                                 </button>
                                 <div class="ilx-tx-v2-line-top">
-                                    <div class="ilx-tx-v2-line-name"><t
-                                            t-esc="line.product_name"
-                                        /></div>
+                                    <div class="ilx-tx-v2-line-name">
+                                        <t t-esc="line.product_name" />
+                                    </div>
                                     <div class="ilx-tx-v2-qty-pill">
                                         <input
                                             class="ilx-tx-v2-qty-input"
@@ -986,16 +1027,15 @@
                                                 t-as="lot"
                                                 t-key="lot.id"
                                             >
-                                                <option t-att-value="lot.id"><t
-                                                        t-esc="lot.name"
-                                                    /></option>
+                                                <option t-att-value="lot.id">
+                                                    <t t-esc="lot.name" />
+                                                </option>
                                             </t>
                                         </select>
                                     </t>
                                     <t t-else="">
-                                        <i class="fa fa-tag me-1" /> <t
-                                            t-esc="line.lot_name || 'No lot'"
-                                        />
+                                        <i class="fa fa-tag me-1" />
+                                        <t t-esc="line.lot_name || 'No lot'" />
                                     </t>
                                 </div>
                                 <div class="ilx-tx-v2-line-divider" />
@@ -1004,15 +1044,15 @@
                                     style="display: flex; justify-content: space-between; align-items: center;"
                                 >
                                     <span><i class="fa fa-cube" /> Reserved: <t
-                                            t-esc="line.qty || '0.00'"
-                                        /></span>
+                                        t-esc="line.qty || '0.00'"
+                                    /></span>
                                     <t t-if="line.available_qty !== undefined">
                                         <span
                                             t-att-style="line.is_available ? 'color: #16a34a; font-weight: 600;' : 'color: #dc2626; font-weight: 600;'"
                                         >
                                             <i class="fa fa-database" /> Available: <t
-                                                t-esc="line.available_qty"
-                                            />
+                                            t-esc="line.available_qty"
+                                        />
                                         </span>
                                     </t>
                                 </div>
@@ -1037,14 +1077,16 @@
                     t-on-click="checkAvailability"
                     t-att-disabled="state.isCheckingAvailability or state.isValidating"
                 >
-                    <i class="fa fa-check-square-o" /> <span>CHECK</span>
+                    <i class="fa fa-check-square-o" />
+                    <span>CHECK</span>
                 </button>
                 <button
                     class="ilx-v2-btn-primary"
                     t-on-click="validateTransfer"
                     t-att-disabled="state.isValidating or state.isCheckingAvailability"
                 >
-                    <i class="fa fa-check" /> <span>VALIDATE</span>
+                    <i class="fa fa-check" />
+                    <span>VALIDATE</span>
                 </button>
             </footer>
         </div>
@@ -1057,7 +1099,9 @@
                     <i class="fa fa-arrow-left" />
                 </button>
                 <h1 class="ilx-emp-v2-header-title">
-                    <t t-if="props.params.title"><t t-esc="props.params.title" /></t>
+                    <t t-if="props.params.title">
+                        <t t-esc="props.params.title" />
+                    </t>
                     <t t-else="">Select Location</t>
                 </h1>
             </header>
@@ -1095,12 +1139,14 @@
                                     </div>
                                 </div>
                                 <div class="ilx-emp-v2-info">
-                                    <span class="ilx-emp-v2-name"><t
-                                            t-esc="loc.display_name"
-                                        /></span>
-                                    <span class="ilx-emp-v2-role"><t
+                                    <span class="ilx-emp-v2-name">
+                                        <t t-esc="loc.display_name" />
+                                    </span>
+                                    <span class="ilx-emp-v2-role">
+                                        <t
                                             t-esc="loc.usage ? loc.usage.toUpperCase() : 'LOCATION'"
-                                        /></span>
+                                        />
+                                    </span>
                                 </div>
                                 <div class="ilx-emp-v2-status">
                                     <t t-if="state.selectedLocation?.id === loc.id">
@@ -1183,24 +1229,24 @@
                                             />
                                         </t>
                                         <t t-else="">
-                                            <div
-                                                class="ilx-emp-v2-avatar-placeholder"
-                                            ><t
+                                            <div class="ilx-emp-v2-avatar-placeholder">
+                                                <t
                                                     t-esc="product.name.charAt(0).toUpperCase()"
-                                                /></div>
+                                                />
+                                            </div>
                                         </t>
                                     </div>
                                 </div>
                                 <div class="ilx-emp-v2-info">
-                                    <span class="ilx-emp-v2-name"><t
-                                            t-esc="product.name"
-                                        /></span>
+                                    <span class="ilx-emp-v2-name">
+                                        <t t-esc="product.name" />
+                                    </span>
                                     <span class="ilx-emp-v2-role">
                                         <t t-esc="product.default_code || 'No SKU'" />
                                         <span class="ilx-emp-v2-dot-sep">•</span>
                                         $<t
-                                            t-esc="product.standard_price ? product.standard_price.toFixed(2) : '0.00'"
-                                        />
+                                        t-esc="product.standard_price ? product.standard_price.toFixed(2) : '0.00'"
+                                    />
                                     </span>
                                 </div>
                                 <div class="ilx-emp-v2-status">
@@ -1275,17 +1321,17 @@
             <div class="ilx-kw-picking-card-top">
                 <div class="ilx-kw-picking-card-info">
                     <span class="ilx-kw-picking-code">Scan target</span>
-                    <h3 class="ilx-kw-picking-partner mb-1"><t
-                            t-esc="props.move.product_id[1]"
-                        /></h3>
+                    <h3 class="ilx-kw-picking-partner mb-1">
+                        <t t-esc="props.move.product_id[1]" />
+                    </h3>
                 </div>
                 <div
                     class="ilx-kw-picking-card-status"
                     style="align-items: center; flex-direction: row; gap: 8px;"
                 >
-                    <span class="ilx-kw-group-badge"><t
-                            t-esc="props.stats?.completionLabel || '0%'"
-                        /></span>
+                    <span class="ilx-kw-group-badge">
+                        <t t-esc="props.stats?.completionLabel || '0%'" />
+                    </span>
                     <i
                         class="fa fa-chevron-right ilx-kw-picking-chevron"
                         role="img"
@@ -1296,15 +1342,18 @@
             <hr class="ilx-kw-divider" />
             <div class="ilx-kw-picking-card-bottom" style="flex-wrap: wrap; gap: 8px;">
                 <div class="ilx-kw-picking-meta-left">
-                    <span class="ilx-kw-meta-text">Demand: <strong><t
-                                t-esc="demandQty"
-                            /></strong></span>
+                    <span class="ilx-kw-meta-text">Demand: <strong>
+                        <t t-esc="demandQty" />
+                    </strong></span>
                 </div>
                 <div class="ilx-kw-picking-meta-right" style="gap: 16px;">
-                    <span class="ilx-kw-meta-text" style="color: #ff9800;">Rem: <strong
-                        ><t t-esc="remainingQty" /></strong></span>
+                    <span class="ilx-kw-meta-text" style="color: #ff9800;">Rem: <strong>
+                        <t t-esc="remainingQty" />
+                    </strong></span>
                     <span class="ilx-kw-meta-text" style="color: #4caf50;">Done: <strong
-                        ><t t-esc="doneQty" /></strong></span>
+                    >
+                        <t t-esc="doneQty" />
+                    </strong></span>
                 </div>
             </div>
             <div
@@ -1331,12 +1380,14 @@
                     t-key="line.id"
                     style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--kw-on-surface-variant); margin-bottom: 4px;"
                 >
-                    <strong><i class="fa fa-tag me-1" /> <t
-                            t-esc="line.lot_id ? line.lot_id[1] : 'No lot'"
-                        /></strong>
-                    <span><t t-esc="line.quantity - line.qty_picked" /> <t
-                            t-esc="pendingLabel"
-                        /></span>
+                    <strong>
+                        <i class="fa fa-tag me-1" />
+                        <t t-esc="line.lot_id ? line.lot_id[1] : 'No lot'" />
+                    </strong>
+                    <span>
+                        <t t-esc="line.quantity - line.qty_picked" />
+                        <t t-esc="pendingLabel" />
+                    </span>
                 </li>
             </ul>
             <div
@@ -1348,7 +1399,9 @@
                     <span
                         class="ilx-kw-chip ilx-kw-chip--default"
                         style="height: 24px; padding: 0 8px; font-size: 0.75rem;"
-                    ><t t-esc="lot" /></span>
+                    >
+                        <t t-esc="lot" />
+                    </span>
                 </t>
             </div>
         </button>
@@ -1400,9 +1453,9 @@
                         class="ilx-kw-picking-code"
                         style="color: #4caf50;"
                     >Completed</span>
-                    <h3 class="ilx-kw-picking-partner mb-1"><t
-                            t-esc="props.line.product_id[1]"
-                        /></h3>
+                    <h3 class="ilx-kw-picking-partner mb-1">
+                        <t t-esc="props.line.product_id[1]" />
+                    </h3>
                     <span
                         class="ilx-kw-picking-code"
                         style="color: var(--kw-on-surface-variant); font-weight: normal; font-size: 0.75rem;"
@@ -1413,9 +1466,8 @@
                         class="ilx-kw-status-tag ilx-kw-status-tag--ready"
                         style="background: #e8f5e9; color: #2e7d32;"
                     >
-                        <i class="fa fa-check me-1" role="img" aria-label="Done" /> <t
-                            t-esc="props.line.qty_picked"
-                        />
+                        <i class="fa fa-check me-1" role="img" aria-label="Done" />
+                        <t t-esc="props.line.qty_picked" />
                     </span>
                 </div>
             </div>
@@ -1431,12 +1483,16 @@
                             t-if="props.line.lot_id"
                             class="ilx-kw-meta-text"
                             style="color: var(--kw-on-surface-variant);"
-                        ><t t-esc="props.line.lot_id[1]" /></span>
+                        >
+                            <t t-esc="props.line.lot_id[1]" />
+                        </span>
                         <span
                             t-elif="props.line.lot_name"
                             class="ilx-kw-meta-text"
                             style="color: var(--kw-on-surface-variant);"
-                        ><t t-esc="props.line.lot_name" /></span>
+                        >
+                            <t t-esc="props.line.lot_name" />
+                        </span>
                     </div>
                 </div>
             </t>
@@ -1481,20 +1537,25 @@
                 t-on-touchstart="onTouchStart"
                 t-on-touchend="onTouchEnd"
             >
-                <button
-                    class="close-btn close-img"
-                    t-on-click="props.onClose"
-                >&#10005;</button>
+                <button class="close-btn close-img" t-on-click="props.onClose">
+                    &#10005;
+                </button>
                 <button
                     class="delete-photo-btn"
                     title="Delete picture"
                     t-on-click="deleteImage"
-                ><i class="fa fa-trash" /></button>
-                <button class="nav nav-img prev" t-on-click="prevImage">&#8249;</button>
+                >
+                    <i class="fa fa-trash" />
+                </button>
+                <button class="nav nav-img prev" t-on-click="prevImage">
+                    &#8249;
+                </button>
                 <t t-if="currentImageSrc">
                     <img t-att-src="currentImageSrc" alt="Picking attachment" />
                 </t>
-                <button class="nav nav-img next" t-on-click="nextImage">&#8250;</button>
+                <button class="nav nav-img next" t-on-click="nextImage">
+                    &#8250;
+                </button>
             </div>
         </div>
     </t>
@@ -1530,86 +1591,107 @@
                                     />
                                 </div>
                                 <div class="ilx-kw-info-text">
-                                    <span class="ilx-kw-eyebrow"><t
+                                    <span class="ilx-kw-eyebrow">
+                                        <t
                                             t-esc="state.resultType === 'product' ? 'PRODUCT' : 'LOCATION'"
-                                        /></span>
-                                    <strong class="ilx-kw-title"><t
+                                        />
+                                    </span>
+                                    <strong class="ilx-kw-title">
+                                        <t
                                             t-esc="state.resultDetails.display_name || state.resultDetails.name"
-                                        /></strong>
+                                        />
+                                    </strong>
                                 </div>
                             </div>
                             <t t-if="state.resultType === 'product'">
                                 <div class="ilx-kw-info-row mt-3">
                                     <div
                                         class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-barcode" /></div>
+                                    >
+                                        <i class="fa fa-barcode" />
+                                    </div>
                                     <div class="ilx-kw-info-text">
                                         <span class="ilx-kw-eyebrow">Barcode</span>
-                                        <span class="ilx-kw-value"><t
-                                                t-esc="state.resultDetails.barcode || '—'"
-                                            /></span>
-                                    </div>
-                                </div>
-                                <div class="ilx-kw-info-row mt-3">
-                                    <div
-                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-tag" /></div>
-                                    <div class="ilx-kw-info-text">
-                                        <span class="ilx-kw-eyebrow">SKU</span>
-                                        <span class="ilx-kw-value"><t
-                                                t-esc="state.resultDetails.default_code || '—'"
-                                            /></span>
-                                    </div>
-                                </div>
-                                <div class="ilx-kw-info-row mt-3">
-                                    <div
-                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-dollar" /></div>
-                                    <div class="ilx-kw-info-text">
-                                        <span
-                                            class="ilx-kw-eyebrow"
-                                        >Cost / Sale Price</span>
-                                        <span class="ilx-kw-value">$<t
-                                                t-esc="state.resultDetails.standard_price"
-                                            /> / $<t
-                                                t-esc="state.resultDetails.list_price"
-                                            /></span>
-                                    </div>
-                                </div>
-                                <div class="ilx-kw-info-row mt-3">
-                                    <div
-                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-cube" /></div>
-                                    <div class="ilx-kw-info-text">
-                                        <span
-                                            class="ilx-kw-eyebrow"
-                                        >Tracking / Type</span>
                                         <span class="ilx-kw-value">
                                             <t
-                                                t-set="trackingLabels"
-                                                t-value="{'serial': 'By Serial', 'lot': 'By Lots', 'none': 'No Tracking'}"
+                                                t-esc="state.resultDetails.barcode || '—'"
                                             />
-                                            <t
-                                                t-set="typeLabel"
-                                                t-value="state.resultDetails.is_storable ? 'Storable Product' : (state.resultDetails.type === 'service' ? 'Service' : state.resultDetails.type === 'combo' ? 'Combo' : 'Consumable')"
-                                            />
-                                            <t
-                                                t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking"
-                                            /> · <t t-esc="typeLabel" />
                                         </span>
                                     </div>
                                 </div>
                                 <div class="ilx-kw-info-row mt-3">
                                     <div
                                         class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-cubes" /></div>
+                                    >
+                                        <i class="fa fa-tag" />
+                                    </div>
+                                    <div class="ilx-kw-info-text">
+                                        <span class="ilx-kw-eyebrow">SKU</span>
+                                        <span class="ilx-kw-value">
+                                            <t
+                                                t-esc="state.resultDetails.default_code || '—'"
+                                            />
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div
+                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
+                                    >
+                                        <i class="fa fa-dollar" />
+                                    </div>
+                                    <div class="ilx-kw-info-text">
+                                        <span
+                                            class="ilx-kw-eyebrow"
+                                        >Cost / Sale Price</span>
+                                        <span class="ilx-kw-value">$<t
+                                            t-esc="state.resultDetails.standard_price"
+                                        /> / $<t
+                                            t-esc="state.resultDetails.list_price"
+                                        /></span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div
+                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
+                                    >
+                                        <i class="fa fa-cube" />
+                                    </div>
+                                    <div class="ilx-kw-info-text">
+                                        <span
+                                            class="ilx-kw-eyebrow"
+                                        >Tracking / Type</span>
+                                        <span class="ilx-kw-value">
+                                            <t
+                                            t-set="trackingLabels"
+                                            t-value="{'serial': 'By Serial', 'lot': 'By Lots', 'none': 'No Tracking'}"
+                                        />
+                                            <t
+                                            t-set="typeLabel"
+                                            t-value="state.resultDetails.is_storable ? 'Storable Product' : (state.resultDetails.type === 'service' ? 'Service' : state.resultDetails.type === 'combo' ? 'Combo' : 'Consumable')"
+                                        />
+                                            <t
+                                            t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking"
+                                        /> · <t t-esc="typeLabel" />
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="ilx-kw-info-row mt-3">
+                                    <div
+                                        class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
+                                    >
+                                        <i class="fa fa-cubes" />
+                                    </div>
                                     <div class="ilx-kw-info-text">
                                         <span class="ilx-kw-eyebrow">On Hand</span>
-                                        <span class="ilx-kw-value"><t
+                                        <span class="ilx-kw-value">
+                                            <t
                                                 t-esc="state.resultDetails.qty_available"
-                                            /> <t
+                                            />
+                                            <t
                                                 t-esc="state.resultDetails.uom_id ? state.resultDetails.uom_id[1] : ''"
-                                            /></span>
+                                            />
+                                        </span>
                                     </div>
                                 </div>
                                 <t t-if="state.productStock.length">
@@ -1619,13 +1701,15 @@
                                     >
                                         <div
                                             class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                        ><i class="fa fa-map-marker" /></div>
+                                        >
+                                            <i class="fa fa-map-marker" />
+                                        </div>
                                         <div class="ilx-kw-info-text" style="flex: 1;">
                                             <span
                                                 class="ilx-kw-eyebrow"
                                             >Stock by Location (<t
-                                                    t-esc="state.productStock.length"
-                                                />)</span>
+                                                t-esc="state.productStock.length"
+                                            />)</span>
                                             <div style="margin-top: 4px;">
                                                 <t
                                                     t-foreach="state.productStock"
@@ -1635,14 +1719,16 @@
                                                     <div class="ilx-kw-stock-row">
                                                         <span
                                                             class="ilx-kw-stock-row__name"
-                                                        ><t
+                                                        >
+                                                            <t
                                                                 t-esc="item.locationName"
-                                                            /></span>
+                                                            />
+                                                        </span>
                                                         <span
                                                             class="ilx-kw-stock-row__qty"
-                                                        ><t
-                                                                t-esc="item.quantity"
-                                                            /></span>
+                                                        >
+                                                            <t t-esc="item.quantity" />
+                                                        </span>
                                                     </div>
                                                 </t>
                                             </div>
@@ -1656,14 +1742,16 @@
                                     >
                                         <div
                                             class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                        ><i class="fa fa-tags" /></div>
+                                        >
+                                            <i class="fa fa-tags" />
+                                        </div>
                                         <div class="ilx-kw-info-text" style="flex: 1;">
                                             <span
                                                 class="ilx-kw-eyebrow"
                                             >Scanned Lot / Serial</span>
-                                            <span class="ilx-kw-value"><t
-                                                    t-esc="state.lot.name"
-                                                /></span>
+                                            <span class="ilx-kw-value">
+                                                <t t-esc="state.lot.name" />
+                                            </span>
                                             <t t-if="state.lotStock.length">
                                                 <div style="margin-top: 4px;">
                                                     <t
@@ -1674,14 +1762,18 @@
                                                         <div class="ilx-kw-stock-row">
                                                             <span
                                                                 class="ilx-kw-stock-row__name"
-                                                            ><t
+                                                            >
+                                                                <t
                                                                     t-esc="item.locationName"
-                                                                /></span>
+                                                                />
+                                                            </span>
                                                             <span
                                                                 class="ilx-kw-stock-row__qty"
-                                                            ><t
+                                                            >
+                                                                <t
                                                                     t-esc="item.quantity"
-                                                                /></span>
+                                                                />
+                                                            </span>
                                                         </div>
                                                     </t>
                                                 </div>
@@ -1700,18 +1792,24 @@
                                 <div class="ilx-kw-info-row mt-3">
                                     <div
                                         class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-barcode" /></div>
+                                    >
+                                        <i class="fa fa-barcode" />
+                                    </div>
                                     <div class="ilx-kw-info-text">
                                         <span class="ilx-kw-eyebrow">Barcode</span>
-                                        <span class="ilx-kw-value"><t
+                                        <span class="ilx-kw-value">
+                                            <t
                                                 t-esc="state.resultDetails.barcode || '—'"
-                                            /></span>
+                                            />
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="ilx-kw-info-row mt-3">
                                     <div
                                         class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                    ><i class="fa fa-flag" /></div>
+                                    >
+                                        <i class="fa fa-flag" />
+                                    </div>
                                     <div class="ilx-kw-info-text">
                                         <span class="ilx-kw-eyebrow">Usage</span>
                                         <span class="ilx-kw-value">
@@ -1732,13 +1830,15 @@
                                     >
                                         <div
                                             class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"
-                                        ><i class="fa fa-cubes" /></div>
+                                        >
+                                            <i class="fa fa-cubes" />
+                                        </div>
                                         <div class="ilx-kw-info-text" style="flex: 1;">
                                             <span
                                                 class="ilx-kw-eyebrow"
                                             >Current Stock (<t
-                                                    t-esc="state.locationStock.length"
-                                                />)</span>
+                                                t-esc="state.locationStock.length"
+                                            />)</span>
                                             <div style="margin-top: 4px;">
                                                 <t
                                                     t-foreach="paginatedStock"
@@ -1748,14 +1848,16 @@
                                                     <div class="ilx-kw-stock-row">
                                                         <span
                                                             class="ilx-kw-stock-row__name"
-                                                        ><t
+                                                        >
+                                                            <t
                                                                 t-esc="item.productName"
-                                                            /></span>
+                                                            />
+                                                        </span>
                                                         <span
                                                             class="ilx-kw-stock-row__qty"
-                                                        ><t
-                                                                t-esc="item.quantity"
-                                                            /></span>
+                                                        >
+                                                            <t t-esc="item.quantity" />
+                                                        </span>
                                                     </div>
                                                 </t>
                                             </div>
@@ -1773,10 +1875,10 @@
                                                     <span
                                                         style="font-size: 0.8rem; color: #666;"
                                                     ><t
-                                                            t-esc="state.stockPage + 1"
-                                                        /> / <t
-                                                            t-esc="stockTotalPages"
-                                                        /></span>
+                                                        t-esc="state.stockPage + 1"
+                                                    /> / <t
+                                                        t-esc="stockTotalPages"
+                                                    /></span>
                                                     <button
                                                         class="btn btn-sm btn-secondary"
                                                         t-on-click="nextStockPage"
@@ -1885,36 +1987,36 @@
         <div class="ilx-kw-tab-content">
             <div class="ilx-kw-card">
                 <div class="ilx-kw-info-row">
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-orange"><i
-                            class="fa fa-building"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-orange">
+                        <i class="fa fa-building" />
+                    </div>
                     <div class="ilx-kw-info-text">
                         <span class="ilx-kw-eyebrow">PARTNER</span>
-                        <strong class="ilx-kw-title"><t
-                                t-esc="props.picking.partner_id?.[1] || 'No partner'"
-                            /></strong>
+                        <strong class="ilx-kw-title">
+                            <t t-esc="props.picking.partner_id?.[1] || 'No partner'" />
+                        </strong>
                     </div>
                 </div>
                 <div class="ilx-kw-info-row mt-3">
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i
-                            class="fa fa-map-marker"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light">
+                        <i class="fa fa-map-marker" />
+                    </div>
                     <div class="ilx-kw-info-text">
                         <span class="ilx-kw-eyebrow">From</span>
-                        <span class="ilx-kw-value"><t
-                                t-esc="props.picking.location_id?.[1]"
-                            /></span>
+                        <span class="ilx-kw-value">
+                            <t t-esc="props.picking.location_id?.[1]" />
+                        </span>
                     </div>
                 </div>
                 <div class="ilx-kw-info-row mt-3">
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i
-                            class="fa fa-arrow-right"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light">
+                        <i class="fa fa-arrow-right" />
+                    </div>
                     <div class="ilx-kw-info-text">
                         <span class="ilx-kw-eyebrow">To</span>
-                        <span class="ilx-kw-value"><t
-                                t-esc="props.picking.location_dest_id?.[1]"
-                            /></span>
+                        <span class="ilx-kw-value">
+                            <t t-esc="props.picking.location_dest_id?.[1]" />
+                        </span>
                     </div>
                 </div>
                 <div
@@ -1922,14 +2024,14 @@
                     t-on-click="onSelectResponsible"
                     style="cursor: pointer;"
                 >
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i
-                            class="fa fa-user"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light">
+                        <i class="fa fa-user" />
+                    </div>
                     <div class="ilx-kw-info-text">
                         <span class="ilx-kw-eyebrow">Responsible</span>
-                        <span class="ilx-kw-value"><t
-                                t-esc="props.picking.user_id?.[1] || 'Unassigned'"
-                            /></span>
+                        <span class="ilx-kw-value">
+                            <t t-esc="props.picking.user_id?.[1] || 'Unassigned'" />
+                        </span>
                     </div>
                     <i
                         class="fa fa-chevron-right"
@@ -1937,9 +2039,9 @@
                     />
                 </div>
                 <div class="ilx-kw-info-row mt-3">
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i
-                            class="fa fa-calendar"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light">
+                        <i class="fa fa-calendar" />
+                    </div>
                     <div class="ilx-kw-info-text w-100">
                         <span class="ilx-kw-eyebrow">Scheduled Date</span>
                         <div class="ilx-kw-select-wrapper mt-1">
@@ -1954,9 +2056,9 @@
                     </div>
                 </div>
                 <div class="ilx-kw-info-row mt-3">
-                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light"><i
-                            class="fa fa-sticky-note-o"
-                        /></div>
+                    <div class="ilx-kw-icon-box-small ilx-kw-bg-purple-light">
+                        <i class="fa fa-sticky-note-o" />
+                    </div>
                     <div class="ilx-kw-info-text w-100">
                         <span class="ilx-kw-eyebrow">Notes</span>
                         <div class="ilx-kw-select-wrapper mt-1">

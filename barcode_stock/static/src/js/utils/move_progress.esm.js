@@ -13,7 +13,7 @@ export function isMovePending(move) {
     if (!move) {
         return false;
     }
-    return move.quantity == 0 || move.qty_done_total < move.quantity;
+    return move.quantity === 0 || move.qty_done_total < move.quantity;
 }
 
 /**
