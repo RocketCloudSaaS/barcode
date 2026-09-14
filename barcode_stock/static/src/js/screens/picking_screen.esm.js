@@ -302,7 +302,7 @@ export class PickingScreen extends Component {
             this.inventory.notify("Changes saved successfully", {
                 type: "success",
             });
-        } catch (error) {
+        } catch {
             this.inventory.notify("Error while saving", {
                 type: "danger",
             });

@@ -766,7 +766,7 @@ export class BarcodeScannerState extends Reactive {
             : null;
         const statedQty = scan?.qty ?? scan?.quantity;
         let quantity = this.scannedQuantity(scan, productUomId);
-        if (packaging && statedQty == null) {
+        if (packaging && (statedQty === null || statedQty === undefined)) {
             quantity = packaging.qty;
         }
         return {
