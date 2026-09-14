@@ -1,11 +1,10 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
-import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 export class LocationSelectorScreen extends Component {
     setup() {
@@ -36,11 +35,11 @@ export class LocationSelectorScreen extends Component {
         const scope = this.props.params?.locationDomain || [];
         const domain = match ? [...match, ...scope] : null;
         const locations = domain
-            ? await this.inventory.searchRead(
-                  "stock.location",
-                  domain,
-                  ["id", "display_name", "usage"]
-              )
+            ? await this.inventory.searchRead("stock.location", domain, [
+                  "id",
+                  "display_name",
+                  "usage",
+              ])
             : [];
         if (locations.length) {
             this.state.selectedLocation = locations[0];
@@ -50,17 +49,18 @@ export class LocationSelectorScreen extends Component {
         // No location carries this barcode: filter the list by it and say so,
         // instead of silently doing nothing.
         this.state.search = barcode;
-        this.inventory.notify(
-            _t("No location matches “%(code)s”.", {code: barcode}),
-            {type: "warning"}
-        );
+        this.inventory.notify(_t("No location matches “%(code)s”.", {code: barcode}), {
+            type: "warning",
+        });
     }
 
     async loadLocations() {
         // When the caller scopes the picker (e.g. the move wizard restricts the
         // destination to valid locations of the operation, like the back office),
         // honour that domain; otherwise show all internal locations.
-        const domain = this.props.params?.locationDomain || [["usage", "=", "internal"]];
+        const domain = this.props.params?.locationDomain || [
+            ["usage", "=", "internal"],
+        ];
         this.state.locations = await this.inventory.searchRead(
             "stock.location",
             domain,

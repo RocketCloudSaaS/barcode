@@ -1,11 +1,14 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {Component, onWillStart, useState} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
+import {
+    barcodeMatchAnyDomain,
+    barcodeMatchDomain,
+} from "@barcode_scanner/js/utils/scan_match.esm";
+import {_t} from "@web/core/l10n/translation";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {barcodeMatchDomain, barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {useService} from "@web/core/utils/hooks";
 
 export class QuickInfoScreen extends Component {
     setup() {
@@ -133,9 +136,12 @@ export class QuickInfoScreen extends Component {
             ["name"]
         );
         if (!lot) {
-            this.inventory.notify(`Lot ${lotName} not found for this product.`, {
-                type: "warning",
-            });
+            this.inventory.notify(
+                _t("Lot %(lot)s not found for this product.", {lot: lotName}),
+                {
+                    type: "warning",
+                }
+            );
             return;
         }
         this.state.lot = lot;
@@ -213,7 +219,7 @@ export class QuickInfoScreen extends Component {
     async searchBarcode() {
         const barcode = this.state.barcode;
         if (!barcode) {
-            this.inventory.notify("Enter a barcode.", {type: "warning"});
+            this.inventory.notify(_t("Enter a barcode."), {type: "warning"});
             return;
         }
         // A typed barcode goes through the same parsers as a scanned one, so a
@@ -223,7 +229,7 @@ export class QuickInfoScreen extends Component {
 
     async onBarcodeScanned(barcode, parsedData) {
         if (!(parsedData?.value || barcode)) {
-            this.inventory.notify("Barcode not recognized.", {type: "warning"});
+            this.inventory.notify(_t("Barcode not recognized."), {type: "warning"});
             return;
         }
         this.state.barcode = "";
@@ -242,11 +248,9 @@ export class QuickInfoScreen extends Component {
             ];
             const productDomain = barcodeMatchAnyDomain(candidates);
             const products = productDomain
-                ? await this.inventory.searchRead(
-                      "product.product",
-                      productDomain,
-                      ["display_name"]
-                  )
+                ? await this.inventory.searchRead("product.product", productDomain, [
+                      "display_name",
+                  ])
                 : [];
             if (products.length) {
                 this.state.barcode = "";
@@ -255,21 +259,19 @@ export class QuickInfoScreen extends Component {
             }
             const locationDomain = barcodeMatchDomain(barcode);
             const locations = locationDomain
-                ? await this.inventory.searchRead(
-                      "stock.location",
-                      locationDomain,
-                      ["display_name"]
-                  )
+                ? await this.inventory.searchRead("stock.location", locationDomain, [
+                      "display_name",
+                  ])
                 : [];
             if (locations.length) {
                 this.state.barcode = "";
                 await this.loadResult(locations[0], "location");
                 return;
             }
-            this.inventory.notify("Barcode not found.", {type: "danger"});
+            this.inventory.notify(_t("Barcode not found."), {type: "danger"});
         } catch (error) {
             console.error(error);
-            this.inventory.notify("Search failed.", {type: "danger"});
+            this.inventory.notify(_t("Search failed."), {type: "danger"});
         }
     }
 }

@@ -1,5 +1,5 @@
-import {barcodeScanHandlers} from "@barcode_scanner/js/registries.esm";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScanHandlers} from "@barcode_scanner/js/registries.esm";
 
 /**
  * Home-screen scan recognition for stock. Isolated in its own file so it can be
@@ -37,11 +37,10 @@ barcodeScanHandlers.add(
             const productCode = parsed?.value || barcode;
             const productDomain = barcodeMatchDomain(productCode);
             const products = productDomain
-                ? await api.searchRead(
-                      "product.product",
-                      productDomain,
-                      ["id", "display_name"]
-                  )
+                ? await api.searchRead("product.product", productDomain, [
+                      "id",
+                      "display_name",
+                  ])
                 : [];
             if (!products.length) {
                 return false;
@@ -59,11 +58,10 @@ barcodeScanHandlers.add(
         async handle(barcode, parsed, {api, navigate}) {
             const locationDomain = barcodeMatchDomain(barcode);
             const locations = locationDomain
-                ? await api.searchRead(
-                      "stock.location",
-                      locationDomain,
-                      ["id", "display_name"]
-                  )
+                ? await api.searchRead("stock.location", locationDomain, [
+                      "id",
+                      "display_name",
+                  ])
                 : [];
             if (!locations.length) {
                 return false;

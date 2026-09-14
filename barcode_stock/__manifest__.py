@@ -5,17 +5,15 @@
     "summary": "Warehouse operations (receipts, deliveries, internal transfers) "
     "for the Barcode suite",
     "author": "Binhex, Odoo Community Association (OCA)",
-    "website": "https://github.com/RocketCloudSaaS/barcode",
+    "website": "https://github.com/OCA/barcode-interface",
     "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
         "stock",
         "stock_move_line_qty_picked",
-        "barcodes",
     ],
     "data": [
-        "security/security.xml",
         "views/stock_location_views.xml",
     ],
     "assets": {

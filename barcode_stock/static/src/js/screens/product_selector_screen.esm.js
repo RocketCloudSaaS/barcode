@@ -1,12 +1,11 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
-import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
-import {recordImageUrl} from "@barcode_stock/js/utils/avatar.esm";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {recordImageUrl} from "@barcode_stock/js/utils/avatar.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 export class ProductSelectorScreen extends Component {
     setup() {

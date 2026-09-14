@@ -1,6 +1,6 @@
-import {registry} from "@web/core/registry";
 import {Mutex} from "@web/core/utils/concurrency";
 import {debounce} from "@web/core/utils/timing";
+import {registry} from "@web/core/registry";
 
 export const GUARDRAIL_CODES = {
     LOT_REQUIRED: "lot_required",
