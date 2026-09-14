@@ -2,7 +2,8 @@
     "name": "Barcode Stock",
     "version": "18.0.1.0.0",
     "category": "Inventory/Logistics",
-    "summary": "Warehouse operations (receipts, deliveries, internal transfers) for the Barcode suite",
+    "summary": "Warehouse operations (receipts, deliveries, internal transfers) "
+    "for the Barcode suite",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
     "maintainers": ["szalatyzuzanna"],

@@ -157,7 +157,7 @@ export class WarehouseOps extends Component {
 
     syncSelect() {
         const el = this.warehouseSelect.el;
-        if (el && this.state.selectedWarehouseId != null) {
+        if (el && this.state.selectedWarehouseId !== null && this.state.selectedWarehouseId !== undefined) {
             const value = String(this.state.selectedWarehouseId);
             if (el.value !== value) {
                 el.value = value;
