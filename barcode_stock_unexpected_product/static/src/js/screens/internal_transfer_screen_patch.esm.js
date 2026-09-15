@@ -1,5 +1,6 @@
-import {patch} from "@web/core/utils/patch";
 import {InternalTransferScreen} from "@barcode_stock/js/screens/internal_transfer_screen.esm";
+import {_t} from "@web/core/l10n/translation";
+import {patch} from "@web/core/utils/patch";
 
 patch(InternalTransferScreen.prototype, {
     async isInsertNewLineAllowed() {
@@ -10,12 +11,12 @@ patch(InternalTransferScreen.prototype, {
         }
         const result = await this.inventory.call(
             "stock.picking",
-            "_barcode_scanner_check_insert_new_line_allowed",
+            "barcode_scanner_check_insert_new_line_allowed",
             [origin, destination]
         );
         if (result?.allowed === false) {
             this.notification.add(
-                result.error || "Adding a new product line is not allowed.",
+                result.error || _t("Adding a new product line is not allowed."),
                 {type: "warning"}
             );
             return false;
