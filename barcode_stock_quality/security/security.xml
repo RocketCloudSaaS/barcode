@@ -1,0 +1,16 @@
+<odoo>
+    <record id="group_barcode_stock_quality_user" model="res.groups">
+        <field name="name">Barcode Stock Quality User</field>
+        <field name="category_id" ref="base.module_category_inventory" />
+        <!--
+            Running a reception's inspections from the scanner reads and fills
+            qc.inspection records, which quality_control_oca restricts to Quality
+            Control users. Grant it here so an operator assigned to this group can
+            inspect from the scanner.
+        -->
+        <field
+            name="implied_ids"
+            eval="[(4, ref('quality_control_oca.group_quality_control_user'))]"
+        />
+    </record>
+</odoo>
