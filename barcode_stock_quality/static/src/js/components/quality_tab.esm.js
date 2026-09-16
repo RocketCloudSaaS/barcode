@@ -114,11 +114,11 @@ export class QualityTab extends Component {
         }
         this.state.busyId = inspection.inspection_id;
         try {
-            const datas = await this.readAsBase64(file);
+            const photo = await this.readPhoto(file);
             const result = await this.inventory.call(
                 "qc.inspection",
                 "action_barcode_scanner_attach_photo",
-                [inspection.inspection_id, file.name, datas]
+                [inspection.inspection_id, photo.name, photo.datas]
             );
             inspection.photo_count = result.photo_count;
             this.inventory.notify(_t("Photo attached."), {type: "success"});
@@ -127,6 +127,43 @@ export class QualityTab extends Component {
         } finally {
             this.state.busyId = null;
         }
+    }
+
+    // Read the chosen photo, shrinking it to a reasonable evidence size. Phone
+    // cameras produce multi-megapixel images whose upload a reverse proxy may
+    // reject as too large, so the picture is scaled down (longest side capped)
+    // and re-encoded as JPEG. Non-images, or a browser without canvas support,
+    // keep the untouched file.
+    async readPhoto(file, maxSide = 1600, quality = 0.82) {
+        if (file.type && file.type.startsWith("image/")) {
+            try {
+                const bitmap = await createImageBitmap(file, {
+                    imageOrientation: "from-image",
+                });
+                const scale = Math.min(
+                    1,
+                    maxSide / Math.max(bitmap.width, bitmap.height)
+                );
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+                const context = canvas.getContext("2d");
+                if (context) {
+                    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                    bitmap.close();
+                    const datas = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+                    if (datas) {
+                        const name = file.name.replace(/\.[^./\\]+$/, "") + ".jpg";
+                        return {name, datas};
+                    }
+                } else {
+                    bitmap.close();
+                }
+            } catch {
+                // A browser without createImageBitmap/canvas keeps the raw file.
+            }
+        }
+        return {name: file.name, datas: await this.readAsBase64(file)};
     }
 
     readAsBase64(file) {
