@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-inherit="barcode_scanner.PickingScreen" t-inherit-mode="extension">
+        <xpath expr="//div[contains(@class, 'ilx-kw-bottom-nav')]" position="inside">
+            <button
+                type="button"
+                class="ilx-kw-nav-item flex-1"
+                t-if="state.picking.state === 'cancel'"
+                t-on-click="backToDraft"
+                aria-label="Back to draft"
+            >
+                <div class="ilx-kw-nav-pill">
+                    <i class="fa fa-undo" />
+                </div>
+                <span>BACK TO DRAFT</span>
+            </button>
+        </xpath>
+    </t>
+</templates>
