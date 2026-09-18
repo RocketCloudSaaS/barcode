@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="barcode_stock_cycle_count.CycleCountListScreen">
+        <div class="ilx-emp-v2-screen">
+            <header class="ilx-emp-v2-header"><button
+                    class="ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button><h1
+                    class="ilx-emp-v2-header-title"
+                >Cycle Count</h1></header>
+            <main class="ilx-emp-v2-main">
+                <button class="btn btn-link" t-on-click="toggleShowAll"><t
+                        t-if="state.showAll"
+                    >Show my counts</t><t t-else="">Show all counts</t></button>
+                <h2 class="ilx-emp-v2-section-title">PLANNED COUNTS</h2>
+                <div class="ilx-emp-v2-list">
+                    <t t-if="state.loading"><div
+                            class="text-center p-4"
+                        >Loading counts...</div></t>
+                    <t t-foreach="state.counts" t-as="count" t-key="count.id"><div
+                            class="ilx-emp-v2-card"
+                            t-on-click="() => this.selectCount(count)"
+                        ><div class="ilx-emp-v2-info"><span class="ilx-emp-v2-name"><t
+                                        t-esc="count.name"
+                                    /></span><span class="ilx-emp-v2-role"><t
+                                        t-esc="count.location_name"
+                                    /> · <t
+                                        t-esc="count.state_label"
+                                    /></span></div><div class="ilx-emp-v2-status"><i
+                                    class="fa fa-chevron-right"
+                                /></div></div></t>
+                    <div
+                        t-if="!state.loading and !state.counts.length"
+                        class="text-center p-4"
+                    >No cycle counts found.</div>
+                </div>
+            </main>
+        </div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountLocationScreen">
+        <div class="ilx-emp-v2-screen"><header class="ilx-emp-v2-header"><button
+                    class="ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button><h1
+                    class="ilx-emp-v2-header-title"
+                >Confirm Cycle Count</h1></header><main class="ilx-emp-v2-main"><div
+                    class="ilx-emp-v2-card"
+                ><div class="ilx-emp-v2-info"><span class="ilx-emp-v2-name"><t
+                                t-esc="state.count?.name"
+                            /></span><span class="ilx-emp-v2-role">Expected location: <t
+                                t-esc="state.count?.location_name"
+                            /></span></div></div><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-if="!state.confirmed"
+                    t-on-click="confirmStart"
+                >Confirm and start</button><div t-else="" class="ilx-emp-v2-card"><div
+                        class="ilx-emp-v2-info"
+                    ><span
+                            class="ilx-emp-v2-name"
+                        >Scan the expected location</span><span
+                            class="ilx-emp-v2-role"
+                        ><t
+                                t-esc="state.count?.location_name"
+                            /></span></div></div><button
+                    class="btn btn-link"
+                    t-if="state.confirmed"
+                    t-on-click="skipLocation"
+                >Continue without scan</button></main></div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountCountScreen">
+        <div class="ilx-emp-v2-screen"><header class="ilx-emp-v2-header"><button
+                    class="ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button><h1
+                    class="ilx-emp-v2-header-title"
+                >Cycle Count</h1></header><main class="ilx-emp-v2-main"><h2
+                    class="ilx-emp-v2-section-title"
+                >COUNT — SCAN OR TYPE THE COUNTED QTY</h2><div
+                    class="ilx-emp-v2-list"
+                ><t t-if="state.loading"><div
+                            class="text-center p-4"
+                        >Loading count lines...</div></t><t
+                        t-foreach="state.lines"
+                        t-as="line"
+                        t-key="line.quant_id"
+                    ><div class="ilx-emp-v2-card"><div class="ilx-emp-v2-info"><span
+                                    class="ilx-emp-v2-name"
+                                ><t t-esc="line.product_name" /></span><span
+                                    class="ilx-emp-v2-role"
+                                ><t t-if="line.lot_name"><t
+                                            t-esc="line.lot_name"
+                                        /> · </t>On hand: <t
+                                        t-esc="line.theoretical_qty"
+                                    /> <t t-esc="line.uom" /></span><t
+                                    t-if="line.tracking !== 'none'"
+                                ><input
+                                        type="text"
+                                        class="ilx-emp-v2-search-input"
+                                        placeholder="Lot / Serial number"
+                                        t-att-list="'cycle-lot-opts-' + line.quant_id"
+                                        t-att-value="line.lot_name"
+                                        t-on-input="(ev) => this.setLotName(line, ev.target.value)"
+                                    /><datalist
+                                        t-att-id="'cycle-lot-opts-' + line.quant_id"
+                                    ><t
+                                            t-foreach="line.lot_options"
+                                            t-as="lotName"
+                                            t-key="lotName"
+                                        ><option
+                                                t-att-value="lotName"
+                                            /></t></datalist></t></div><div
+                                class="ilx-emp-v2-status"
+                            ><input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    t-att-value="line.counted"
+                                    t-on-input="(ev) => this.setCounted(line, ev.target.value)"
+                                /><t t-if="difference(line) !== null"><span><t
+                                            t-if="difference(line) > 0"
+                                        >+</t><t
+                                            t-esc="difference(line)"
+                                        /></span></t></div></div></t><div
+                        t-if="!state.loading and !state.lines.length"
+                        class="text-center p-4"
+                    >No stock in this location.</div></div></main><footer
+                class="ilx-emp-v2-footer"
+            ><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-on-click="apply"
+                    t-att-disabled="state.applying"
+                >Apply count</button></footer></div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountDoneScreen">
+        <div class="ilx-emp-v2-screen"><main class="ilx-emp-v2-main text-center"><h1
+                    class="ilx-emp-v2-header-title"
+                >Cycle Count complete</h1><p><t
+                        t-esc="props.params.cycleCount?.name"
+                    /></p><p><t t-esc="props.params.cycleCount?.location_name" /></p><p
+                >Applied lines: <t t-esc="props.params.appliedCount" /></p><p
+                >Accuracy: <t t-esc="props.params.accuracy" /></p><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-on-click="backToList"
+                >Return to cycle counts</button></main></div>
+    </t>
+</templates>
