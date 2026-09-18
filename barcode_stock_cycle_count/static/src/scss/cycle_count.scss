@@ -1,0 +1,1544 @@
+.ilx-icon-cycle {
+    background: var(--ilx-warning-bg);
+    color: #e65100;
+}
+
+.ilx-kw-cycle-count-list {
+    // Filter toolbar/menus. Their base definitions live in barcode_stock's
+    // picking_filters.scss, which is NOT a dependency of this module; the
+    // list must therefore resolve them standalone. Scoped so barcode_scanner
+    // and barcode_stock (when installed) are never affected.
+    .ilx-kw-filter-tools {
+        position: relative;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--ilx-space-2, 0.5rem);
+    }
+
+    .ilx-kw-filter-toolbar {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .ilx-kw-tool-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        background: var(--ilx-surface-container-high);
+        color: var(--ilx-on-surface-variant);
+
+        .fa-caret-down {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        &.has-value {
+            background: var(--ilx-surface-container-low);
+            color: var(--ilx-on-surface);
+        }
+
+        &.active {
+            background: var(--ilx-primary-container);
+            color: var(--ilx-on-surface);
+        }
+    }
+
+    .ilx-kw-tool-count {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: var(--ilx-primary);
+        color: #fff;
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ilx-kw-tool-spacer {
+        flex: 1;
+    }
+
+    .ilx-kw-star-btn {
+        width: 48px;
+        padding: 0;
+        justify-content: center;
+
+        .fa {
+            font-size: 1rem;
+        }
+
+        &.active {
+            color: var(--ilx-primary);
+            background: var(--ilx-surface-container-low);
+        }
+    }
+
+    .ilx-kw-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 240px;
+        // Interpolated so libsass emits the CSS min() verbatim (mirrors the
+        // barcode_stock source this replaces).
+        max-width: #{"min(320px, calc(100vw - 3rem))"};
+        max-height: 60vh;
+        overflow-y: auto;
+        background: var(--ilx-surface);
+        border: 1px solid var(--ilx-outline-variant);
+        border-radius: var(--ilx-radius-lg);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+        padding: 8px;
+        z-index: 3;
+    }
+
+    .ilx-kw-menu-section + .ilx-kw-menu-section {
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid var(--ilx-outline-variant);
+    }
+
+    .ilx-kw-menu-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ilx-on-surface-variant);
+        padding: 6px 10px;
+    }
+
+    .ilx-kw-menu-option {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 10px;
+        border: none;
+        background: transparent;
+        color: var(--ilx-on-surface);
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-align: left;
+        border-radius: var(--ilx-radius-default);
+        cursor: pointer;
+
+        .fa {
+            font-size: 0.95rem;
+            color: var(--ilx-on-surface-variant);
+            width: 18px;
+            text-align: center;
+        }
+
+        &:hover {
+            background: var(--ilx-surface-container-high);
+        }
+
+        &.selected {
+            color: var(--ilx-primary);
+            font-weight: 600;
+
+            .fa {
+                color: var(--ilx-primary);
+            }
+        }
+    }
+
+    .ilx-kw-menu-custom-date {
+        padding: 6px 10px 10px 38px;
+
+        .ilx-kw-filter-date-input {
+            width: 100%;
+            min-height: 48px;
+        }
+    }
+
+    .ilx-kw-facets {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .ilx-kw-facet {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 0 4px 0 12px;
+        gap: 4px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: var(--ilx-primary-container);
+        color: var(--ilx-on-surface);
+    }
+
+    .ilx-kw-facet-remove {
+        width: 48px;
+        height: 48px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.75;
+
+        &:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.08);
+        }
+    }
+    .ilx-queue-shell {
+        padding: 0;
+    }
+    // Card layout (already present in the staged candidate; preserved verbatim).
+    .ilx-queue-card {
+        display: grid;
+        min-width: 0;
+        gap: 0.75rem;
+        align-items: stretch;
+        padding: 1rem;
+        border: 1px solid var(--ilx-outline-variant, #e3ded5);
+        border-radius: var(--ilx-radius-xl, 18px);
+        background: var(--ilx-surface-container-lowest, #fff);
+        box-shadow: var(--ilx-shadow, 0 2px 8px rgba(37, 32, 24, 0.06));
+        cursor: pointer;
+        text-align: left;
+        transition:
+            border-color 140ms ease-out,
+            box-shadow 140ms ease-out,
+            transform 140ms ease-out;
+
+        &:hover {
+            border-color: var(--ilx-primary-container);
+            box-shadow: 0 4px 12px rgba(37, 32, 24, 0.1);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+
+        &:focus-visible {
+            outline: 3px solid var(--ilx-primary-container);
+            outline-offset: 2px;
+        }
+    }
+
+    .ilx-queue-card__top {
+        align-items: flex-start;
+        min-width: 0;
+    }
+
+    .ilx-cycle-count-card__name {
+        min-width: 0;
+        flex: 1 1 auto;
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .ilx-queue-card__status {
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.55rem;
+    }
+
+    .ilx-state-pill {
+        min-height: 30px;
+        padding: 0.3rem 0.65rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    .ilx-cycle-count-card__location {
+        display: flex;
+        min-width: 0;
+        align-items: flex-start;
+        gap: 0.5rem;
+        color: var(--ilx-on-surface-variant);
+        font-size: 0.875rem;
+        line-height: 1.35;
+
+        > .fa {
+            flex: 0 0 auto;
+            margin-top: 0.1rem;
+            color: var(--ilx-primary);
+        }
+    }
+
+    .ilx-cycle-count-card__location-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .ilx-queue-card__meta-row {
+        min-width: 0;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .ilx-cycle-count-card__meta {
+        min-width: 0;
+        max-width: 100%;
+        min-height: 32px;
+        flex: 0 1 auto;
+        padding: 0.3rem 0.65rem;
+        font-size: 0.75rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+        white-space: normal;
+
+        > .fa {
+            flex: 0 0 auto;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ilx-queue-card {
+            transition: none;
+
+            &:hover,
+            &:active {
+                transform: none;
+            }
+        }
+    }
+}
+
+.ilx-state-pill--open {
+    background: var(--ilx-success-bg);
+    color: var(--ilx-success-text, var(--ilx-success));
+}
+
+.ilx-state-pill--draft {
+    background: var(--ilx-warning-bg);
+    color: var(--ilx-warning-text, var(--ilx-warning));
+}
+
+.ilx-cycle-count-overdue {
+    color: var(--ilx-danger, var(--barcode-danger));
+}
+
+.ilx-cycle-count-card__deadline.ilx-cycle-count-overdue {
+    border: 1px solid var(--ilx-danger, var(--barcode-danger, #ba1a1a));
+    background: var(--ilx-danger-bg, #fdecea);
+    color: var(--ilx-danger, var(--barcode-danger, #ba1a1a));
+}
+
+.ilx-cycle-count-start-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--ilx-outline-variant, #d7c9a5);
+    border-inline-start: 5px solid var(--ilx-warning, #b45309);
+    border-radius: var(--ilx-radius-lg, 16px);
+    background: var(--ilx-warning-bg, #fff7e6);
+    color: var(--ilx-on-surface, #29251f);
+    box-shadow: 0 4px 14px rgba(47, 37, 20, 0.08);
+
+    &--error {
+        border-color: var(--ilx-danger, var(--barcode-danger, #b42318));
+        border-inline-start-color: var(--ilx-danger, var(--barcode-danger, #b42318));
+        background: var(--ilx-danger-bg, #fff1f0);
+    }
+
+    &__icon {
+        display: inline-flex;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(180, 83, 9, 0.12);
+        color: var(--ilx-warning-text, #92400e);
+        font-size: 1.05rem;
+    }
+
+    &--error &__icon {
+        background: rgba(180, 35, 24, 0.1);
+        color: var(--ilx-danger, var(--barcode-danger, #b42318));
+    }
+
+    &__content {
+        min-width: 0;
+    }
+
+    &__eyebrow {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ilx-on-surface-variant, #665f55);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+    }
+
+    &__title {
+        margin: 0 0 6px;
+        font-size: 1.05rem;
+        font-weight: 750;
+        line-height: 1.25;
+    }
+
+    &__message,
+    &__action,
+    &__detail {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    &__facts {
+        display: grid;
+        gap: 8px;
+        margin: 14px 0;
+
+        > div {
+            display: grid;
+            gap: 3px;
+        }
+
+        span {
+            color: var(--ilx-on-surface-variant, #665f55);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        strong {
+            overflow-wrap: anywhere;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+    }
+
+    &__action {
+        padding-top: 10px;
+        border-top: 1px solid rgba(102, 95, 85, 0.2);
+        font-weight: 650;
+    }
+
+    &__details-toggle {
+        margin-top: 10px;
+        color: var(--ilx-on-surface-variant, #665f55);
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 650;
+    }
+
+    &__detail {
+        margin-top: 6px;
+        font-family: monospace;
+        font-size: 0.78rem;
+    }
+}
+
+.ilx-queue-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ilx-queue-loading,
+.ilx-queue-error,
+.ilx-queue-empty-state {
+    margin: var(--ilx-space-4, 1rem) 0;
+}
+
+@media (max-width: 767.98px) {
+    .ilx-queue-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+// Cycle Count > Count screen: mobile/reader presentation.
+.ilx-cycle-count-count {
+    .ilx-count-progress {
+        margin-bottom: var(--ilx-space-3, 0.75rem);
+    }
+
+    .ilx-count-progress__label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ilx-on-surface-variant);
+        margin-bottom: 4px;
+    }
+
+    .ilx-count-progress__bar {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--ilx-surface-container-high);
+        overflow: hidden;
+    }
+
+    .ilx-count-progress__fill {
+        height: 100%;
+        background: var(--ilx-primary);
+        border-radius: 4px;
+    }
+
+    .ilx-count-feedback {
+        padding: 10px 14px;
+        border-radius: var(--ilx-radius-default);
+        margin-bottom: var(--ilx-space-3, 0.75rem);
+        font-size: 0.9rem;
+        font-weight: 600;
+
+        &--success {
+            background: var(--ilx-success-bg);
+            color: var(--ilx-success-text, var(--ilx-success));
+        }
+
+        &--warning {
+            background: var(--ilx-warning-bg);
+            color: var(--ilx-warning-text, var(--ilx-warning));
+        }
+
+        &--error {
+            background: var(--ilx-danger-bg, var(--ilx-surface-container-high));
+            color: var(--ilx-danger, var(--barcode-danger));
+        }
+    }
+
+    .ilx-count-state {
+        &--loading {
+            color: var(--ilx-on-surface-variant);
+        }
+
+        &--error {
+            color: var(--ilx-danger, var(--barcode-danger));
+        }
+
+        &--empty {
+            color: var(--ilx-on-surface-variant);
+        }
+    }
+
+    .ilx-count-line {
+        align-items: stretch;
+        flex-wrap: wrap;
+
+        .ilx-emp-v2-name {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        &.ilx-count-line--highlighted {
+            border: 2px solid #594679;
+            background: #f5f1fa;
+        }
+    }
+
+    .ilx-count-line__lot {
+        font-size: 0.85rem;
+        color: var(--ilx-on-surface-variant);
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .ilx-count-qty {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+
+        input[type="number"] {
+            min-height: 44px;
+            min-width: 88px;
+        }
+    }
+
+    .ilx-count-qty__field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 0.8rem;
+    }
+
+    .ilx-count-qty__label {
+        color: var(--ilx-on-surface-variant);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+
+    .ilx-count-qty__value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ilx-on-surface);
+    }
+
+    .ilx-count-diff-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        background: var(--ilx-surface-container-high);
+        color: var(--ilx-on-surface);
+
+        &.is-positive {
+            background: var(--ilx-success-bg);
+            color: var(--ilx-success-text, var(--ilx-success));
+        }
+
+        &.is-negative {
+            background: var(--ilx-warning-bg);
+            color: var(--ilx-warning-text, var(--ilx-warning));
+        }
+
+        &.is-empty {
+            color: var(--ilx-on-surface-variant);
+        }
+    }
+
+    form .form-control,
+    form .btn {
+        min-height: 44px;
+    }
+
+    .ilx-emp-v2-confirm-btn {
+        min-height: 48px;
+    }
+}
+
+.ilx-cycle-count-done {
+    background: #fbf9fe;
+    color: #25231f;
+
+    .ilx-cycle-count-done__header {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e8e3ed;
+        background: #fff;
+    }
+
+    .ilx-cycle-count-done__header-copy {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .ilx-emp-v2-header-title {
+        margin: 0;
+        color: #25231f;
+        font-size: 1rem;
+        font-weight: 750;
+        line-height: 1.2;
+    }
+
+    .ilx-cycle-count-done__count-name {
+        overflow: hidden;
+        color: #625d55;
+        font-size: 0.75rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ilx-cycle-count-done__status {
+        display: inline-flex;
+        min-height: 27px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 9px;
+        border: 1px solid #cce5d5;
+        border-radius: 999px;
+        background: #edf7f0;
+        color: #246b43;
+        font-size: 0.67rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
+
+    .ilx-cycle-count-done__main {
+        display: flex;
+        width: 100%;
+        max-width: 520px;
+        min-height: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        justify-content: center;
+        gap: 14px;
+        align-self: center;
+        padding: 20px 16px;
+    }
+
+    .ilx-cycle-count-done__summary {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        padding: 24px 18px 20px;
+        border: 1px solid #e8e3ed;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(42, 34, 55, 0.045);
+        text-align: center;
+    }
+
+    .ilx-cycle-count-done__mark {
+        display: inline-flex;
+        width: 58px;
+        height: 58px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+        border: 1px solid #cce5d5;
+        border-radius: 50%;
+        background: #edf7f0;
+        color: #246b43;
+        font-size: 1.4rem;
+    }
+
+    .ilx-cycle-count-done__eyebrow {
+        margin: 0 0 5px;
+        color: #594679;
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .ilx-cycle-count-done__summary h2 {
+        margin: 0;
+        color: #25231f;
+        font-size: 1.24rem;
+        font-weight: 750;
+        line-height: 1.25;
+    }
+
+    .ilx-cycle-count-done__location {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 10px 0 0;
+        color: #625d55;
+        font-size: 0.82rem;
+
+        .fa {
+            color: #594679;
+        }
+    }
+
+    .ilx-cycle-count-done__results {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .ilx-cycle-count-done__result {
+        display: flex;
+        min-width: 0;
+        min-height: 88px;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        padding: 14px;
+        border: 1px solid #e8e3ed;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(42, 34, 55, 0.035);
+
+        strong {
+            color: #25231f;
+            font-size: 1.45rem;
+            font-weight: 750;
+            line-height: 1.1;
+        }
+    }
+
+    .ilx-cycle-count-done__result-label {
+        color: #625d55;
+        font-size: 0.72rem;
+        font-weight: 650;
+    }
+
+    .ilx-cycle-count-done__footer {
+        flex: 0 0 auto;
+        padding: 10px 14px calc(env(safe-area-inset-bottom) + 10px);
+        border-top: 1px solid #e8e3ed;
+        background: #fff;
+        box-shadow: 0 -3px 10px rgba(42, 34, 55, 0.05);
+    }
+
+    .ilx-cycle-count-done__return {
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        background: #514078;
+        color: #fff;
+
+        &:hover,
+        &:focus-visible {
+            background: #402f67;
+            color: #fff;
+        }
+    }
+
+    .ilx-cycle-count-done__back:focus-visible,
+    .ilx-cycle-count-done__return:focus-visible {
+        outline: 3px solid #594679;
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 360px) {
+        .ilx-cycle-count-done__main {
+            padding-right: 12px;
+            padding-left: 12px;
+        }
+
+        .ilx-cycle-count-done__summary {
+            padding-right: 14px;
+            padding-left: 14px;
+        }
+
+        .ilx-cycle-count-done__result {
+            padding: 12px;
+        }
+    }
+}
+
+// Count-entry layout follows the Stitch Cycle Count screen while retaining the
+// shared scanner shell and its safe-area footer.
+.ilx-cycle-count-count {
+    background-color: #f7f5f1;
+    color: #25231f;
+
+    .ilx-count-header {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 12px 16px 10px;
+        border-bottom: 1px solid #e6e0d8;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(37, 32, 24, 0.04);
+    }
+
+    .ilx-count-header__copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .ilx-count-header__title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ilx-emp-v2-header-title {
+        font-size: 1.05rem;
+        line-height: 1.2;
+        color: #25231f;
+    }
+
+    .ilx-count-live {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border: 1px solid var(--ilx-success, #a7e4cb);
+        border-radius: 7px;
+        background: var(--ilx-success-bg, #e8f8f1);
+        color: var(--ilx-success-text, #147d5b);
+        font-size: 0.68rem;
+        font-weight: 750;
+        text-transform: uppercase;
+
+        .fa {
+            font-size: 0.48rem;
+        }
+    }
+
+    .ilx-count-header__name,
+    .ilx-count-header__location {
+        overflow: hidden;
+        color: #625d55;
+        font-size: 0.76rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ilx-count-header__location {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+
+        .fa {
+            color: #594679;
+        }
+    }
+
+    .ilx-count-main {
+        display: flex;
+        min-height: 0;
+        flex-direction: column;
+        gap: 12px;
+        padding: 4px 14px 16px;
+        background: #f7f5f1;
+        overscroll-behavior: contain;
+    }
+
+    .ilx-count-scan-card {
+        flex: 0 0 auto;
+        padding: 12px;
+        border: 1px solid #e3ded5;
+        border-radius: var(--ilx-radius-xl, 18px);
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(37, 32, 24, 0.06);
+    }
+
+    .ilx-count-scan-card__heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+
+        h2 {
+            margin: 0;
+            color: #25231f;
+            font-size: 0.88rem;
+            font-weight: 750;
+        }
+
+        p {
+            margin: 2px 0 0;
+            color: #625d55;
+            font-size: 0.72rem;
+            line-height: 1.3;
+        }
+    }
+
+    .ilx-count-scan-card__icon {
+        display: inline-flex;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 11px;
+        background: #f0edf5;
+        color: #594679;
+    }
+
+    .ilx-count-scan-form {
+        display: flex;
+        gap: 7px;
+        margin: 0;
+
+        .visually-hidden {
+            position: absolute;
+        }
+    }
+
+    .ilx-count-scan-input {
+        display: flex;
+        min-width: 0;
+        min-height: 44px;
+        flex: 1 1 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 0 11px;
+        border: 1px solid #ddd8cf;
+        border-radius: 12px;
+        background: #f8f6f2;
+
+        > .fa {
+            flex: 0 0 auto;
+            color: #594679;
+            font-size: 0.88rem;
+        }
+
+        input {
+            width: 100%;
+            min-width: 0;
+            min-height: 42px;
+            padding: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #25231f;
+            font-size: 0.82rem;
+
+            &::placeholder {
+                color: #706a61;
+                opacity: 1;
+            }
+        }
+
+        &:focus-within {
+            border-color: #594679;
+            box-shadow: 0 0 0 2px rgba(114, 89, 166, 0.14);
+        }
+    }
+
+    .ilx-count-add-btn {
+        display: inline-flex;
+        min-width: 76px;
+        min-height: 44px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 12px;
+        background: #514078;
+        color: #fff;
+        font-size: 0.82rem;
+        font-weight: 700;
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.48;
+        }
+    }
+
+    .ilx-count-main > .ilx-count-progress {
+        flex: 0 0 auto;
+        padding: 0 2px;
+    }
+
+    .ilx-count-progress__heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 5px;
+    }
+
+    .ilx-count-progress__label {
+        margin: 0;
+        color: #25231f;
+        font-size: 0.78rem;
+        font-weight: 650;
+    }
+
+    .ilx-count-progress__percent {
+        color: #594679;
+        font-size: 0.73rem;
+        font-weight: 700;
+    }
+
+    .ilx-count-progress__bar {
+        height: 5px;
+        border-radius: 999px;
+        background: #e8e3da;
+    }
+
+    .ilx-count-progress__fill {
+        border-radius: inherit;
+        background: #594679;
+        transition: width 160ms ease-out;
+    }
+
+    .ilx-count-feedback {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 11px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 650;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+
+        &--success {
+            border-color: var(--ilx-success, #b6ead6);
+            background: var(--ilx-success-bg, #e8f8f1);
+            color: var(--ilx-success-text, var(--ilx-success));
+        }
+
+        &--warning {
+            border-color: var(--ilx-warning, #f1d6a3);
+            background: var(--ilx-warning-bg, #fff7e6);
+            color: var(--ilx-warning-text, var(--ilx-warning));
+        }
+
+        &--error {
+            border-color: var(--ilx-danger, var(--barcode-danger, #d65b6a));
+            background: var(--ilx-danger-bg, #fff0f1);
+            color: var(--ilx-danger, var(--barcode-danger));
+        }
+    }
+
+    .ilx-count-list {
+        flex: 0 0 auto;
+        gap: 10px;
+        padding-bottom: 4px;
+    }
+
+    .ilx-count-state {
+        display: flex;
+        min-height: 88px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        padding: 18px;
+        border: 1px dashed #d8d2c8;
+        border-radius: 16px;
+        background: #fff;
+        font-size: 0.84rem;
+        text-align: center;
+
+        &--loading {
+            color: #625d55;
+        }
+
+        &--error {
+            border-color: var(--ilx-danger, var(--barcode-danger, #d65b6a));
+            color: var(--ilx-danger, var(--barcode-danger, #b42318));
+        }
+
+        &--empty {
+            color: #625d55;
+        }
+    }
+
+    .ilx-count-line {
+        display: block;
+        padding: 12px;
+        border: 1px solid #e3ded5;
+        border-inline-start: 3px solid #d8d2c8;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(37, 32, 24, 0.05);
+        cursor: default;
+        transition:
+            border-color 140ms ease-out,
+            box-shadow 140ms ease-out,
+            background-color 140ms ease-out;
+
+        &--match {
+            border-color: #e3ded5;
+            border-inline-start-color: #d8d2c8;
+        }
+
+        &--variance {
+            border-color: #e3ded5;
+            border-inline-start-color: #d8d2c8;
+        }
+
+        &.ilx-count-line--highlighted {
+            border-color: #594679;
+            border-inline-start-color: #594679;
+            box-shadow: 0 0 0 2px rgba(89, 70, 121, 0.14);
+            background: #f5f1fa;
+        }
+    }
+
+    .ilx-count-line__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .ilx-count-line__identity {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+    }
+
+    .ilx-count-line__name {
+        margin: 0;
+        color: #25231f;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .ilx-count-line__lot {
+        color: #625d55;
+        font-size: 0.73rem;
+        overflow-wrap: anywhere;
+    }
+
+    .ilx-count-tracking {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #625d55;
+        font-size: 0.64rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .ilx-count-difference {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 3px;
+    }
+
+    .ilx-count-difference__label {
+        color: #625d55;
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .ilx-count-qty {
+        display: grid;
+        grid-template-columns: minmax(70px, 0.75fr) minmax(0, 1.5fr);
+        align-items: end;
+        gap: 10px;
+    }
+
+    .ilx-count-qty__field {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .ilx-count-qty__label {
+        color: #625d55;
+        font-size: 0.64rem;
+        font-weight: 800;
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+    }
+
+    .ilx-count-qty__value {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px;
+        color: #25231f;
+        font-size: 0.91rem;
+        font-weight: 750;
+
+        small {
+            color: #625d55;
+            font-size: 0.69rem;
+            font-weight: 500;
+        }
+    }
+
+    .ilx-count-stepper {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 5px;
+        padding: 3px;
+        border: 1px solid #ddd8cf;
+        border-radius: 12px;
+        background: #f8f6f2;
+
+        input {
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            padding: 0 2px;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #25231f;
+            font-size: 0.88rem;
+            font-weight: 750;
+            text-align: center;
+
+            &::placeholder {
+                color: #706a61;
+                font-size: 0.72rem;
+                font-weight: 500;
+                opacity: 1;
+            }
+        }
+
+        &:focus-within {
+            border-color: #594679;
+            box-shadow: 0 0 0 2px rgba(114, 89, 166, 0.14);
+        }
+    }
+
+    .ilx-count-stepper__button {
+        display: inline-flex;
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e3ded5;
+        border-radius: 9px;
+        background: #fff;
+        color: #25231f;
+        font-size: 0.8rem;
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.38;
+        }
+
+        &:not(:disabled):active {
+            background: #f0edf5;
+            color: #594679;
+        }
+    }
+
+    .ilx-count-diff-chip {
+        display: inline-flex;
+        min-height: 23px;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #eeeae3;
+        color: #58544d;
+        font-size: 0.69rem;
+        font-weight: 800;
+        white-space: nowrap;
+
+        small {
+            font-size: 0.58rem;
+            font-weight: 650;
+        }
+
+        &.is-positive,
+        &.is-negative {
+            background: var(--ilx-danger-bg, #fff0f1);
+            color: var(--ilx-danger, var(--barcode-danger, #bd3449));
+        }
+
+        &.is-zero {
+            background: var(--ilx-success-bg, #e8f8f1);
+            color: var(--ilx-success-text, #147d5b);
+        }
+
+        &.is-empty {
+            color: var(--ilx-on-surface-variant, #706b78);
+        }
+    }
+
+    .ilx-count-quick {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 9px;
+        border-top: 1px solid #e5e0d8;
+    }
+
+    .ilx-count-quick__label {
+        flex: 0 0 auto;
+        color: #625d55;
+        font-size: 0.64rem;
+        font-weight: 650;
+    }
+
+    .ilx-count-quick__actions {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 5px;
+    }
+
+    .ilx-count-quick__button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border: 1px solid #ddd8cf;
+        border-radius: 9px;
+        background: #fff;
+        color: #302d28;
+        font-size: 0.65rem;
+        font-weight: 700;
+        white-space: nowrap;
+
+        &:disabled {
+            cursor: not-allowed;
+            border-color: #e1ddd5;
+            background: #f0ede7;
+            color: #716b62;
+            opacity: 1;
+        }
+
+        &--match {
+            border-color: #4d3679;
+            background: #4d3679;
+            color: #fff;
+
+            &:not(:disabled):hover {
+                border-color: #402d67;
+                background: #402d67;
+                color: #fff;
+            }
+
+            &:not(:disabled):active {
+                border-color: #362451;
+                background: #362451;
+                color: #fff;
+            }
+
+            &:disabled {
+                border-color: #ddd8e3;
+                background: #eeebf2;
+                color: #625b6d;
+            }
+        }
+    }
+
+    .ilx-count-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 0 auto;
+        padding: 10px 14px calc(env(safe-area-inset-bottom) + 10px);
+        border-top: 1px solid #e5e0d8;
+        background: #fff;
+        box-shadow: 0 -3px 10px rgba(37, 32, 24, 0.06);
+    }
+
+    .ilx-count-save {
+        display: flex;
+        flex: 0 0 60px;
+        min-height: 46px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        margin: 0;
+        padding: 4px 3px;
+        font-size: 0.6rem;
+        line-height: 1.1;
+        white-space: nowrap;
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+    }
+
+    .ilx-count-apply {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 46px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 16px;
+        background: #514078;
+        color: #fff;
+        text-align: left;
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+    }
+
+    .ilx-count-apply__label,
+    .ilx-count-apply__progress {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ilx-count-apply__label {
+        font-size: 0.9rem;
+        font-weight: 750;
+    }
+
+    .ilx-count-apply__progress {
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 0.72rem;
+        font-weight: 650;
+        white-space: nowrap;
+    }
+
+    .ilx-emp-v2-back-btn:focus-visible,
+    .ilx-count-add-btn:focus-visible,
+    .ilx-count-save:focus-visible,
+    .ilx-count-stepper__button:focus-visible,
+    .ilx-count-quick__button:focus-visible,
+    .ilx-count-apply:focus-visible {
+        outline: 3px solid #594679;
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 380px) {
+        .ilx-count-main {
+            padding-right: 10px;
+            padding-left: 10px;
+        }
+
+        .ilx-count-line {
+            padding: 10px;
+        }
+
+        .ilx-count-qty {
+            grid-template-columns: minmax(58px, 0.65fr) minmax(0, 1.5fr);
+            gap: 7px;
+        }
+
+        .ilx-count-stepper {
+            gap: 3px;
+            padding: 2px;
+        }
+
+        .ilx-count-quick {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .ilx-count-quick__actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+}
