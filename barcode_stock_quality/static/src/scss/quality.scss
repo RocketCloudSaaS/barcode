@@ -79,6 +79,35 @@
     }
 }
 
+.ilx-quality-answer {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ilx-outline-variant);
+    font-size: 0.9rem;
+
+    .ilx-quality-answer-ok {
+        color: var(--ilx-success);
+    }
+
+    .ilx-quality-answer-ko {
+        color: var(--ilx-error);
+    }
+
+    .ilx-quality-answer-name {
+        flex: 1;
+        color: var(--ilx-on-surface);
+    }
+
+    .ilx-quality-answer-value {
+        font-weight: 600;
+        color: var(--ilx-on-surface);
+        text-align: right;
+    }
+}
+
 .ilx-quality-choices {
     display: flex;
     flex-wrap: wrap;

@@ -73,7 +73,7 @@
                     <t t-esc="inspection.product_name" />
                 </div>
 
-                <!-- Questions (editable while the inspection can still change) -->
+                <!-- Questions (editable only while the inspection is ready) -->
                 <t t-if="isEditable(inspection)">
                     <div
                         t-foreach="inspection.lines"
@@ -126,6 +126,26 @@
                     >
                         Confirm inspection
                     </button>
+                </t>
+
+                <!-- Answers of a confirmed inspection, read-only -->
+                <t t-elif="canReset(inspection)">
+                    <div
+                        t-foreach="inspection.lines"
+                        t-as="line"
+                        t-key="line.id"
+                        class="ilx-quality-answer"
+                    >
+                        <i
+                            t-att-class="line.success ? 'fa fa-check-circle ilx-quality-answer-ok' : 'fa fa-times-circle ilx-quality-answer-ko'"
+                        />
+                        <span class="ilx-quality-answer-name">
+                            <t t-esc="line.name" />
+                        </span>
+                        <span class="ilx-quality-answer-value">
+                            <t t-esc="answerLabel(line)" />
+                        </span>
+                    </div>
                 </t>
 
                 <!-- Photo evidence: available once there is a failure to justify -->

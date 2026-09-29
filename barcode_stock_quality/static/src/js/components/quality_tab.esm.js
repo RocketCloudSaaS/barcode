@@ -64,8 +64,19 @@ export class QualityTab extends Component {
         return this.answersFor(inspection)[line.id]?.qualitative_value_id === valueId;
     }
 
+    // Only a ready inspection is answered; a confirmed one is shown read-only
+    // and reopened with "Back to draft" to correct it.
     isEditable(inspection) {
-        return inspection.state === "ready" || inspection.state === "waiting";
+        return inspection.state === "ready";
+    }
+
+    answerLabel(line) {
+        if (line.question_type === "qualitative") {
+            return line.qualitative_value_name;
+        }
+        return line.uom_name
+            ? `${line.quantitative_value} ${line.uom_name}`
+            : String(line.quantitative_value);
     }
 
     allAnswered(inspection) {
@@ -107,7 +118,7 @@ export class QualityTab extends Component {
     }
 
     canReset(inspection) {
-        return inspection.state === "success" || inspection.state === "failed";
+        return ["success", "waiting", "failed"].includes(inspection.state);
     }
 
     async reset(inspection) {

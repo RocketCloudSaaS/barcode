@@ -8,5 +8,5 @@
     **Quality** tab appears; answer each check and confirm.
 4.  When an inspection does not pass, tap *Attach photo evidence* to add a photo
     to it.
-5.  If an inspection was confirmed by mistake, tap *Back to draft* to reopen it
-    and answer it again.
+5.  A confirmed inspection shows its answers read-only. If it was confirmed by
+    mistake, tap *Back to draft* to reopen it and answer it again.

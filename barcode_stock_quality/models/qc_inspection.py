@@ -25,6 +25,9 @@ class QcInspection(models.Model):
                     "min_value": line.min_value,
                     "max_value": line.max_value,
                     "uom_name": line.test_uom_id.display_name or "",
+                    "qualitative_value_name": line.qualitative_value.name or "",
+                    "quantitative_value": line.quantitative_value,
+                    "success": line.success,
                     "possible_values": [
                         {"id": value.id, "name": value.name, "ok": value.ok}
                         for value in line.possible_ql_values
@@ -60,7 +63,7 @@ class QcInspection(models.Model):
         inspection = self.browse(inspection_id).exists()
         if not inspection:
             raise UserError(_("The inspection no longer exists."))
-        if inspection.state not in ("ready", "waiting"):
+        if inspection.state != "ready":
             raise UserError(_("This inspection cannot be edited in its current state."))
 
         answers_by_line = {answer["line_id"]: answer for answer in answers}
