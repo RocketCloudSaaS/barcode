@@ -106,6 +106,36 @@ export class QualityTab extends Component {
         }
     }
 
+    canReset(inspection) {
+        return inspection.state === "success" || inspection.state === "failed";
+    }
+
+    async reset(inspection) {
+        if (this.state.busyId) {
+            return;
+        }
+        this.state.busyId = inspection.inspection_id;
+        try {
+            const updated = await this.inventory.call(
+                "qc.inspection",
+                "action_barcode_scanner_reset",
+                [inspection.inspection_id]
+            );
+            delete this.state.answers[inspection.inspection_id];
+            this.replaceInspection(updated);
+            this.inventory.notify(
+                _t("Inspection %(name)s is back to draft.", {
+                    name: updated.inspection_name,
+                }),
+                {type: "info"}
+            );
+        } catch (error) {
+            this.notifyError(error, _t("Could not reset the inspection."));
+        } finally {
+            this.state.busyId = null;
+        }
+    }
+
     async onPhotoSelected(inspection, ev) {
         const file = ev.target.files && ev.target.files[0];
         ev.target.value = "";

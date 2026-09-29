@@ -61,9 +61,7 @@ class QcInspection(models.Model):
         if not inspection:
             raise UserError(_("The inspection no longer exists."))
         if inspection.state not in ("ready", "waiting"):
-            raise UserError(
-                _("This inspection cannot be edited in its current state.")
-            )
+            raise UserError(_("This inspection cannot be edited in its current state."))
 
         answers_by_line = {answer["line_id"]: answer for answer in answers}
         for line in inspection.inspection_lines:
@@ -77,6 +75,22 @@ class QcInspection(models.Model):
                 line.quantitative_value = answer.get("quantitative_value") or 0.0
 
         inspection.action_confirm()
+        return inspection._barcode_scanner_read()
+
+    @api.model
+    def action_barcode_scanner_reset(self, inspection_id):
+        """Put a confirmed inspection back to draft so it can be answered again.
+
+        Mirrors the back office (draft, then mark todo) in one step: a draft
+        inspection is not runnable from the scanner, so it is left ``ready``.
+        """
+        inspection = self.browse(inspection_id).exists()
+        if not inspection:
+            raise UserError(_("The inspection no longer exists."))
+        if inspection.state not in ("success", "waiting", "failed"):
+            raise UserError(_("Only a confirmed inspection can be reset."))
+        inspection.action_draft()
+        inspection.action_todo()
         return inspection._barcode_scanner_read()
 
     @api.model

@@ -65,10 +65,7 @@
                         <t t-else="">Pending</t>
                     </span>
                 </div>
-                <div
-                    class="ilx-quality-inspection-sub"
-                    t-if="inspection.lot_name"
-                >
+                <div class="ilx-quality-inspection-sub" t-if="inspection.lot_name">
                     <t t-esc="inspection.product_name" /> ·
                     Lot/Serial: <t t-esc="inspection.lot_name" />
                 </div>
@@ -87,10 +84,7 @@
                         <div class="ilx-quality-question-name">
                             <t t-esc="line.name" />
                         </div>
-                        <div
-                            class="ilx-quality-question-notes"
-                            t-if="line.notes"
-                        >
+                        <div class="ilx-quality-question-notes" t-if="line.notes">
                             <t t-esc="line.notes" />
                         </div>
                         <t t-if="line.question_type === 'qualitative'">
@@ -149,13 +143,20 @@
                             t-on-change="(ev) => this.onPhotoSelected(inspection, ev)"
                         />
                     </label>
-                    <span
-                        class="ilx-quality-photo-count"
-                        t-if="inspection.photo_count"
-                    >
+                    <span class="ilx-quality-photo-count" t-if="inspection.photo_count">
                         <t t-esc="inspection.photo_count" /> photo(s)
                     </span>
                 </div>
+
+                <!-- Undo a wrong confirmation: back to draft to answer again -->
+                <button
+                    t-if="canReset(inspection)"
+                    class="ilx-quality-reset"
+                    t-att-disabled="state.busyId === inspection.inspection_id"
+                    t-on-click="() => this.reset(inspection)"
+                >
+                    <i class="fa fa-undo me-1" /> Back to draft
+                </button>
             </div>
         </div>
     </t>

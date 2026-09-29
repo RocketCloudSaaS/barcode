@@ -174,3 +174,21 @@
     font-size: 0.82rem;
     color: var(--ilx-on-surface-variant);
 }
+
+.ilx-quality-reset {
+    width: 100%;
+    height: 44px;
+    margin-top: 14px;
+    border: 1px solid var(--ilx-outline-variant);
+    border-radius: 12px;
+    background: var(--ilx-surface-container-low);
+    color: var(--ilx-on-surface);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+    }
+}
