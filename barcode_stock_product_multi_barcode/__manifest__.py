@@ -5,7 +5,7 @@
     "summary": "Recognize alternate product barcodes in the warehouse app",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid"],
+    "maintainers": ["antoniodavid", "szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_stock",
