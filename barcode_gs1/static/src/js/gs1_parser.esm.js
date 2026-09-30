@@ -316,16 +316,17 @@ function canEndValue(rule) {
  * Where a variable-length value ends: at the FNC1 separator, or — when the
  * scanner sends none — heuristically at the next application identifier that
  * may end it. GS1 requires the separator unless the value is the last element,
- * so this is a best effort at reading a barcode that omits it.
+ * so this is a best effort at reading a barcode that omits it. `matchAt(index)`
+ * returns the rule match at a position, as `matchRule` does.
  */
-function findVariableEnd(barcode, start, maxLength, rules) {
+function findVariableEnd(barcode, start, maxLength, matchAt) {
     const separatorIndex = barcode.indexOf(GS1_SEPARATOR, start);
     if (separatorIndex !== -1 && separatorIndex - start <= maxLength) {
         return separatorIndex;
     }
     const maxIndex = Math.min(barcode.length, start + maxLength);
     for (let index = start + 1; index < maxIndex; index++) {
-        const match = matchRule(barcode, index, rules);
+        const match = matchAt(index);
         if (match && canEndValue(match.rule)) {
             return index;
         }
@@ -333,8 +334,20 @@ function findVariableEnd(barcode, start, maxLength, rules) {
     return maxIndex;
 }
 
-/** The first rule that matches at `index`, with the value it captures. */
-function matchRule(barcode, index, rules) {
+/**
+ * The first rule that matches at `index`, with the value it captures.
+ *
+ * Finding where a variable-length value ends looks ahead with this same
+ * function, so the answer for each position is kept in `cache` for the whole
+ * barcode: without it an alphanumeric run such as "10A10A…" is read again at
+ * every level of the look-ahead, and the time grows exponentially.
+ */
+function matchRule(barcode, index, rules, cache = new Map()) {
+    if (cache.has(index)) {
+        return cache.get(index);
+    }
+    const matchAt = (position) => matchRule(barcode, position, rules, cache);
+    let result = null;
     const rest = barcode.slice(index);
     for (const rule of rules) {
         const aiMatch = rule.aiRegex.exec(rest);
@@ -351,15 +364,17 @@ function matchRule(barcode, index, rules) {
             }
         } else {
             const maxLength = rule.maxLength || 20;
-            valueEnd = findVariableEnd(barcode, valueStart, maxLength, rules);
+            valueEnd = findVariableEnd(barcode, valueStart, maxLength, matchAt);
         }
         const value = barcode.slice(valueStart, valueEnd);
         if (!rule.fullRegex.test(ai + value)) {
             continue;
         }
-        return {rule, ai, value, end: valueEnd};
+        result = {rule, ai, value, end: valueEnd};
+        break;
     }
-    return null;
+    cache.set(index, result);
+    return result;
 }
 
 function parseParenthesizedGS1(barcode, rules) {
@@ -375,13 +390,14 @@ function parseParenthesizedGS1(barcode, rules) {
 
 function parseRawGS1(barcode, rules) {
     const tokens = [];
+    const cache = new Map();
     let index = 0;
     while (index < barcode.length) {
         if (barcode[index] === GS1_SEPARATOR) {
             index += 1;
             continue;
         }
-        const match = matchRule(barcode, index, rules);
+        const match = matchRule(barcode, index, rules, cache);
         if (!match) {
             break;
         }
