@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="barcode_stock_cycle_count.CycleCountListScreen">
+        <div class="ilx-kw-screen ilx-kw-cycle-count-list ilx-emp-v2-screen">
+            <header class="ilx-kw-header ilx-kw-header--elevated ilx-emp-v2-header">
+                <button
+                    type="button"
+                    class="ilx-kw-icon-btn ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button>
+                <div class="ilx-kw-header-left"><h1
+                        class="ilx-kw-header-title ilx-emp-v2-header-title"
+                    >Cycle Count</h1></div>
+                <div class="header-spacer" />
+            </header>
+            <main class="ilx-kw-main ilx-emp-v2-main">
+                <section class="ilx-kw-search-section">
+                    <div class="ilx-kw-search-bar"><i
+                            class="fa fa-search ilx-kw-search-icon"
+                        /><input
+                            name="search"
+                            type="text"
+                            class="ilx-kw-search-input"
+                            placeholder="Scan or search cycle counts..."
+                            t-model="state.search"
+                        /></div>
+                    <div class="ilx-kw-filter-tools" t-on-click.stop="() => {}">
+                        <div class="ilx-kw-filter-toolbar">
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn"
+                                t-att-class="{active: state.openMenu === 'filters', 'has-value': state.activeFilters.length}"
+                                t-on-click="() => this.toggleMenu('filters')"
+                            ><i class="fa fa-filter" /><span>Filters</span><span
+                                    t-if="state.activeFilters.length"
+                                    class="ilx-kw-tool-count"
+                                    t-esc="state.activeFilters.length"
+                                /><i class="fa fa-caret-down" /></button>
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn"
+                                t-att-class="{active: state.openMenu === 'group', 'has-value': state.groupByLevels.length}"
+                                t-on-click="() => this.toggleMenu('group')"
+                            ><i class="fa fa-layer-group" /><span>Group by</span><i
+                                    class="fa fa-caret-down"
+                                /></button>
+                            <div class="ilx-kw-tool-spacer" />
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn ilx-kw-star-btn"
+                                t-att-class="{active: isCurrentFilterDefault}"
+                                t-on-click="toggleDefaultFilter"
+                                title="Save default filter"
+                            ><i
+                                    t-att-class="isCurrentFilterDefault ? 'fa fa-star' : 'fa fa-star-o'"
+                                /></button>
+                            <button
+                                type="button"
+                                class="ilx-kw-tool-btn"
+                                t-if="state.search || state.activeFilters.length"
+                                t-on-click="clearFilters"
+                            ><i class="fa fa-times" /><span>Clear</span></button>
+                            <div
+                                class="ilx-kw-menu"
+                                t-if="state.openMenu === 'filters'"
+                            >
+                                <div class="ilx-kw-menu-section"><div
+                                        class="ilx-kw-menu-title"
+                                    >State</div>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-att-class="{selected: state.filterValues.state === 'draft'}"
+                                        t-on-click="() => this.setFilterValue('state', 'draft')"
+                                    ><i class="fa fa-circle-o" /> Planned</button>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-att-class="{selected: state.filterValues.state === 'open'}"
+                                        t-on-click="() => this.setFilterValue('state', 'open')"
+                                    ><i class="fa fa-circle-o" /> Execution</button>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-on-click="() => this.setFilterValue('state', 'all')"
+                                    ><i class="fa fa-circle-o" /> All</button>
+                                </div>
+                                <div class="ilx-kw-menu-section"><div
+                                        class="ilx-kw-menu-title"
+                                    >Assignment</div>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-on-click="() => this.setAssignment('mine')"
+                                    ><i class="fa fa-user" /> Mine</button>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-on-click="() => this.setAssignment('unassigned')"
+                                    ><i class="fa fa-user-o" /> Unassigned</button>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-on-click="() => this.setAssignment('all')"
+                                    ><i class="fa fa-users" /> All</button>
+                                </div>
+                                <div class="ilx-kw-menu-section"><div
+                                        class="ilx-kw-menu-title"
+                                    >Deadline</div>
+                                    <t
+                                        t-foreach="[['overdue', 'Overdue'], ['today', 'Today'], ['week', 'This week']]"
+                                        t-as="option"
+                                        t-key="option[0]"
+                                    ><button
+                                            type="button"
+                                            class="ilx-kw-menu-option"
+                                            t-on-click="() => this.setFilterValue('deadline', option[0])"
+                                        ><i class="fa fa-calendar" /> <t
+                                                t-esc="option[1]"
+                                            /></button></t>
+                                    <div class="ilx-kw-menu-custom-date"><input
+                                            type="date"
+                                            class="ilx-kw-filter-date-input"
+                                            t-on-change="(ev) => this.setCustomDate(ev.target.value)"
+                                        /></div>
+                                    <button
+                                        type="button"
+                                        class="ilx-kw-menu-option"
+                                        t-on-click="() => this.setFilterValue('deadline', null)"
+                                    ><i class="fa fa-circle-o" /> All</button>
+                                </div>
+                            </div>
+                            <div
+                                class="ilx-kw-menu"
+                                t-if="state.openMenu === 'group'"
+                            ><div class="ilx-kw-menu-section"><div
+                                        class="ilx-kw-menu-title"
+                                    >Group by</div><t
+                                        t-foreach="groupOrder"
+                                        t-as="group"
+                                        t-key="group"
+                                    ><button
+                                            type="button"
+                                            class="ilx-kw-menu-option"
+                                            t-att-class="{selected: state.groupByLevels.includes(group)}"
+                                            t-on-click="() => this.toggleGroupLevel(group)"
+                                        ><i
+                                                class="fa fa-check-square-o"
+                                                t-if="state.groupByLevels.includes(group)"
+                                            /><i class="fa fa-square-o" t-else="" /> <t
+                                                t-esc="groupLabels[group]"
+                                            /></button></t></div></div>
+                        </div>
+                        <div
+                            class="ilx-kw-facets"
+                            t-if="state.activeFilters.length || state.groupByLevels.length"
+                        ><t
+                                t-foreach="state.activeFilters"
+                                t-as="filter"
+                                t-key="filter"
+                            ><span class="ilx-kw-facet"><span><t
+                                            t-esc="filterLabels[filter]"
+                                        />: <t
+                                            t-esc="state.filterValues[filter]"
+                                        /></span><button
+                                        type="button"
+                                        class="ilx-kw-facet-remove"
+                                        t-on-click="() => this.removeFilter(filter)"
+                                    ><i class="fa fa-times" /></button></span></t><t
+                                t-foreach="state.groupByLevels"
+                                t-as="group"
+                                t-key="group"
+                            ><span class="ilx-kw-facet"><span><i
+                                            class="fa fa-layer-group"
+                                        /> <t
+                                            t-esc="groupLabels[group]"
+                                        /></span><button
+                                        type="button"
+                                        class="ilx-kw-facet-remove"
+                                        t-on-click="() => this.removeGroup(group)"
+                                    ><i class="fa fa-times" /></button></span></t></div>
+                    </div>
+                </section>
+                <section class="ilx-queue-shell">
+                    <div class="ilx-queue-header"><div
+                            class="ilx-queue-header__copy"
+                        ><div
+                                class="ilx-queue-header__eyebrow"
+                            >CYCLE COUNT QUEUE</div><h2
+                                class="ilx-queue-header__title"
+                            >Cycle Counts</h2><div class="ilx-queue-header__subtitle"><t
+                                    t-esc="headerSubtitle"
+                                /></div></div></div>
+                    <div class="ilx-queue-summary-grid"><t
+                            t-foreach="summaryCards"
+                            t-as="card"
+                            t-key="card.key"
+                        ><div
+                                t-att-class="'ilx-summary-card ilx-summary-card--' + card.tone"
+                            ><span t-esc="card.label" /><strong
+                                    t-esc="card.value"
+                                /></div></t></div>
+                    <div class="ilx-queue-filters"><span
+                            class="ilx-filter-chip"
+                            t-if="state.groupByLevels.length"
+                        ><i class="fa fa-layer-group" /> Grouped</span></div>
+                    <div class="ilx-queue-groups">
+                        <div
+                            t-if="state.loading"
+                            class="ilx-queue-empty-state ilx-queue-loading"
+                        ><div class="ilx-empty-text">Loading cycle counts...</div></div>
+                        <div
+                            t-elif="state.error"
+                            class="ilx-queue-empty-state ilx-queue-error"
+                        ><div
+                                class="ilx-empty-text"
+                            >Unable to load cycle counts.</div><div
+                                class="ilx-empty-text-sm"
+                            >Try again from the list.</div></div>
+                        <div
+                            t-elif="!state.counts.length"
+                            class="ilx-queue-empty-state"
+                        ><div class="ilx-empty-text">No cycle counts found.</div><div
+                                class="ilx-empty-text-sm"
+                            >There are no planned counts in this queue.</div></div>
+                        <div
+                            t-elif="!filteredCounts.length"
+                            class="ilx-queue-empty-state"
+                        ><div
+                                class="ilx-empty-text"
+                            >No matching cycle counts.</div><button
+                                type="button"
+                                class="btn btn-link"
+                                t-on-click="clearFilters"
+                            >Clear all</button></div>
+                        <t t-else="">
+                            <t
+                                t-foreach="sortedGroupKeys(state.groupedCounts)"
+                                t-as="groupKey"
+                                t-key="groupKey"
+                            ><div class="ilx-queue-group"><div
+                                        t-if="groupKey !== 'all'"
+                                        class="ilx-queue-group__header"
+                                        t-on-click="() => this.toggleGroup('root-' + groupKey)"
+                                    ><div class="ilx-queue-group__copy"><span
+                                                class="ilx-queue-group__title"
+                                                t-esc="groupKey"
+                                            /><span
+                                                class="ilx-queue-group__summary"
+                                                t-esc="countGroupEntries(state.groupedCounts[groupKey])"
+                                            /></div><i
+                                            class="ilx-queue-group__chevron fa"
+                                            t-att-class="state.collapsedGroups['root-' + groupKey] ? 'fa-chevron-down' : 'fa-chevron-up'"
+                                        /></div><div
+                                        t-if="!state.collapsedGroups['root-' + groupKey]"
+                                        class="ilx-queue-group__body"
+                                    ><t
+                                            t-if="Array.isArray(state.groupedCounts[groupKey])"
+                                        ><t
+                                                t-foreach="state.groupedCounts[groupKey]"
+                                                t-as="count"
+                                                t-key="count.id"
+                                            ><article
+                                                    class="ilx-queue-card ilx-emp-v2-card"
+                                                    t-on-click="() => this.selectCount(count)"
+                                                ><div class="ilx-queue-card__top"><div
+                                                        ><span
+                                                                class="ilx-queue-card__code ilx-emp-v2-name"
+                                                                t-esc="count.name"
+                                                            /><h3
+                                                                class="ilx-queue-card__headline ilx-emp-v2-info"
+                                                                t-esc="count.location_name"
+                                                            /></div><div
+                                                            class="ilx-queue-card__status"
+                                                        ><span
+                                                                t-att-class="getStateBadgeClass(count)"
+                                                                t-esc="getStateLabel(count)"
+                                                            /><i
+                                                                class="ilx-queue-card__arrow fa fa-chevron-right"
+                                                            /></div></div><div
+                                                        class="ilx-queue-card__meta-row"
+                                                    ><span
+                                                            class="ilx-queue-meta-pill ilx-emp-v2-role"
+                                                            t-esc="getCountSubtitle(count)"
+                                                        /><span
+                                                            t-att-class="'ilx-queue-meta-pill ' + getDeadlineMetaClass(count)"
+                                                            t-esc="getDeadlineLabel(count)"
+                                                        /></div></article></t></t><t
+                                            t-else=""
+                                        ><t
+                                                t-foreach="sortedGroupKeys(state.groupedCounts[groupKey])"
+                                                t-as="childKey"
+                                                t-key="childKey"
+                                            ><div class="ilx-queue-group"><div
+                                                        class="ilx-queue-group__header"
+                                                        t-on-click="() => this.toggleGroup('root-' + groupKey + '/child-' + childKey)"
+                                                    ><div
+                                                            class="ilx-queue-group__copy"
+                                                        ><span
+                                                                class="ilx-queue-group__title"
+                                                                t-esc="childKey"
+                                                            /><span
+                                                                class="ilx-queue-group__summary"
+                                                                t-esc="countGroupEntries(state.groupedCounts[groupKey][childKey])"
+                                                            /></div><i
+                                                            class="ilx-queue-group__chevron fa fa-chevron-down"
+                                                        /></div><div
+                                                        class="ilx-queue-group__body"
+                                                    ><t
+                                                            t-foreach="state.groupedCounts[groupKey][childKey]"
+                                                            t-as="count"
+                                                            t-key="count.id"
+                                                        ><article
+                                                                class="ilx-queue-card ilx-emp-v2-card"
+                                                                t-on-click="() => this.selectCount(count)"
+                                                            ><div
+                                                                    class="ilx-queue-card__top"
+                                                                ><div><span
+                                                                            class="ilx-queue-card__code ilx-emp-v2-name"
+                                                                            t-esc="count.name"
+                                                                        /><h3
+                                                                            class="ilx-queue-card__headline ilx-emp-v2-info"
+                                                                            t-esc="count.location_name"
+                                                                        /></div><div
+                                                                        class="ilx-queue-card__status"
+                                                                    ><span
+                                                                            t-att-class="getStateBadgeClass(count)"
+                                                                            t-esc="getStateLabel(count)"
+                                                                        /><i
+                                                                            class="ilx-queue-card__arrow fa fa-chevron-right"
+                                                                        /></div></div><div
+                                                                    class="ilx-queue-card__meta-row"
+                                                                ><span
+                                                                        class="ilx-queue-meta-pill ilx-emp-v2-role"
+                                                                        t-esc="getCountSubtitle(count)"
+                                                                    /><span
+                                                                        t-att-class="'ilx-queue-meta-pill ' + getDeadlineMetaClass(count)"
+                                                                        t-esc="getDeadlineLabel(count)"
+                                                                    /></div></article></t></div></div></t></t></div></div></t>
+                        </t>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountLocationScreen">
+        <div class="ilx-emp-v2-screen"><header class="ilx-emp-v2-header"><button
+                    class="ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button><h1
+                    class="ilx-emp-v2-header-title"
+                >Confirm Cycle Count</h1></header><main class="ilx-emp-v2-main"><div
+                    class="ilx-emp-v2-card"
+                ><div class="ilx-emp-v2-info"><span class="ilx-emp-v2-name"><t
+                                t-esc="state.count?.name"
+                            /></span><span class="ilx-emp-v2-role">Expected location: <t
+                                t-esc="state.count?.location_name"
+                            /></span></div></div><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-if="!state.confirmed"
+                    t-on-click="confirmStart"
+                >Confirm and start</button><div t-else="" class="ilx-emp-v2-card"><div
+                        class="ilx-emp-v2-info"
+                    ><span
+                            class="ilx-emp-v2-name"
+                        >Scan the expected location</span><span
+                            class="ilx-emp-v2-role"
+                        ><t
+                                t-esc="state.count?.location_name"
+                            /></span></div></div><button
+                    class="btn btn-link"
+                    t-if="state.confirmed"
+                    t-on-click="skipLocation"
+                >Continue without scan</button></main></div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountCountScreen">
+        <div class="ilx-emp-v2-screen"><header class="ilx-emp-v2-header"><button
+                    class="ilx-emp-v2-back-btn"
+                    t-on-click="goBack"
+                ><i class="fa fa-arrow-left" /></button><h1
+                    class="ilx-emp-v2-header-title"
+                >Cycle Count</h1></header><main class="ilx-emp-v2-main"><h2
+                    class="ilx-emp-v2-section-title"
+                >COUNT — SCAN OR TYPE THE COUNTED QTY</h2><div
+                    class="ilx-emp-v2-list"
+                ><t t-if="state.loading"><div
+                            class="text-center p-4"
+                        >Loading count lines...</div></t><t
+                        t-foreach="state.lines"
+                        t-as="line"
+                        t-key="line.quant_id"
+                    ><div class="ilx-emp-v2-card"><div class="ilx-emp-v2-info"><span
+                                    class="ilx-emp-v2-name"
+                                ><t t-esc="line.product_name" /></span><span
+                                    class="ilx-emp-v2-role"
+                                ><t t-if="line.lot_name"><t
+                                            t-esc="line.lot_name"
+                                        /> · </t>On hand: <t
+                                        t-esc="line.theoretical_qty"
+                                    /> <t t-esc="line.uom" /></span><t
+                                    t-if="line.tracking !== 'none'"
+                                ><span t-esc="line.lot_name" /></t></div><div
+                                class="ilx-emp-v2-status"
+                            ><input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    t-att-value="line.counted"
+                                    t-on-input="(ev) => this.setCounted(line, ev.target.value)"
+                                /><t t-if="difference(line) !== null"><span><t
+                                            t-if="difference(line) > 0"
+                                        >+</t><t
+                                            t-esc="difference(line)"
+                                        /></span></t></div></div></t><div
+                        t-if="!state.loading and !state.lines.length"
+                        class="text-center p-4"
+                    >No stock in this location.</div></div></main><footer
+                class="ilx-emp-v2-footer"
+            ><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-on-click="apply"
+                    t-att-disabled="state.applying"
+                >Apply count</button></footer></div>
+    </t>
+    <t t-name="barcode_stock_cycle_count.CycleCountDoneScreen">
+        <div class="ilx-emp-v2-screen"><main class="ilx-emp-v2-main text-center"><h1
+                    class="ilx-emp-v2-header-title"
+                >Cycle Count complete</h1><p><t
+                        t-esc="props.params.cycleCount?.name"
+                    /></p><p><t t-esc="props.params.cycleCount?.location_name" /></p><p
+                >Applied lines: <t t-esc="props.params.appliedCount" /></p><p
+                >Accuracy: <t t-esc="props.params.accuracy" /></p><button
+                    class="ilx-emp-v2-confirm-btn"
+                    t-on-click="backToList"
+                >Return to cycle counts</button></main></div>
+    </t>
+</templates>
