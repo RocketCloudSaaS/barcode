@@ -9,7 +9,12 @@ class BarcodeNomenclature(models.Model):
 
     @api.model
     def parse_barcode_scanner_barcode(self, barcode):
-        nomenclature = self.env.ref("barcodes.default_barcode_nomenclature")
+        # A company may run its own nomenclature (a custom one, or the GS1
+        # one); reading it the way the core does keeps the scanner and the
+        # back office decoding the same barcode alike.
+        nomenclature = self.env.company.nomenclature_id or self.env.ref(
+            "barcodes.default_barcode_nomenclature"
+        )
         parsed = nomenclature.parse_barcode(barcode)
         return {
             "type": "ean",

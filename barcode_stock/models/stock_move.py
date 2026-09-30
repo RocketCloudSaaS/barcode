@@ -49,25 +49,3 @@ class StockMove(models.Model):
             move.qty_done_total = done
             move.qty_remaining = move.product_uom_qty - done
             move.is_fully_picked = move.qty_remaining <= 0
-
-    def _upsert_move_line(self, vals):
-        self.ensure_one()
-        StockMoveLine = self.env["stock.move.line"]
-        domain = [("move_id", "=", self.id)]
-        identifying_fields = [
-            "product_id",
-            "lot_id",
-            "package_id",
-            "result_package_id",
-            "location_id",
-            "location_dest_id",
-        ]
-        for field in identifying_fields:
-            if field in vals:
-                domain.append((field, "=", vals[field]))
-        move_line = StockMoveLine.search(domain, limit=1, order="id desc")
-        if move_line:
-            move_line.write(vals)
-            return move_line
-        vals.setdefault("move_id", self.id)
-        return StockMoveLine.create(vals)

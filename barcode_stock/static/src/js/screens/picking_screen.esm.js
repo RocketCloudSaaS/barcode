@@ -64,6 +64,13 @@ export class PickingScreen extends Component {
                 // A move confirmed in the wizard comes back as the move
                 // to focus, so the reload below lands on its tab.
                 this.state.highlightedMoveId = this.focusMoveId;
+                // Coming back from another screen (the responsible picker,
+                // say) should land on the tab it was opened from, not on the
+                // default one.
+                const returnedTab = this.props.params?.activeTab;
+                if (returnedTab) {
+                    this.state.activeTab = returnedTab;
+                }
                 await this.loadData({force: true});
                 if (responsible && responsible.id) {
                     this.state.activeTab = "info";
@@ -286,6 +293,7 @@ export class PickingScreen extends Component {
             returnParams: {
                 pickingId: this.pickingId,
                 listParams: this.listParams,
+                activeTab: this.state.activeTab,
             },
         });
     }
