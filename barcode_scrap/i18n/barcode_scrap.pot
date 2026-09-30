@@ -30,6 +30,12 @@ msgstr ""
 #. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "Destination:"
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
 msgid "IN THIS LOCATION"
 msgstr ""
 
@@ -86,6 +92,12 @@ msgstr ""
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
 msgid "No products found."
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "No scrap location is configured for this company."
 msgstr ""
 
 #. module: barcode_scrap
@@ -252,6 +264,12 @@ msgstr ""
 #. odoo-python
 #: code:addons/barcode_scrap/models/stock_scrap.py:0
 msgid "The selected location is no longer valid."
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-python
+#: code:addons/barcode_scrap/models/stock_scrap.py:0
+msgid "The selected scrap location is not valid."
 msgstr ""
 
 #. module: barcode_scrap

@@ -192,3 +192,82 @@ class TestBarcodeScrap(TransactionCase):
         )
         self.assertTrue(result["done"])
         self.assertEqual(self._qty(self.serial_product, self.serial), 0)
+
+    def test_destination_default_and_choices(self):
+        data = self.Scrap.action_barcode_scrap_location_stock(self.location.id)
+        default = self.env["stock.location"].browse(data["scrap_location_id"])
+        self.assertTrue(default.scrap_location)
+        choices = self.env["stock.location"].browse(
+            [loc["id"] for loc in data["scrap_locations"]]
+        )
+        self.assertIn(default, choices)
+        self.assertTrue(all(choices.mapped("scrap_location")))
+
+        result = self.Scrap.action_barcode_scrap(
+            self.location.id, [{"product_id": self.product.id, "qty": 1}]
+        )
+        scrap = self.Scrap.search([("name", "in", result["names"])])
+        self.assertEqual(scrap.scrap_location_id, default)
+
+    def test_destination_chosen(self):
+        other = self.env["stock.location"].create(
+            {
+                "name": "Barcode Scrap Bin",
+                "usage": "inventory",
+                "scrap_location": True,
+                "company_id": self.company.id,
+            }
+        )
+        data = self.Scrap.action_barcode_scrap_location_stock(self.location.id)
+        self.assertIn(other.id, [loc["id"] for loc in data["scrap_locations"]])
+        result = self.Scrap.action_barcode_scrap(
+            self.location.id,
+            [{"product_id": self.product.id, "qty": 1}],
+            scrap_location_id=other.id,
+        )
+        scrap = self.Scrap.search([("name", "in", result["names"])])
+        self.assertEqual(scrap.scrap_location_id, other)
+
+    def test_destination_must_be_a_scrap_location(self):
+        with self.assertRaises(UserError):
+            self.Scrap.action_barcode_scrap(
+                self.location.id,
+                [{"product_id": self.product.id, "qty": 1}],
+                scrap_location_id=self.location.id,
+            )
+
+    def test_destination_filter_matches_back_office(self):
+        # Offered: the company's scrap locations and the shared ones; never
+        # another company's nor a location not flagged as scrap -- the Scrap
+        # Location field's domain plus the company check Odoo adds to it.
+        Location = self.env["stock.location"]
+        shared = Location.create(
+            {
+                "name": "Barcode Shared Scrap",
+                "usage": "inventory",
+                "scrap_location": True,
+            }
+        )
+        not_scrap = Location.create(
+            {
+                "name": "Barcode Not Scrap",
+                "usage": "inventory",
+                "company_id": self.company.id,
+            }
+        )
+        other_company = self.env["res.company"].create({"name": "Barcode Scrap Co"})
+        other = Location.search(
+            [("scrap_location", "=", True), ("company_id", "=", other_company.id)]
+        )
+        self.assertTrue(other)
+        data = self.Scrap.action_barcode_scrap_location_stock(self.location.id)
+        offered = {loc["id"] for loc in data["scrap_locations"]}
+        self.assertIn(shared.id, offered)
+        self.assertNotIn(not_scrap.id, offered)
+        self.assertFalse(offered & set(other.ids))
+        with self.assertRaises(UserError):
+            self.Scrap.action_barcode_scrap(
+                self.location.id,
+                [{"product_id": self.product.id, "qty": 1}],
+                scrap_location_id=other[:1].id,
+            )

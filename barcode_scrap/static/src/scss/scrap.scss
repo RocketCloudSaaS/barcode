@@ -24,3 +24,40 @@
         border-color: var(--ilx-primary);
     }
 }
+
+// Destination row: where the scrapped goods go.
+.ilx-scrap-destination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--ilx-surface-container-low);
+    color: var(--ilx-on-surface);
+    font-size: 0.9rem;
+
+    .ilx-scrap-destination-label {
+        color: var(--ilx-on-surface-variant);
+    }
+
+    .ilx-scrap-destination-name {
+        font-weight: 600;
+    }
+
+    .ilx-scrap-destination-select {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--ilx-outline-variant);
+        background: var(--ilx-surface-container-lowest);
+        color: var(--ilx-on-surface);
+        font-weight: 600;
+    }
+
+    &.ilx-scrap-destination-missing {
+        background: var(--ilx-danger-bg);
+        color: var(--ilx-error);
+    }
+}

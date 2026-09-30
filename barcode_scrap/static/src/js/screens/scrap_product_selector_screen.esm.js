@@ -82,6 +82,7 @@ export class ScrapProductSelectorScreen extends Component {
             locationName: params.locationName,
             lines: params.lines || [],
             reasonIds: params.reasonIds || [],
+            scrapLocationId: params.scrapLocationId || null,
         };
     }
 

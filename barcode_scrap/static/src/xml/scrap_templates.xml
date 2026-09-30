@@ -80,6 +80,32 @@
             </header>
 
             <main class="ilx-emp-v2-main">
+                <!-- Where the goods go: a scrap location, preselected like the
+                     back office does and changeable among the scrap ones. -->
+                <div t-if="state.scrapLocations.length" class="ilx-scrap-destination">
+                    <i class="fa fa-trash-o" />
+                    <span class="ilx-scrap-destination-label">Destination:</span>
+                    <select
+                        class="ilx-scrap-destination-select"
+                        t-on-change="(ev) => this.setScrapLocation(ev.target.value)"
+                    >
+                        <t t-foreach="state.scrapLocations" t-as="loc" t-key="loc.id">
+                            <option
+                                t-att-value="loc.id"
+                                t-att-selected="loc.id === state.scrapLocationId"
+                                t-esc="loc.name"
+                            />
+                        </t>
+                    </select>
+                </div>
+                <div
+                    t-elif="!state.loading"
+                    class="ilx-scrap-destination ilx-scrap-destination-missing"
+                >
+                    <i class="fa fa-exclamation-triangle" />
+                    <span>No scrap location is configured for this company.</span>
+                </div>
+
                 <!-- Tap to add a product by hand. -->
                 <button
                     class="ilx-emp-v2-search-box"

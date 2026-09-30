@@ -34,6 +34,8 @@ export class ScrapScreen extends Component {
             stock: [],
             reasons: [],
             reasonIds: [],
+            scrapLocationId: null,
+            scrapLocations: [],
             loading: true,
             scrapping: false,
         });
@@ -49,6 +51,7 @@ export class ScrapScreen extends Component {
             this.state.locationId = params.locationId || null;
             this.state.locationName = params.locationName || "";
             this.state.reasonIds = [...(params.reasonIds || [])];
+            this.state.scrapLocationId = params.scrapLocationId || null;
             if (Array.isArray(params.lines)) {
                 // Coming back from the product selector: restore the lines.
                 this.state.lines = params.lines.map((l) => ({...l}));
@@ -75,6 +78,19 @@ export class ScrapScreen extends Component {
             [this.state.locationId]
         );
         this.state.stock = data.stock || [];
+        this.state.scrapLocations = data.scrap_locations || [];
+        // Keep the destination the operator chose; otherwise take the one the
+        // back office preselects for this company.
+        const known = this.state.scrapLocations.some(
+            (loc) => loc.id === this.state.scrapLocationId
+        );
+        if (!known) {
+            this.state.scrapLocationId = data.scrap_location_id || null;
+        }
+    }
+
+    setScrapLocation(value) {
+        this.state.scrapLocationId = parseInt(value, 10) || null;
     }
 
     async loadReasons() {
@@ -126,6 +142,7 @@ export class ScrapScreen extends Component {
             locationName: this.state.locationName,
             lines: this.state.lines.map((l) => ({...l})),
             reasonIds: [...this.state.reasonIds],
+            scrapLocationId: this.state.scrapLocationId,
             // Offer first what the location holds: that is what gets scrapped.
             stockProductIds: [...new Set(this.state.stock.map((s) => s.product_id))],
         });
@@ -320,7 +337,7 @@ export class ScrapScreen extends Component {
                     })),
                     this.state.reasonIds,
                 ],
-                {force}
+                {force, scrap_location_id: this.state.scrapLocationId || false}
             );
             if (!result.done) {
                 this.state.scrapping = false;

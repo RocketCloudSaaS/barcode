@@ -31,6 +31,12 @@ msgstr "Elija el lote/número de serie"
 #. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "Destination:"
+msgstr "Destino:"
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
 msgid "IN THIS LOCATION"
 msgstr "EN ESTA UBICACIÓN"
 
@@ -88,6 +94,12 @@ msgstr "Ningún producto coincide con «%(code)s»."
 #: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
 msgid "No products found."
 msgstr "No se han encontrado productos."
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "No scrap location is configured for this company."
+msgstr "No hay ninguna ubicación de desecho configurada para esta compañía."
 
 #. module: barcode_scrap
 #. odoo-javascript
@@ -258,6 +270,12 @@ msgstr "La cantidad a desechar de %(name)s debe ser positiva."
 #: code:addons/barcode_scrap/models/stock_scrap.py:0
 msgid "The selected location is no longer valid."
 msgstr "La ubicación seleccionada ya no es válida."
+
+#. module: barcode_scrap
+#. odoo-python
+#: code:addons/barcode_scrap/models/stock_scrap.py:0
+msgid "The selected scrap location is not valid."
+msgstr "La ubicación de desecho seleccionada no es válida."
 
 #. module: barcode_scrap
 #. odoo-python

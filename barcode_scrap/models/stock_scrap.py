@@ -17,6 +17,19 @@ class StockScrap(models.Model):
         return location
 
     @api.model
+    def _barcode_scrap_destinations(self, company):
+        """The locations a scrap of ``company`` may send its goods to.
+
+        Exactly what the back office's Scrap Location field offers: its domain
+        (locations flagged as scrap locations) plus the company check Odoo adds
+        to it -- the company's own locations and the shared ones.
+        """
+        Location = self.env["stock.location"]
+        return Location.search(
+            [("scrap_location", "=", True)] + Location._check_company_domain(company)
+        )
+
+    @api.model
     def action_barcode_scrap_location_stock(self, location_id):
         """Return what a location holds, per product and lot.
 
@@ -28,9 +41,19 @@ class StockScrap(models.Model):
         quants = self.env["stock.quant"].search(
             [("location_id", "=", location.id), ("quantity", ">", 0)]
         )
+        company = location.company_id or self.env.company
+        # The destination the back office would preselect for this company.
+        default_scrap_location = self.new(
+            {"company_id": company.id, "location_id": location.id}
+        ).scrap_location_id
+        scrap_locations = self._barcode_scrap_destinations(company)
         return {
             "location_id": location.id,
             "location_name": location.display_name,
+            "scrap_location_id": default_scrap_location.id or False,
+            "scrap_locations": [
+                {"id": loc.id, "name": loc.display_name} for loc in scrap_locations
+            ],
             "stock": [
                 {
                     "product_id": quant.product_id.id,
@@ -145,7 +168,12 @@ class StockScrap(models.Model):
 
     @api.model
     def action_barcode_scrap(
-        self, location_id, lines, reason_tag_ids=None, force=False
+        self,
+        location_id,
+        lines,
+        reason_tag_ids=None,
+        force=False,
+        scrap_location_id=None,
     ):
         """Scrap the scanned lines from one location and validate them at once.
 
@@ -157,6 +185,10 @@ class StockScrap(models.Model):
         scanner can ask the operator to confirm. That is the choice the back
         office offers through its insufficient-quantity wizard, and confirming
         does what that wizard does -- the scrap is done regardless.
+
+        ``scrap_location_id`` is where the goods go; it must be a scrap location
+        of the company. Left empty, the scrap gets the company's default one, as
+        in the back office.
         """
         location = self._barcode_scrap_location(location_id)
         prepared = self._barcode_scrap_prepare_lines(lines, location)
@@ -164,6 +196,12 @@ class StockScrap(models.Model):
             self.env["stock.scrap.reason.tag"].browse(reason_tag_ids or []).exists()
         )
         company = location.company_id or self.env.company
+        destination = {}
+        if scrap_location_id:
+            scrap_location = self.env["stock.location"].browse(scrap_location_id)
+            if scrap_location not in self._barcode_scrap_destinations(company):
+                raise UserError(_("The selected scrap location is not valid."))
+            destination = {"scrap_location_id": scrap_location.id}
         vals_list = [
             {
                 "product_id": product.id,
@@ -173,6 +211,7 @@ class StockScrap(models.Model):
                 "location_id": location.id,
                 "company_id": company.id,
                 "scrap_reason_tag_ids": [(6, 0, reasons.ids)],
+                **destination,
             }
             for product, lot, qty in prepared
         ]
