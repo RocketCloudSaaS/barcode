@@ -2051,7 +2051,6 @@
                                 class="ilx-kw-select"
                                 t-model="props.picking.scheduled_date"
                             />
-                            <i class="fa fa-chevron-down ilx-kw-chevron-right" />
                         </div>
                     </div>
                 </div>

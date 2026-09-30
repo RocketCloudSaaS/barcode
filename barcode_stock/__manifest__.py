@@ -10,6 +10,7 @@
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
+        "barcodes",
         "stock",
         "stock_move_line_qty_picked",
     ],

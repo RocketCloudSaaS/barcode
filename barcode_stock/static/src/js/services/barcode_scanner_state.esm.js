@@ -186,15 +186,15 @@ export class BarcodeScannerState extends Reactive {
             this.useExistingLots = type.use_existing_lots;
             this.useCreateLots = type.use_create_lots;
 
-            const expiryModule = await this.orm.searchRead(
-                "ir.module.module",
-                [
-                    ["name", "=", "product_expiry"],
-                    ["state", "=", "installed"],
-                ],
-                ["id"]
-            );
-            this.hasProductExpiry = expiryModule.length > 0;
+            // Ask the model whether the expiry fields are there, rather than
+            // whether `product_expiry` is installed: reading ir.module.module
+            // takes Administration rights, which a stock operator has no
+            // reason to hold, and the fields are what we actually use.
+            const lotFields = await this.orm.call("stock.lot", "fields_get", [
+                ["expiration_date", "removal_date"],
+                ["type"],
+            ]);
+            this.hasProductExpiry = "expiration_date" in lotFields;
 
             const lotBaseFields = ["name", "product_id", "product_qty"];
             if (this.hasProductExpiry) {
