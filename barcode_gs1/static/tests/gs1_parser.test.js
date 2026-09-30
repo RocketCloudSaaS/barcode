@@ -122,6 +122,15 @@ describe("BarcodeGs1", () => {
         });
     });
 
+    test("a long alphanumeric run without separators is read in linear time", () => {
+        // Every "10" in the run could open another lot, so finding where each
+        // value ends looks ahead again and again: without remembering what
+        // each position matched, this 80-character scan takes about 25 s.
+        const parsed = parseGs1("]C110" + "A10".repeat(25));
+        expect(parsed.lot).toBe("A10A10A10A10A10A10A1");
+        expect(parsed.errors).toInclude("Missing GTIN (AI 01)");
+    });
+
     test("a count (AI 30) is the quantity and a serial (AI 21) doubles as the lot", () => {
         expect(parseGs1("(01)09501101020917(21)SN9(30)12")).toMatchObject({
             serial: "SN9",
@@ -357,9 +366,9 @@ describe("BarcodeGs1", () => {
         ).toMatchObject(cheese);
         // "L0892611" contains "92", a company-internal identifier: breaking
         // there would truncate the lot to "L08".
-        expect(
-            parseGs1("019843603819086715260926310300432410L0892611")
-        ).toMatchObject(cheese);
+        expect(parseGs1("019843603819086715260926310300432410L0892611")).toMatchObject(
+            cheese
+        );
 
         // Gorgonzola, weight only on the upper barcode.
         expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
