@@ -192,6 +192,38 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             8,
         )
 
+    def test_internal_transfer_reports_partial_allocation_per_line(self):
+        # 8 untracked units on hand, 3 tracked ones asked for out of 5: the
+        # summary has to tell the operator, line by line, how much of what
+        # they asked for actually moved.
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            self.stock_location.id,
+            self.destination_location.id,
+            False,
+            [
+                {
+                    "product_id": self.untracked_product.id,
+                    "qty": 20,
+                    "lot_id": False,
+                },
+                {
+                    "product_id": self.tracked_product.id,
+                    "qty": 3,
+                    "lot_id": self.lot.id,
+                },
+            ],
+        )
+        self.assertFalse(result["fully_transferred"])
+        summary = {line["product_id"]: line for line in result["lines"]}
+        short = summary[self.untracked_product.id]
+        self.assertEqual(short["requested_qty"], 20)
+        self.assertEqual(short["moved_qty"], 8)
+        # The line that was fully served keeps its own figures; the summary is
+        # per line, not a single verdict for the whole transfer.
+        served = summary[self.tracked_product.id]
+        self.assertEqual(served["requested_qty"], 3)
+        self.assertEqual(served["moved_qty"], 3)
+
     def test_internal_transfer_raises_when_no_stock(self):
         empty_product = self.env["product.product"].create(
             {"name": "No Stock Product", "is_storable": True}

@@ -260,7 +260,7 @@ class StockPicking(models.Model):
         # available. Like the back office, we transfer the available quantity
         # instead of refusing the whole operation when more was requested.
         move_plan = []
-        for line in prepared_lines:
+        for line_index, line in enumerate(prepared_lines):
             product = line["product"]
             rounding = product.uom_id.rounding
             allocations = self._barcode_scanner_allocate_from_origin(
@@ -270,7 +270,12 @@ class StockPicking(models.Model):
             if float_compare(allocated, 0, precision_rounding=rounding) <= 0:
                 continue
             move_plan.append(
-                {"line": line, "allocations": allocations, "qty": allocated}
+                {
+                    "line": line,
+                    "line_index": line_index,
+                    "allocations": allocations,
+                    "qty": allocated,
+                }
             )
 
         if not move_plan:
@@ -340,15 +345,15 @@ class StockPicking(models.Model):
         # Report requested vs. moved per line so the UI can warn the operator
         # when only part of the requested quantity was available (allocation is
         # capped at on-hand stock, and SKIP LOCKED may skip busy quants).
-        moved_by_line = {id(plan["line"]): plan["qty"] for plan in move_plan}
+        moved_by_line = {plan["line_index"]: plan["qty"] for plan in move_plan}
         line_summary = [
             {
                 "product_id": line["product"].id,
                 "product_name": line["product"].display_name,
                 "requested_qty": line["qty"],
-                "moved_qty": moved_by_line.get(id(line), 0.0),
+                "moved_qty": moved_by_line.get(index, 0.0),
             }
-            for line in prepared_lines
+            for index, line in enumerate(prepared_lines)
         ]
         fully_transferred = all(
             float_compare(
