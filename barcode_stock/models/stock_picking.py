@@ -211,6 +211,10 @@ class StockPicking(models.Model):
             )
             locked_ids = {row[0] for row in self.env.cr.fetchall()}
             quants = quants.filtered(lambda quant: quant.id in locked_ids)
+            # `_gather` read the quantities before the rows were locked, so a
+            # concurrent transaction may have moved them in between. Drop the
+            # cached values and let the loop below re-read them under the lock.
+            quants.invalidate_recordset(["quantity", "reserved_quantity"])
 
         allocations = []
         remaining = requested_qty
