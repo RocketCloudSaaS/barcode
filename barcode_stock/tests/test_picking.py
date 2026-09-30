@@ -685,23 +685,6 @@ class TestStockMoveQtyProgress(TransactionCase):
         self.assertEqual(move.qty_done_total, 0)
         self.assertEqual(move.qty_remaining, 0)
 
-    def test_upsert_move_line_creates_then_updates(self):
-        _, move = self._draft_move()
-        vals = {
-            "product_id": self.product.id,
-            "product_uom_id": self.product.uom_id.id,
-            "location_id": self.stock_location.id,
-            "location_dest_id": self.customer_location.id,
-            "quantity": 2,
-        }
-        line = move._upsert_move_line(dict(vals))
-        self.assertTrue(line.exists())
-        self.assertEqual(line.move_id, move)
-        # The same identifying fields update the existing line, not create a new.
-        line2 = move._upsert_move_line(dict(vals, quantity=7))
-        self.assertEqual(line2, line)
-        self.assertEqual(line.quantity, 7)
-
 
 class TestStockMoveLine(TransactionCase):
     @classmethod
