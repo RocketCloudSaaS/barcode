@@ -83,9 +83,6 @@ describe("ProductMultiBarcode", () => {
                 if (model === "product.barcode") {
                     return ALTERNATES;
                 }
-                if (model === "ir.module.module") {
-                    return [];
-                }
                 if (model === "stock.lot") {
                     return [];
                 }
@@ -106,6 +103,10 @@ describe("ProductMultiBarcode", () => {
                     return ids.map((id) => ({...PRODUCT, id}));
                 }
                 return [];
+            },
+            // The preload asks stock.lot for its expiry fields; none here.
+            call() {
+                return {};
             },
         };
         const state = new BarcodeScannerState(orm);
