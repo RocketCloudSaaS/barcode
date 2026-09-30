@@ -71,6 +71,12 @@ msgstr ""
 
 #. module: barcode_scrap
 #. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "New reason"
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_location_screen.esm.js:0
 msgid "No internal location matches “%(code)s”."
 msgstr ""
@@ -136,6 +142,12 @@ msgstr ""
 msgid ""
 "Product %(name)s is tracked: scan or choose its lot/serial number before "
 "scrapping it."
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "Reason name"
 msgstr ""
 
 #. module: barcode_scrap
@@ -288,6 +300,12 @@ msgstr ""
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
 msgid "This location does not hold enough stock for:"
+msgstr ""
+
+#. module: barcode_scrap
+#. odoo-python
+#: code:addons/barcode_scrap/models/stock_scrap.py:0
+msgid "Type a name for the scrap reason."
 msgstr ""
 
 #. module: barcode_scrap

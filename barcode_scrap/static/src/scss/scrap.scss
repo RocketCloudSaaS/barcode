@@ -61,3 +61,22 @@
         color: var(--ilx-error);
     }
 }
+
+// Quick creation of a scrap reason.
+.ilx-scrap-reason-new {
+    border-style: dashed;
+    color: var(--ilx-on-surface-variant);
+}
+
+.ilx-scrap-reason-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+
+    .ilx-emp-v2-search-input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+    }
+}

@@ -72,6 +72,12 @@ msgstr "Número de lote / serie"
 
 #. module: barcode_scrap
 #. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "New reason"
+msgstr "Nuevo motivo"
+
+#. module: barcode_scrap
+#. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_location_screen.esm.js:0
 msgid "No internal location matches “%(code)s”."
 msgstr "Ninguna ubicación interna coincide con «%(code)s»."
@@ -140,6 +146,12 @@ msgid ""
 msgstr ""
 "El producto %(name)s tiene seguimiento: escanee o elija su lote/número de "
 "serie antes de desecharlo."
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
+msgid "Reason name"
+msgstr "Nombre del motivo"
 
 #. module: barcode_scrap
 #. odoo-javascript
@@ -296,6 +308,12 @@ msgstr "No existe el lote/número de serie %(lot)s para %(name)s."
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
 msgid "This location does not hold enough stock for:"
 msgstr "Esta ubicación no tiene existencias suficientes de:"
+
+#. module: barcode_scrap
+#. odoo-python
+#: code:addons/barcode_scrap/models/stock_scrap.py:0
+msgid "Type a name for the scrap reason."
+msgstr "Escriba un nombre para el motivo del desecho."
 
 #. module: barcode_scrap
 #. odoo-javascript

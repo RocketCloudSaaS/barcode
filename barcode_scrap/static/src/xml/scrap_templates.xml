@@ -206,7 +206,7 @@
                         >Nothing to scrap yet — scan or add a product.</div>
                     </t>
 
-                    <t t-if="state.reasons.length">
+                    <t t-if="!state.loading">
                         <h2 class="ilx-emp-v2-section-title">SCRAP REASON</h2>
                         <div class="ilx-scrap-reasons">
                             <button
@@ -219,6 +219,37 @@
                             >
                                 <t t-esc="reason.name" />
                             </button>
+                            <!-- Quick-create a reason by name, as the back office allows. -->
+                            <button
+                                t-if="state.newReason === null"
+                                class="ilx-scrap-reason ilx-scrap-reason-new"
+                                t-on-click="startNewReason"
+                            >
+                                <i class="fa fa-plus" /> New reason
+                            </button>
+                            <div t-else="" class="ilx-scrap-reason-form">
+                                <input
+                                    type="text"
+                                    t-ref="newReason"
+                                    class="ilx-emp-v2-search-input"
+                                    placeholder="Reason name"
+                                    t-att-value="state.newReason"
+                                    t-on-input="(ev) => this.setNewReason(ev.target.value)"
+                                    t-on-keydown="onNewReasonKeydown"
+                                />
+                                <button
+                                    class="ilx-scrap-reason ilx-scrap-reason-active"
+                                    t-on-click="saveNewReason"
+                                >
+                                    <i class="fa fa-check" />
+                                </button>
+                                <button
+                                    class="ilx-scrap-reason"
+                                    t-on-click="cancelNewReason"
+                                >
+                                    <i class="fa fa-times" />
+                                </button>
+                            </div>
                         </div>
                     </t>
                 </div>

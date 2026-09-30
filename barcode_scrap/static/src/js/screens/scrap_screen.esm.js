@@ -1,4 +1,4 @@
-import {Component, onWillStart, useState} from "@odoo/owl";
+import {Component, onWillStart, useEffect, useRef, useState} from "@odoo/owl";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
@@ -36,9 +36,21 @@ export class ScrapScreen extends Component {
             reasonIds: [],
             scrapLocationId: null,
             scrapLocations: [],
+            // Name being typed for a new scrap reason; null while the field is closed.
+            newReason: null,
             loading: true,
             scrapping: false,
         });
+
+        this.newReasonRef = useRef("newReason");
+        useEffect(
+            (open) => {
+                if (open && this.newReasonRef.el) {
+                    this.newReasonRef.el.focus();
+                }
+            },
+            () => [this.state.newReason !== null]
+        );
 
         useBarcodeHandler({
             onScan: async (barcode, parsedData) => {
@@ -287,6 +299,56 @@ export class ScrapScreen extends Component {
             this.state.reasonIds.push(reason.id);
         } else {
             this.state.reasonIds.splice(index, 1);
+        }
+    }
+
+    startNewReason() {
+        this.state.newReason = "";
+    }
+
+    cancelNewReason() {
+        this.state.newReason = null;
+    }
+
+    setNewReason(value) {
+        this.state.newReason = value;
+    }
+
+    onNewReasonKeydown(ev) {
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.saveNewReason();
+        } else if (ev.key === "Escape") {
+            this.cancelNewReason();
+        }
+    }
+
+    /**
+     * Create a scrap reason from its typed name, like the back office's reason
+     * field quick-creates one, and select it. An existing reason with the same
+     * name comes back instead of a duplicate.
+     */
+    async saveNewReason() {
+        const name = String(this.state.newReason || "").trim();
+        if (!name) {
+            this.cancelNewReason();
+            return;
+        }
+        try {
+            const reason = await this.inventory.call(
+                "stock.scrap",
+                "action_barcode_scrap_create_reason",
+                [name]
+            );
+            if (!this.state.reasons.some((r) => r.id === reason.id)) {
+                this.state.reasons.push(reason);
+            }
+            if (!this.state.reasonIds.includes(reason.id)) {
+                this.state.reasonIds.push(reason.id);
+            }
+            this.state.newReason = null;
+        } catch {
+            // The API wrapper already surfaced the server error to the operator.
         }
     }
 

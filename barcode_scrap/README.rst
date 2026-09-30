@@ -1,3 +1,7 @@
+.. image:: https://odoo-community.org/readme-banner-image
+   :target: https://odoo-community.org/get-involved?utm_source=readme
+   :alt: Odoo Community Association
+
 =============
 Barcode Scrap
 =============
@@ -58,8 +62,10 @@ Scrap goods
    holds.
 3. Each line shows how much of it the location holds. Adjust the
    quantity if needed.
-4. Choose the **scrap reasons** (the reasons configured in Inventory, if
-   any) and tap **Scrap**.
+4. Choose the **scrap reasons** and tap **Scrap**. A reason that does
+   not exist yet can be created on the spot with **New reason**, as the
+   back office's reason field allows; typing the name of an existing one
+   (in any case) picks that one instead of creating a duplicate.
 
 Lots and serial numbers
 -----------------------

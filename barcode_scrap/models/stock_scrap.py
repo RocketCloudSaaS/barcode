@@ -30,6 +30,27 @@ class StockScrap(models.Model):
         )
 
     @api.model
+    def action_barcode_scrap_create_reason(self, name):
+        """Create a scrap reason from the scanner, as the back office's reason
+        field quick-creates one from a typed name.
+
+        A reason that already exists under the same name, whatever its case, is
+        returned instead of creating a near-duplicate operators would then have
+        to tell apart.
+        """
+        name = " ".join((name or "").split())
+        if not name:
+            raise UserError(_("Type a name for the scrap reason."))
+        Tag = self.env["stock.scrap.reason.tag"]
+        # `=ilike` reads % and _ as wildcards: escape them so the match stays an
+        # exact, case-insensitive one.
+        pattern = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        tag = Tag.search([("name", "=ilike", pattern)], limit=1) or Tag.create(
+            {"name": name}
+        )
+        return {"id": tag.id, "name": tag.name}
+
+    @api.model
     def action_barcode_scrap_location_stock(self, location_id):
         """Return what a location holds, per product and lot.
 

@@ -236,6 +236,27 @@ class TestBarcodeScrap(TransactionCase):
                 scrap_location_id=self.location.id,
             )
 
+    def test_create_reason(self):
+        created = self.Scrap.action_barcode_scrap_create_reason("  Broken   box ")
+        tag = self.env["stock.scrap.reason.tag"].browse(created["id"])
+        self.assertEqual(tag.name, "Broken box")
+        # Same name in another case: the existing reason, no duplicate.
+        again = self.Scrap.action_barcode_scrap_create_reason("broken BOX")
+        self.assertEqual(again["id"], tag.id)
+        self.assertEqual(
+            self.Scrap.action_barcode_scrap_create_reason("damaged")["id"],
+            self.reason.id,
+        )
+
+    def test_create_reason_wildcards_stay_literal(self):
+        wild = self.Scrap.action_barcode_scrap_create_reason("Dam%")
+        self.assertNotEqual(wild["id"], self.reason.id)
+        self.assertEqual(wild["name"], "Dam%")
+
+    def test_create_reason_needs_a_name(self):
+        with self.assertRaises(UserError):
+            self.Scrap.action_barcode_scrap_create_reason("   ")
+
     def test_destination_filter_matches_back_office(self):
         # Offered: the company's scrap locations and the shared ones; never
         # another company's nor a location not flagged as scrap -- the Scrap
