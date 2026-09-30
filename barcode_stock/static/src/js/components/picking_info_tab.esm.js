@@ -1,11 +1,18 @@
-import {Component, markup} from "@odoo/owl";
+import {Component} from "@odoo/owl";
+
+/**
+ * Wrap a typed note as a paragraph, escaping it first: an operator may well
+ * write "5 < 10", and the note is stored in an HTML field.
+ */
+function noteToHtml(text) {
+    const escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    return `<p>${escaped}</p>`;
+}
 
 export class PickingInfoTab extends Component {
-    get noteMarkup() {
-        const note = this.props.picking?.note;
-        return note ? markup(note) : false;
-    }
-
     get notePlainText() {
         const note = this.props.picking?.note;
         if (!note) return "";
@@ -16,7 +23,7 @@ export class PickingInfoTab extends Component {
 
     onNoteInput(ev) {
         const text = ev.target.value.trim();
-        this.props.picking.note = text ? `<p>${text}</p>` : "";
+        this.props.picking.note = text ? noteToHtml(text) : "";
     }
 
     onSelectResponsible() {

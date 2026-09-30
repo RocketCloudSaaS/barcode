@@ -181,7 +181,9 @@ export class MoveWizardScreen extends Component {
 
     get canFulfill() {
         if (this.isSerial) return false;
-        return this.remainingQty - (this.state.qtyPicked || 0) > 1;
+        // Shown while anything is still missing, including the last unit: the
+        // shortcut disappearing at 1 reads as "nothing left to pick".
+        return this.remainingQty - (this.state.qtyPicked || 0) > 0;
     }
 
     get fulfillIncrement() {

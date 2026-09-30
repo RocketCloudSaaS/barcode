@@ -93,7 +93,12 @@ export class UserSelectorScreen extends Component {
     }
 
     goBack() {
-        this.store.goBack();
+        // Leaving without a selection still has to restore what the caller
+        // was doing -- its tab, its in-progress lines -- and `goBack`
+        // replaces the params rather than merging them, so hand back the
+        // ones we were given instead of the staler history entry.
+        const returnParams = this.props.params?.returnParams;
+        this.store.goBack(returnParams ? {...returnParams} : undefined);
     }
 }
 

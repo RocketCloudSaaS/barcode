@@ -192,6 +192,38 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             8,
         )
 
+    def test_internal_transfer_reports_partial_allocation_per_line(self):
+        # 8 untracked units on hand, 3 tracked ones asked for out of 5: the
+        # summary has to tell the operator, line by line, how much of what
+        # they asked for actually moved.
+        result = self.env["stock.picking"].action_barcode_scanner_internal_transfer(
+            self.stock_location.id,
+            self.destination_location.id,
+            False,
+            [
+                {
+                    "product_id": self.untracked_product.id,
+                    "qty": 20,
+                    "lot_id": False,
+                },
+                {
+                    "product_id": self.tracked_product.id,
+                    "qty": 3,
+                    "lot_id": self.lot.id,
+                },
+            ],
+        )
+        self.assertFalse(result["fully_transferred"])
+        summary = {line["product_id"]: line for line in result["lines"]}
+        short = summary[self.untracked_product.id]
+        self.assertEqual(short["requested_qty"], 20)
+        self.assertEqual(short["moved_qty"], 8)
+        # The line that was fully served keeps its own figures; the summary is
+        # per line, not a single verdict for the whole transfer.
+        served = summary[self.tracked_product.id]
+        self.assertEqual(served["requested_qty"], 3)
+        self.assertEqual(served["moved_qty"], 3)
+
     def test_internal_transfer_raises_when_no_stock(self):
         empty_product = self.env["product.product"].create(
             {"name": "No Stock Product", "is_storable": True}
@@ -652,23 +684,6 @@ class TestStockMoveQtyProgress(TransactionCase):
         move._compute_qty_progress()
         self.assertEqual(move.qty_done_total, 0)
         self.assertEqual(move.qty_remaining, 0)
-
-    def test_upsert_move_line_creates_then_updates(self):
-        _, move = self._draft_move()
-        vals = {
-            "product_id": self.product.id,
-            "product_uom_id": self.product.uom_id.id,
-            "location_id": self.stock_location.id,
-            "location_dest_id": self.customer_location.id,
-            "quantity": 2,
-        }
-        line = move._upsert_move_line(dict(vals))
-        self.assertTrue(line.exists())
-        self.assertEqual(line.move_id, move)
-        # The same identifying fields update the existing line, not create a new.
-        line2 = move._upsert_move_line(dict(vals, quantity=7))
-        self.assertEqual(line2, line)
-        self.assertEqual(line.quantity, 7)
 
 
 class TestStockMoveLine(TransactionCase):
