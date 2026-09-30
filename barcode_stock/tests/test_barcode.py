@@ -68,3 +68,13 @@ class TestBarcodeScannerEAN13(TransactionCase):
         self.assertEqual(result["type"], "ean")
         self.assertIn("product", result)
         self.assertIn("qty", result)
+
+    def test_parse_barcode_scanner_barcode_uses_company_nomenclature(self):
+        # A company running its own nomenclature must decode through it, not
+        # through the default one: the alias rule below turns the barcode into
+        # "product.product", which the default nomenclature never yields.
+        self.env.company.nomenclature_id = self.nomenclature
+        result = self.env["barcode.nomenclature"].parse_barcode_scanner_barcode(
+            "5901234123457"
+        )
+        self.assertEqual(result["product"], "product.product")
