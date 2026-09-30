@@ -1,0 +1,378 @@
+import {Component, onWillStart, useState} from "@odoo/owl";
+import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
+import {_t} from "@web/core/l10n/translation";
+import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {formatFloat} from "@web/core/utils/numbers";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
+
+/**
+ * Scrap lines of one location. The operator scans the goods to write off (a GS1
+ * label also brings its lot/serial and quantity), adds others from the "+"
+ * product selector, sets each quantity and lot, picks the scrap reasons and
+ * scraps. Each line shows how much of it the location holds, and the lot field
+ * suggests the lots actually stored there.
+ *
+ * When a line asks for more than the location holds, the server returns it
+ * instead of scrapping, and the operator is asked whether to scrap anyway -- the
+ * same choice the back office offers.
+ *
+ * The lines in progress survive the round-trip to the product selector: they
+ * are carried through the navigation params and restored on the way back.
+ */
+export class ScrapScreen extends Component {
+    setup() {
+        this.inventory = useBarcodeScanner();
+        this.store = useService("barcodeStore");
+        this._seq = 0;
+        this.state = useState({
+            locationId: null,
+            locationName: "",
+            lines: [],
+            stock: [],
+            reasons: [],
+            reasonIds: [],
+            loading: true,
+            scrapping: false,
+        });
+
+        useBarcodeHandler({
+            onScan: async (barcode, parsedData) => {
+                await this.onBarcodeScanned(barcode, parsedData);
+            },
+        });
+
+        onWillStart(async () => {
+            const params = this.props.params || {};
+            this.state.locationId = params.locationId || null;
+            this.state.locationName = params.locationName || "";
+            this.state.reasonIds = [...(params.reasonIds || [])];
+            if (Array.isArray(params.lines)) {
+                // Coming back from the product selector: restore the lines.
+                this.state.lines = params.lines.map((l) => ({...l}));
+                this._seq = this.state.lines.reduce(
+                    (max, l) => Math.max(max, l._id || 0),
+                    0
+                );
+            }
+            await Promise.all([this.loadStock(), this.loadReasons()]);
+            this.state.loading = false;
+            if (params.addProduct) {
+                await this.addOrIncrement(params.addProduct, null, 1);
+            }
+        });
+    }
+
+    async loadStock() {
+        if (!this.state.locationId) {
+            return;
+        }
+        const data = await this.inventory.call(
+            "stock.scrap",
+            "action_barcode_scrap_location_stock",
+            [this.state.locationId]
+        );
+        this.state.stock = data.stock || [];
+    }
+
+    async loadReasons() {
+        this.state.reasons = await this.inventory.searchRead(
+            "stock.scrap.reason.tag",
+            [],
+            ["id", "name"]
+        );
+    }
+
+    // --- scanning -------------------------------------------------------------
+
+    async onBarcodeScanned(barcode, parsed) {
+        // Match the product the same tolerant, all-candidates way the other
+        // screens do: a GS1 GTIN has several equivalent variant forms, and the
+        // parser's value can differ from the raw scan.
+        const candidates = [
+            ...(parsed?.productCodes || []),
+            parsed?.gtin,
+            parsed?.value,
+            barcode,
+        ];
+        const domain = barcodeMatchAnyDomain(candidates);
+        const products = domain
+            ? await this.inventory.searchRead("product.product", domain, [
+                  "id",
+                  "display_name",
+                  "tracking",
+                  "uom_id",
+              ])
+            : [];
+        if (!products.length) {
+            this.inventory.notify(
+                _t("No product matches “%(code)s”.", {code: parsed?.value || barcode}),
+                {type: "warning"}
+            );
+            return;
+        }
+        const lotName = parsed?.lot || parsed?.serial || null;
+        const qty = parseFloat(parsed?.quantity ?? parsed?.qty) || 1;
+        await this.addOrIncrement(products[0], lotName, qty);
+    }
+
+    // --- add a product from the "+" selector ----------------------------------
+
+    addProduct() {
+        this.store.navigate("scrap_product_selector", {
+            locationId: this.state.locationId,
+            locationName: this.state.locationName,
+            lines: this.state.lines.map((l) => ({...l})),
+            reasonIds: [...this.state.reasonIds],
+            // Offer first what the location holds: that is what gets scrapped.
+            stockProductIds: [...new Set(this.state.stock.map((s) => s.product_id))],
+        });
+    }
+
+    // --- lines ----------------------------------------------------------------
+
+    stockLots(productId) {
+        return this.state.stock.filter((s) => s.product_id === productId && s.lot_id);
+    }
+
+    findStockLot(productId, lotName) {
+        const name = String(lotName || "")
+            .trim()
+            .toLowerCase();
+        if (!name) {
+            return null;
+        }
+        return (
+            this.stockLots(productId).find((s) => s.lot_name.toLowerCase() === name) ||
+            null
+        );
+    }
+
+    lineKey(productId, lotId, lotName) {
+        return `${productId}|${lotId || ""}|${String(lotName || "").toLowerCase()}`;
+    }
+
+    async addOrIncrement(product, lotName, qty) {
+        const tracking = product.tracking || "none";
+        let lotId = false;
+        let name = lotName || "";
+        if (tracking !== "none") {
+            const match = this.findStockLot(product.id, name);
+            const lots = this.stockLots(product.id);
+            if (match) {
+                lotId = match.lot_id;
+                name = match.lot_name;
+            } else if (!name && lots.length === 1) {
+                // Only one lot of this product here: it can only be that one.
+                lotId = lots[0].lot_id;
+                name = lots[0].lot_name;
+            }
+        }
+        const key = this.lineKey(product.id, lotId, name);
+        const line = this.state.lines.find(
+            (l) => this.lineKey(l.product_id, l.lot_id, l.lot_name) === key
+        );
+        if (line && tracking !== "serial") {
+            line.qty = String((parseFloat(line.qty) || 0) + qty);
+            this.flashLine(line);
+            return;
+        }
+        if (line && name) {
+            this.inventory.notify(
+                _t("Serial number %(lot)s is already on the list.", {lot: name}),
+                {type: "warning"}
+            );
+            this.flashLine(line);
+            return;
+        }
+        const newLine = {
+            _id: ++this._seq,
+            product_id: product.id,
+            product_name: product.display_name,
+            tracking,
+            uom: product.uom_id?.[1] || "",
+            lot_id: lotId,
+            lot_name: name,
+            qty: String(tracking === "serial" ? 1 : qty),
+        };
+        // Put a freshly scanned/added product at the TOP, where the operator is
+        // looking, instead of appending it out of sight at the bottom.
+        this.state.lines.unshift(newLine);
+        this.flashLine(newLine);
+    }
+
+    /**
+     * Draw the operator's eye to the line a scan just added or changed: mark it
+     * highlighted for a moment and scroll it into view. Purely visual.
+     *
+     * @param {Object} line the scrap line to highlight
+     */
+    flashLine(line) {
+        line._flash = true;
+        clearTimeout(line._flashTimer);
+        line._flashTimer = setTimeout(() => {
+            line._flash = false;
+        }, 1500);
+        requestAnimationFrame(() => {
+            const el = document.getElementById(`scrap-line-${line._id}`);
+            if (el) {
+                el.scrollIntoView({behavior: "smooth", block: "nearest"});
+            }
+        });
+    }
+
+    setLotName(line, value) {
+        line.lot_name = value;
+        const match = this.findStockLot(line.product_id, value);
+        line.lot_id = match ? match.lot_id : false;
+    }
+
+    setQty(line, value) {
+        line.qty = value;
+    }
+
+    available(line) {
+        const entries = this.state.stock.filter(
+            (s) => s.product_id === line.product_id
+        );
+        let matching = entries;
+        if (line.tracking !== "none") {
+            if (!line.lot_id) {
+                return null;
+            }
+            matching = entries.filter((s) => s.lot_id === line.lot_id);
+        }
+        return matching.reduce((total, s) => total + s.quantity, 0);
+    }
+
+    formatQty(value) {
+        return formatFloat(value, {trailingZeros: false});
+    }
+
+    removeLine(line) {
+        const index = this.state.lines.indexOf(line);
+        if (index !== -1) {
+            this.state.lines.splice(index, 1);
+        }
+    }
+
+    // --- reasons --------------------------------------------------------------
+
+    isReasonSelected(reason) {
+        return this.state.reasonIds.includes(reason.id);
+    }
+
+    toggleReason(reason) {
+        const index = this.state.reasonIds.indexOf(reason.id);
+        if (index === -1) {
+            this.state.reasonIds.push(reason.id);
+        } else {
+            this.state.reasonIds.splice(index, 1);
+        }
+    }
+
+    // --- scrap ----------------------------------------------------------------
+
+    async scrap(force = false) {
+        const lines = this.state.lines;
+        if (!lines.length) {
+            this.inventory.notify(_t("Scan at least one product to scrap."), {
+                type: "warning",
+            });
+            return;
+        }
+        const missingLot = lines.find(
+            (l) => l.tracking !== "none" && !l.lot_id && !String(l.lot_name).trim()
+        );
+        if (missingLot) {
+            this.inventory.notify(
+                _t("Set the lot/serial for %(name)s before scrapping.", {
+                    name: missingLot.product_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
+        const noQty = lines.find((l) => !(parseFloat(l.qty) > 0));
+        if (noQty) {
+            this.inventory.notify(
+                _t("Set the quantity to scrap for %(name)s.", {
+                    name: noQty.product_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
+        this.state.scrapping = true;
+        try {
+            const result = await this.inventory.call(
+                "stock.scrap",
+                "action_barcode_scrap",
+                [
+                    this.state.locationId,
+                    lines.map((l) => ({
+                        product_id: l.product_id,
+                        lot_id: l.lot_id || false,
+                        lot_name: l.lot_name || "",
+                        qty: parseFloat(l.qty) || 0,
+                    })),
+                    this.state.reasonIds,
+                ],
+                {force}
+            );
+            if (!result.done) {
+                this.state.scrapping = false;
+                this.confirmInsufficient(result.insufficient || []);
+                return;
+            }
+            this.inventory.notify(_t("Scrapped %(n)s product(s).", {n: result.count}), {
+                type: "success",
+            });
+            this.store.navigate("main", {}, {clearHistory: true});
+        } catch {
+            // The API wrapper already surfaced the server error to the operator.
+            this.state.scrapping = false;
+        }
+    }
+
+    confirmInsufficient(insufficient) {
+        const rows = insufficient.map((s) => {
+            // Built apart from the _t() call: a template literal among its
+            // arguments hides the message from Odoo's translation extractor.
+            const what = s.lot_name
+                ? s.product_name + " (" + s.lot_name + ")"
+                : s.product_name;
+            return _t(
+                "• %(what)s: %(requested)s %(uom)s to scrap, %(available)s here",
+                {
+                    what,
+                    requested: this.formatQty(s.requested),
+                    available: this.formatQty(s.available),
+                    uom: s.uom,
+                }
+            );
+        });
+        this.inventory.openDialog(ConfirmationDialog, {
+            title: _t("Not enough stock"),
+            body: [
+                _t("This location does not hold enough stock for:"),
+                ...rows,
+                "",
+                _t("Scrap anyway?"),
+            ].join("\n"),
+            confirmLabel: _t("Scrap anyway"),
+            confirm: () => this.scrap(true),
+            cancel: () => undefined,
+        });
+    }
+
+    goBack() {
+        this.store.goBack();
+    }
+
+    static template = "barcode_scrap.ScrapScreen";
+}
+
+barcodeScreens.add("scrap", {component: ScrapScreen});
