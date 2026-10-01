@@ -182,7 +182,7 @@
                                         type="number"
                                         inputmode="decimal"
                                         min="0"
-                                        step="0.01"
+                                        step="1"
                                         class="ilx-emp-v2-search-input"
                                         style="width:90px; text-align:center; padding:6px 8px;"
                                         t-att-value="line.qty"
