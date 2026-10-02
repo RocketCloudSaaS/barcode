@@ -263,7 +263,7 @@
                     t-att-style="(state.scrapping || state.lines.length === 0) ? 'opacity: 0.5; cursor: not-allowed;' : ''"
                 >
                     <t t-if="state.scrapping">Scrapping...</t>
-                    <t t-else="">Scrap (<t t-esc="state.lines.length" />)</t>
+                    <t t-else="" t-esc="scrapLabel()" />
                 </button>
             </footer>
         </div>
