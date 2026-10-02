@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-30 06:59+0000\n"
+"POT-Creation-Date: 2026-10-02 07:25+0000\n"
 "PO-Revision-Date: 2026-09-30 06:59+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -198,15 +198,23 @@ msgid "Scan, or add a product..."
 msgstr "Escanee, o añada un producto..."
 
 #. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
 #: model:ir.model,name:barcode_scrap.model_stock_scrap
 msgid "Scrap"
 msgstr "Desechar"
 
 #. module: barcode_scrap
 #. odoo-javascript
-#: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
-msgid "Scrap ("
-msgstr "Desechar ("
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
+msgid "Scrap %(n)s products"
+msgstr "Desechar %(n)s productos"
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
+msgid "Scrap %(qty)s %(uom)s"
+msgstr "Desechar %(qty)s %(uom)s"
 
 #. module: barcode_scrap
 #. odoo-javascript
@@ -224,14 +232,14 @@ msgstr "Desechar igualmente"
 #. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
-msgid "Scrap anyway?"
-msgstr "¿Desechar igualmente?"
+msgid "Scrapped %(n)s products."
+msgstr "Se han desechado %(n)s productos."
 
 #. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
-msgid "Scrapped %(n)s product(s)."
-msgstr "Se han desechado %(n)s producto(s)."
+msgid "Scrapped %(qty)s %(uom)s of %(name)s."
+msgstr "Se han desechado %(qty)s %(uom)s de %(name)s."
 
 #. module: barcode_scrap
 #. odoo-javascript
@@ -264,6 +272,12 @@ msgstr "Indique el lote/número de serie de %(name)s antes de desechar."
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
 msgid "Set the quantity to scrap for %(name)s."
 msgstr "Indique la cantidad a desechar de %(name)s."
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
+msgid "The full quantity will be scrapped. Scrap anyway?"
+msgstr "Se desechará la cantidad completa. ¿Desechar igualmente?"
 
 #. module: barcode_scrap
 #. odoo-python
@@ -318,5 +332,9 @@ msgstr "Escriba un nombre para el motivo del desecho."
 #. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
-msgid "• %(what)s: %(requested)s %(uom)s to scrap, %(available)s here"
-msgstr "• %(what)s: %(requested)s %(uom)s a desechar, %(available)s aquí"
+msgid ""
+"• %(what)s: %(requested)s %(uom)s to scrap, %(available)s here (stock will "
+"be %(remaining)s)"
+msgstr ""
+"• %(what)s: %(requested)s %(uom)s a desechar, %(available)s aquí (el stock "
+"quedará en %(remaining)s)"

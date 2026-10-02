@@ -280,6 +280,48 @@ export class ScrapScreen extends Component {
         return formatFloat(value, {trailingZeros: false});
     }
 
+    /**
+     * What the lines add up to: the total quantity when they all share one unit
+     * of measure (otherwise a total means nothing), and how many products.
+     *
+     * @param {Object[]} lines the scrap lines
+     * @returns {{qty: Number, uom: (string|null), products: Number}}
+     */
+    summarize(lines) {
+        const uoms = new Set(lines.map((l) => l.uom));
+        return {
+            qty: lines.reduce((total, l) => total + (parseFloat(l.qty) || 0), 0),
+            uom: uoms.size === 1 ? [...uoms][0] : null,
+            products: new Set(lines.map((l) => l.product_id)).size,
+        };
+    }
+
+    scrapLabel() {
+        if (!this.state.lines.length) {
+            return _t("Scrap");
+        }
+        const summary = this.summarize(this.state.lines);
+        if (summary.uom === null) {
+            return _t("Scrap %(n)s products", {n: summary.products});
+        }
+        return _t("Scrap %(qty)s %(uom)s", {
+            qty: this.formatQty(summary.qty),
+            uom: summary.uom,
+        });
+    }
+
+    scrappedMessage(lines) {
+        const summary = this.summarize(lines);
+        if (summary.products === 1) {
+            return _t("Scrapped %(qty)s %(uom)s of %(name)s.", {
+                qty: this.formatQty(summary.qty),
+                uom: summary.uom,
+                name: lines[0].product_name,
+            });
+        }
+        return _t("Scrapped %(n)s products.", {n: summary.products});
+    }
+
     removeLine(line) {
         const index = this.state.lines.indexOf(line);
         if (index !== -1) {
@@ -406,9 +448,7 @@ export class ScrapScreen extends Component {
                 this.confirmInsufficient(result.insufficient || []);
                 return;
             }
-            this.inventory.notify(_t("Scrapped %(n)s product(s).", {n: result.count}), {
-                type: "success",
-            });
+            this.inventory.notify(this.scrappedMessage(lines), {type: "success"});
             this.store.navigate("main", {}, {clearHistory: true});
         } catch {
             // The API wrapper already surfaced the server error to the operator.
@@ -424,22 +464,25 @@ export class ScrapScreen extends Component {
                 ? s.product_name + " (" + s.lot_name + ")"
                 : s.product_name;
             return _t(
-                "• %(what)s: %(requested)s %(uom)s to scrap, %(available)s here",
+                "• %(what)s: %(requested)s %(uom)s to scrap, %(available)s here (stock will be %(remaining)s)",
                 {
                     what,
                     requested: this.formatQty(s.requested),
                     available: this.formatQty(s.available),
+                    remaining: this.formatQty(s.available - s.requested),
                     uom: s.uom,
                 }
             );
         });
+        // Say plainly what confirming does: the whole quantity is scrapped (as
+        // in the back office), not only what the location holds.
         this.inventory.openDialog(ConfirmationDialog, {
             title: _t("Not enough stock"),
             body: [
                 _t("This location does not hold enough stock for:"),
                 ...rows,
                 "",
-                _t("Scrap anyway?"),
+                _t("The full quantity will be scrapped. Scrap anyway?"),
             ].join("\n"),
             confirmLabel: _t("Scrap anyway"),
             confirm: () => this.scrap(true),
