@@ -19,7 +19,17 @@ class TestManualLineAvailability(TransactionCase):
             }
         )
         cls.picking_type = cls.env.ref("stock.picking_type_internal")
+        cls._picking_type_allow_insert_new_line = cls.picking_type.allow_insert_new_line
         cls.picking_type.allow_insert_new_line = True
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.picking_type.write(
+            {
+                "allow_insert_new_line": cls._picking_type_allow_insert_new_line,
+            }
+        )
+        super().tearDownClass()
 
     def test_insufficient_stock_does_not_create_move(self):
         product = self.env["product.product"].create(

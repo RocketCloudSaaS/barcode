@@ -9,6 +9,19 @@ class StockPicking(models.Model):
     _inherit = "stock.picking"
 
     @api.model
+    def _barcode_scanner_resolve_manual_line_lot(self, lot_id):
+        if not lot_id:
+            return False
+        try:
+            lot_id = int(lot_id)
+        except (TypeError, ValueError):
+            raise UserError(_("The selected lot is not valid.")) from None
+        lot = self.env["stock.lot"].browse(lot_id).exists()
+        if not lot:
+            raise UserError(_("The selected lot is not valid."))
+        return lot
+
+    @api.model
     def barcode_scanner_check_insert_new_line_allowed(
         self, origin_location_id, destination_location_id
     ):
@@ -85,15 +98,13 @@ class StockPicking(models.Model):
         if not source or not destination:
             raise UserError(_("The selected locations are no longer valid."))
 
-        # Serialize additions to the same picking so the manual-move lookup,
-        # create-or-merge and reservation run as one unit. The reservation
-        # itself is atomic at quant level (_update_reserved_quantity), so no
-        # location lock is needed.
+        # Serialize additions to this picking so the manual-move lookup and
+        # subsequent create-or-merge of a move cannot race.
         self.env.cr.execute(
             "SELECT id FROM stock_picking WHERE id = %s FOR UPDATE", (picking.id,)
         )
 
-        lot = self.env["stock.lot"].browse(lot_id).exists() if lot_id else False
+        lot = self._barcode_scanner_resolve_manual_line_lot(lot_id)
         if product.tracking != "none" and not lot:
             raise UserError(
                 _("A valid lot or serial number is required for this product.")

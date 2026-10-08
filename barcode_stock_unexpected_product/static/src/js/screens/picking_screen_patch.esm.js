@@ -1,8 +1,8 @@
-import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
-import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
-import {_t} from "@web/core/l10n/translation";
-import {patch} from "@web/core/utils/patch";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
+import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
+import {_t} from "@web/core/l10n/translation";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {patch} from "@web/core/utils/patch";
 
 export function isManualLineEligible(pickingTypeCode, allowInsertNewLine) {
     return pickingTypeCode === "internal" && Boolean(allowInsertNewLine);
@@ -104,6 +104,8 @@ patch(PickingScreen.prototype, {
                     reloadToken: Date.now(),
                     preselectProduct: product.id,
                     preselectBarcode: barcode,
+                    scannedQuantity: normalized.quantity,
+                    scannedLotName: normalized.lotName,
                     autoPick: true,
                 });
                 return;

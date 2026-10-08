@@ -11,11 +11,30 @@ export function matchesProductSearch(product, search) {
     );
 }
 
+export function getManualLineInitialQuantity(params) {
+    const quantity = Number.parseFloat(params?.scannedQuantity);
+    return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+export function lotIdForName(lots, lotName) {
+    const name = String(lotName || "").trim();
+    if (!name) {
+        return false;
+    }
+    const lot = (lots || []).find(
+        (candidate) => String(candidate.name || "").trim() === name
+    );
+    return lot ? String(lot.id) : false;
+}
+
 patch(ProductSelectorScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.state.lots = [];
         this.state.lotId = false;
+        if (this.props.params?.mode === "manual_line") {
+            this.state.qty = getManualLineInitialQuantity(this.props.params);
+        }
     },
 
     async loadProducts() {
@@ -58,11 +77,18 @@ patch(ProductSelectorScreen.prototype, {
                         ["id", "name"]
                     );
                 }
+                this.state.lotId = lotIdForName(
+                    this.state.lots,
+                    this.props.params?.scannedLotName
+                );
             }
         }
     },
 
     get filteredProducts() {
+        if (this.props.params?.mode !== "manual_line") {
+            return super.filteredProducts;
+        }
         if (!this.state.search) {
             return this.state.products;
         }
@@ -92,8 +118,8 @@ patch(ProductSelectorScreen.prototype, {
         if (!product) {
             return;
         }
-        const qty = parseInt(this.state.qty, 10) || 1;
-        const lotId = this.state.lotId || false;
+        const qty = Number.parseFloat(this.state.qty) || 1;
+        const lotId = Number.parseInt(this.state.lotId, 10) || false;
         try {
             const result = await this.inventory.call(
                 "stock.picking",

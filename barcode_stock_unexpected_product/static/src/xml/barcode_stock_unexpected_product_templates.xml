@@ -58,7 +58,7 @@
     <t t-inherit="barcode_scanner.PickingMoveCard" t-inherit-mode="extension" owl="1">
         <xpath expr="//div[hasclass('ilx-kw-picking-card-status')]" position="inside">
             <span
-                t-if="props.move.is_manually"
+                t-if="props.move.is_manually and props.onDeleteManual"
                 class="ilx-manual-delete-btn"
                 t-on-click.stop="() => props.onDeleteManual(props.move.id)"
                 title="Delete manual line"
@@ -66,11 +66,37 @@
         </xpath>
     </t>
     <t t-inherit="barcode_scanner.PickingDoneCard" t-inherit-mode="extension" owl="1">
+        <xpath expr="//button[hasclass('ilx-picking-done-card')]" position="attributes">
+            <attribute name="t-on-click">
+                () => props.line.is_manually
+                    ? props.onDeleteManual?.(props.line.move_id[0])
+                    : props.onDelete(props.line.id)
+            </attribute>
+            <attribute name="t-att-title">
+                props.line.is_manually
+                    ? (props.onDeleteManual ? 'Delete manually added line' : 'Manually added line')
+                    : false
+            </attribute>
+        </xpath>
+        <xpath
+            expr="//button[hasclass('ilx-picking-done-card')]//span[normalize-space(.)='Tap to remove this confirmation']"
+            position="replace"
+        >
+            <span
+                class="ilx-kw-picking-code"
+                style="color: var(--kw-on-surface-variant); font-weight: normal; font-size: 0.75rem;"
+            >
+                <t t-if="props.line.is_manually">
+                    <t t-if="props.onDeleteManual">Tap to delete this manual line</t>
+                    <t t-else="">Manually added line</t>
+                </t>
+                <t t-else="">Tap to remove this confirmation</t>
+            </span>
+        </xpath>
         <xpath expr="//div[hasclass('ilx-kw-picking-card-status')]" position="inside">
             <span
-                t-if="props.line.is_manually"
+                t-if="props.line.is_manually and props.onDeleteManual"
                 class="ilx-manual-delete-btn"
-                t-on-click.stop="() => props.onDeleteManual(props.line.move_id[0])"
                 title="Delete manual line"
             ><i class="fa fa-trash" /></span>
         </xpath>

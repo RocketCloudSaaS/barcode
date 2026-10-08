@@ -33,12 +33,30 @@ class TestBarcodeScannerInsertNewLineGate(TransactionCase):
         )
         # Ensure the warehouse internal type for the test locations is False
         wh = cls.stock_location.warehouse_id
+        cls._internal_picking_type = cls.env["stock.picking.type"]
+        cls._internal_picking_type_allow_insert_new_line = False
         if wh:
             itype = cls.env["stock.picking.type"].search(
                 [("warehouse_id", "=", wh.id), ("code", "=", "internal")], limit=1
             )
             if itype:
+                cls._internal_picking_type = itype
+                cls._internal_picking_type_allow_insert_new_line = (
+                    itype.allow_insert_new_line
+                )
                 itype.allow_insert_new_line = False
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._internal_picking_type:
+            cls._internal_picking_type.write(
+                {
+                    "allow_insert_new_line": (
+                        cls._internal_picking_type_allow_insert_new_line
+                    ),
+                }
+            )
+        super().tearDownClass()
 
     def _verdict(self, origin_id, destination_id):
         return self.env["stock.picking"].barcode_scanner_check_insert_new_line_allowed(
