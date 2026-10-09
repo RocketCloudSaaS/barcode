@@ -39,12 +39,35 @@ are installed, and neither needs the other without it.
 .. contents::
    :local:
 
+Configuration
+=============
+
+Nothing to configure for the module itself. The precision a measure is
+kept at is Odoo's, though, and its defaults are coarser than most GS1
+labels.
+
+A measure becomes a quantity rounded twice, as anywhere in stock: to the
+*Rounding Precision* of the product's unit, and to the decimals of the
+*Product Unit of Measure* accuracy. Both default to two decimals, so the
+2.497 kg a label states is stored as 2.50 kg, and the app shows 2.50 so
+that the quantity on screen is the one that will be stored.
+
+To keep the grams a label states, for products stocked in kilograms:
+
+- set the *Rounding Precision* of *kg* to 0.001, under *Inventory →
+  Configuration → Units of Measures → UoM Categories → Weight* (the
+  *Units of Measure* option must be enabled in the Inventory settings);
+- set the digits of *Product Unit of Measure* to 3, under *Settings →
+  Technical → Database Structure → Decimal Accuracy* (developer mode).
+
+The accuracy applies to every quantity in the database, not only to
+scans.
+
 Usage
 =====
 
-Nothing to configure: installing ``barcode_gs1`` next to
-``barcode_stock`` brings this module in, and every screen that applies a
-scanned quantity uses it.
+Installing ``barcode_gs1`` next to ``barcode_stock`` brings this module
+in, and every screen that applies a scanned quantity uses it.
 
 When a scanned GS1 barcode carries a measure, the unit that measure is
 in comes from the rule that read it (*Unit of Measure* on the barcode
@@ -52,20 +75,27 @@ rule — AI 310n is kilograms, 320n pounds, 311n metres). It is then
 compared with the unit the product is stocked in:
 
 - **same kind of unit** — the measure is the quantity, converted into
-  the product's own unit: 2.497 kg on the label is 2.497 for a product
-  in kilograms and 2497 for one in grams;
+  the product's own unit: 2.497 kg on the label is 2497 for a product in
+  grams;
 - **a different kind** — a weight for a product counted in units, say —
   the measure says nothing about how many to pick, so the piece count on
   the label (AI 30/37) is the quantity, and a single unit when the label
   states none.
 
-Only the floating point noise of the conversion is rounded away, so the
-2.497 kg the label states does not become the 2.50 the unit's own
-rounding would give.
+The quantity is rounded the way it will be stored, so what the screen
+shows is what ends up in stock. With Odoo's defaults that is two
+decimals: 2.497 kg is 2.50 for a product in kilograms (see Configuration
+to keep the grams).
+
+When the GTIN is a packaging barcode (a carton of twelve, say), a label
+without a count picks the pack's quantity, and a count on the label wins
+over it. A measure in the product's own kind of unit wins over both: a
+carton of cheese weighing 4.32 kg is 4.32 for a product stocked in
+kilograms, not twelve.
 
 Without this module GS1 barcodes are still parsed, but a measure is
 never the quantity: the warehouse app takes the piece count, or a single
-unit.
+unit (the pack's quantity for a packaging barcode).
 
 Bug Tracker
 ===========
