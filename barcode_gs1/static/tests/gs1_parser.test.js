@@ -113,11 +113,55 @@ describe("BarcodeGs1", () => {
         });
     });
 
-    test("variable-length AIs end at the next AI when no separator is sent", () => {
-        expect(parseGs1("010950110102091710LOT12317261231")).toMatchObject({
-            value: "9501101020917",
+    test("a variable-length value runs to the end when it is the last element", () => {
+        // GS1 needs no separator after the last element, and recommends putting
+        // the variable-length ones there: digits inside the value that look
+        // like an identifier must not cut it short.
+        expect(parseGs1("0109501101020917215830192")).toMatchObject({
+            serial: "5830192",
+            lot: "5830192",
+            count: null,
+            qty: 1,
+            errors: [],
+        });
+        expect(parseGs1("0109501101020917214711000123")).toMatchObject({
+            serial: "4711000123",
+            productionDate: null,
+            errors: [],
+        });
+        expect(parseGs1("010950110102091710A3712")).toMatchObject({
+            lot: "A3712",
+            count: null,
+            qty: 1,
+            errors: [],
+        });
+        expect(parseGs1("01095011010209171020241130")).toMatchObject({
+            lot: "20241130",
+            errors: [],
+        });
+        expect(parseGs1("01095011010209171726123110LOT123")).toMatchObject({
             lot: "LOT123",
             expiry: "2026-12-31",
+            errors: [],
+        });
+    });
+
+    test("a value too long to be one ends at the next element that reads cleanly", () => {
+        // Longer than a lot may be, so a separator was dropped: the lot ends
+        // where a real date starts, and the count after it is read as well.
+        expect(parseGs1("010950110102091710LOT12345678172612313005")).toMatchObject({
+            lot: "LOT12345678",
+            expiry: "2026-12-31",
+            count: 5,
+            qty: 5,
+            errors: [],
+        });
+        // "17991399" looks like an expiry date but is not one (month 13): the
+        // lot is not cut there.
+        expect(parseGs1("010950110102091710AB17991399CD172612313005")).toMatchObject({
+            lot: "AB17991399CD",
+            expiry: "2026-12-31",
+            count: 5,
             errors: [],
         });
     });
@@ -140,15 +184,18 @@ describe("BarcodeGs1", () => {
         });
     });
 
-    test("a net weight (AI 310n) is decoded with its decimals and used as the quantity", () => {
+    test("a net weight (AI 310n) is decoded with its decimals, not as the quantity", () => {
+        // Whether a weight is the quantity depends on the unit the product is
+        // stocked in, which the parser does not know: 1.25 kg is not 1.25 units.
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
-            quantity: 1.25,
+            count: null,
+            qty: 1,
+            quantity: 1,
         });
     });
 
-    test("an explicit count wins over the weight", () => {
+    test("a count next to the weight is the quantity", () => {
         expect(parseGs1("(01)09501101020917(3103)001250(30)4")).toMatchObject({
             weight: 1.25,
             qty: 4,
@@ -282,14 +329,15 @@ describe("BarcodeGs1", () => {
             expiry: "2026-12-31",
             errors: [],
         });
-        expect(parseGs1("010950110102091710LOT12317261231")).toMatchObject({
+        expect(parseGs1("01095011010209171726123110LOT123")).toMatchObject({
             value: "9501101020917",
             lot: "LOT123",
+            expiry: "2026-12-31",
             errors: [],
         });
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
+            qty: 1,
             errors: [],
         });
         expect(parseGs1("(01)09501101020916")).toMatchObject({
@@ -344,20 +392,19 @@ describe("BarcodeGs1", () => {
         expect(
             parseGs1(`0198003948002568310300249710534343${GS}3002${GS}15261006`)
         ).toMatchObject(guanciale);
-        // The same data with the separators dropped, as a scanner that cannot
-        // emit FNC1 sends it: the lot is a run of digits in which a catch-all
-        // measure range would match "3434", and cutting there would invent a
-        // 33.0021 quantity out of the lot number.
+        // With the separators dropped there is no telling where the lot ends:
+        // GS1 reads it to the end. A scanner that cannot send FNC1 is set to
+        // send the nomenclature's separator instead.
         expect(
             parseGs1("0198003948002568310300249710534343300215261006")
-        ).toMatchObject(guanciale);
+        ).toMatchObject({lot: "534343300215261006", count: null, expiry: null});
 
         // Hard cheese, 4.324 kg, no count: the lot closes the barcode.
         const cheese = {
             value: "98436038190867",
             lot: "L0892611",
             weight: 4.324,
-            qty: 4.324,
+            qty: 1,
             expiry: "2026-09-26",
             errors: [],
         };
@@ -374,7 +421,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
             value: "98017024009181",
             weight: 3.09,
-            qty: 3.09,
+            qty: 1,
             errors: [],
         });
         // ... and the tracking data on a second one, which carries no GTIN. A
@@ -385,11 +432,6 @@ describe("BarcodeGs1", () => {
             count: 2,
             expiry: "2026-06-13",
             errors: ["Missing GTIN (AI 01)"],
-        });
-        expect(parseGs1("]C1152606131026104005" + "37002")).toMatchObject({
-            lot: "26104005",
-            count: 2,
-            expiry: "2026-06-13",
         });
         expect(isGS1Barcode("]C1152606131026104005")).toBe(true);
     });
@@ -412,7 +454,7 @@ describe("BarcodeGs1", () => {
         });
     });
 
-    test("a rule configured as a weighted product is the quantity", () => {
+    test("a rule configured as a weighted product is a measure, not the quantity", () => {
         loadNomenclature(
             [
                 ODOO_RULES[1],
@@ -430,11 +472,11 @@ describe("BarcodeGs1", () => {
         );
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
-            quantity: 1.25,
+            qty: 1,
+            quantity: 1,
             errors: [],
         });
-        // A counted quantity still wins over the weight.
+        // A counted quantity is the quantity.
         expect(parseGs1("(01)09501101020917(3103)001250(30)4")).toMatchObject({
             weight: 1.25,
             qty: 4,

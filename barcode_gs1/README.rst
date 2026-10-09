@@ -1,7 +1,3 @@
-.. image:: https://odoo-community.org/readme-banner-image
-   :target: https://odoo-community.org/get-involved?utm_source=readme
-   :alt: Odoo Community Association
-
 ===========
 Barcode GS1
 ===========
@@ -33,10 +29,9 @@ the ``barcode_parsers`` registry, without patching the base. Scanned
 GS1-128 barcodes, whether written with parenthesised application
 identifiers (``(01)...(10)...``) or as raw FNC1-separated data, are
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
-(21), production/pack/best-before/expiry dates (11/13/15/16/17), count
-(30/37), net weight and other measures (310n–360n, with the variable
-weight used as the quantity), amounts payable (390n–393n), SSCC (00) and
-location GLNs (410/413/414).
+(21), production/pack/best-before/ expiry dates (11/13/15/16/17), count
+(30/37), net weight and other measures (310n–360n), amounts payable
+(390n–393n), SSCC (00) and location GLNs (410/413/414).
 
 What each application identifier means is read from **Odoo's own GS1
 nomenclature** (``barcode.nomenclature`` and its rules, as shipped by
@@ -83,7 +78,7 @@ A scanned GS1 barcode produces a parsed object such as:
        useDate: "YYYY-MM-DD",    // AI 15 / 16 (best before, sell by)
        packDate: "YYYY-MM-DD",   // AI 13
        productionDate: "...",    // AI 11
-       qty: <number>,            // AI 30 / 37, or the net weight (AI 310n)
+       qty: <number>,            // AI 30 / 37; 1 when the label states no count
        count: <number>,          // AI 30 / 37 (pieces), kept next to the weight
        weight: <number>,         // AI 310n–360n
        weightUom: {id, name},    // the unit that measure is in, per the rule
@@ -118,32 +113,35 @@ the barcode app opens.
 So to teach the scanner a new application identifier, add a rule under
 *Inventory → Configuration → Barcode Nomenclatures* — no code change. A
 rule whose *Type* is one the app understands (product, lot, quantity,
-weighted product, priced product, package, package type, expiration date,
-best before date, pack date, location, destination location) lands on the
-matching field above; the value of any other rule is still available in
-``ais``.
+weighted product, priced product, package, package type, expiration
+date, best before date, pack date, location, destination location) lands
+on the matching field above; the value of any other rule is still
+available in ``ais``.
 
 Identifiers the nomenclature does not define keep working through the
-ones built into the module, and if the nomenclature cannot be read at all
-the module falls back to them entirely.
+ones built into the module, and if the nomenclature cannot be read at
+all the module falls back to them entirely.
 
-Scanners that drop the separator
---------------------------------
+Variable-length values and the separator
+----------------------------------------
 
-GS1 ends a variable-length value with FNC1, and a keyboard-wedge scanner
-often sends nothing in its place. Odoo has a field for exactly that —
-*FNC1 Separator* on the nomenclature — so configure the scanner to send
-one of those characters (``#`` out of the box) and the scan is read as
-printed.
+GS1 ends a variable-length value (a lot, a serial…) with FNC1, except
+when it is the last element of the barcode, where none is needed. The
+parser reads it that way: up to the next separator, or to the end of the
+barcode.
 
-With no separator at all the reading is a guess, and the parser makes an
-educated one: it ends a variable-length value only at a specific numeric
-identifier, never inside an alphanumeric one and never at a catch-all
-range. That reads a real pallet label —
-``(01)…(3103)002497(10)534343(30)02(15)261006`` — exactly as printed,
-where a naive scan cuts the lot number in half and turns the rest into a
-quantity. Two alphanumeric values in a row with nothing between them stay
-ambiguous, which is why GS1 does not allow it.
+A keyboard-wedge scanner often sends nothing in place of FNC1. Odoo has
+a field for exactly that — *FNC1 Separator* on the nomenclature — so
+configure the scanner to send one of those characters (``#`` out of the
+box) and the scan is read as printed.
+
+Only when that reading is impossible — a value longer than its rule
+allows — was a separator clearly dropped. The value then ends at the
+next element that reads cleanly: a specific numeric identifier (never an
+alphanumeric one, nor a catch-all range) with a value, a real date or a
+right check digit. Anything short of that is ambiguous — ``21 5830192``
+is the serial 5830192, or the serial 58 followed by a count of 192 — and
+is read as GS1 says, as one value.
 
 Misreads are refused
 --------------------
@@ -161,8 +159,8 @@ What the warehouse app does with it (with ``barcode_stock`` installed):
   unit: the piece count (AI 30/37), or the measure — a net weight, say —
   when the product is stocked in that kind of unit. Weighing that choice
   needs the unit the product is stocked in, so it lives in
-  ``barcode_gs1_stock``, which installs itself as soon as both modules are
-  there;
+  ``barcode_gs1_stock``, which installs itself as soon as both modules
+  are there;
 - the lot or serial is looked up for the scanned product and preselected
   in the move wizard; on a receipt an unknown lot opens the create-lot
   flow with the name and, when ``product_expiry`` is installed, the
@@ -198,16 +196,13 @@ Contributors
 Maintainers
 -----------
 
-.. |maintainer-antoniodavid| image:: https://github.com/antoniodavid.png?size=40px
-    :target: https://github.com/antoniodavid
-    :alt: antoniodavid
 .. |maintainer-szalatyzuzanna| image:: https://github.com/szalatyzuzanna.png?size=40px
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
-Current maintainers:
+Current maintainer:
 
-|maintainer-antoniodavid| |maintainer-szalatyzuzanna| 
+|maintainer-szalatyzuzanna| 
 
 This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_gs1>`_ project on GitHub.
 
