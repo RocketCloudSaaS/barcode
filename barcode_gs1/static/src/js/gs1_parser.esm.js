@@ -8,9 +8,14 @@ import {
 const GS1_SEPARATOR = String.fromCharCode(29); // FNC1 (<GS>, 0x1D)
 
 // The symbology identifiers the GS1 carriers prefix their data with: GS1-128,
-// DataBar, GS1 DataMatrix, GS1 QR and GS1 Aztec. Their presence is itself proof
-// that what follows is GS1 data ("]E0", a plain EAN-13, is not one of them).
+// DataBar, GS1 DataMatrix, GS1 QR and GS1 DotCode. Their presence is itself
+// proof that what follows is GS1 data ("]E0", a plain EAN-13, is not one of
+// them).
 const GS1_SYMBOLOGIES = ["]C1", "]e0", "]d2", "]Q3", "]J1"];
+
+// An application identifier written in parentheses, as on the human-readable
+// line of a label: "(01)", "(3103)".
+const PARENTHESISED_AI = /\(\d{2,4}\)/;
 
 // The characters GS1 allows in an alphanumeric value, as Odoo's own rules
 // spell them out.
@@ -457,7 +462,7 @@ function parseRawGS1(barcode, rules) {
         tokens.push({rule: match.rule, ai: match.ai, value: match.value});
         index = match.end;
     }
-    return {tokens, rest: barcode.slice(index).replace(GS1_SEPARATOR, "")};
+    return {tokens, rest: barcode.slice(index).replaceAll(GS1_SEPARATOR, "")};
 }
 
 /**
@@ -465,9 +470,10 @@ function parseRawGS1(barcode, rules) {
  *
  * The result follows the conventions the app already reads: `value`/`product`
  * hold the product code (screens and scan handlers look the product up with
- * it), `qty`/`quantity` the quantity to handle — the piece count when the
- * barcode carries one, a single unit otherwise — and `lot`/`serial`/`expiration`
- * the tracking data. A GS1 scan therefore flows through the existing screens
+ * it), `qty`/`quantity` the piece count the barcode states — null when it
+ * states none, so the screen applies its own default: a single unit, or the
+ * pack's quantity for a packaging barcode — and `lot`/`serial`/`expiration` the
+ * tracking data. A GS1 scan therefore flows through the existing screens
  * without them knowing anything about GS1.
  *
  * A measure (a net weight, say) is kept in `weight`/`weightUom` and never
@@ -480,7 +486,7 @@ function parseRawGS1(barcode, rules) {
 export function parseGS1Barcode(barcode) {
     const normalized = applyAlternativeSeparators(normalizeBarcode(barcode));
     const rules = activeRules();
-    const {tokens, rest} = normalized.includes("(")
+    const {tokens, rest} = PARENTHESISED_AI.test(normalized)
         ? parseParenthesizedGS1(normalized, rules)
         : parseRawGS1(normalized, rules);
 
@@ -508,8 +514,8 @@ export function parseGS1Barcode(barcode) {
         count: null,
         price: null,
         currency: null,
-        qty: 1,
-        quantity: 1,
+        qty: null,
+        quantity: null,
         errors: [],
     };
     let hasExpiration = false;
@@ -519,6 +525,13 @@ export function parseGS1Barcode(barcode) {
         parsed.ais[token.ai] = token.value;
         if (!token.rule) {
             parsed.errors.push(`Unknown GS1 application identifier ${token.ai}`);
+            continue;
+        }
+        if (!token.rule.fullRegex.test(token.ai + token.value)) {
+            // Only a parenthesised value can get here: the raw reading never
+            // cuts a value its rule would not accept.
+            parsed.errors.push(`Invalid GS1 value for AI ${token.ai}`);
+            rejectedGtin = rejectedGtin || token.rule.type === "product";
             continue;
         }
         const read = readValue(token);
@@ -610,31 +623,52 @@ export function parseGS1Barcode(barcode) {
 }
 
 /**
- * True if the (normalized) barcode looks like GS1 data: parenthesised AIs, an
- * FNC1 separator, or a raw string starting with the GTIN AI (01) that is longer
- * than a plain EAN13 (so genuine EAN13 codes fall through to the base parser).
+ * How a barcode shows itself to be GS1 data. A symbology identifier, an FNC1
+ * separator or a parenthesised application identifier is proof. A raw string
+ * starting with the GTIN AI (01) and longer than an EAN13 is only a hint, which
+ * the parse has to confirm. Anything else is not GS1 data.
  */
-export function isGS1Barcode(barcode) {
+function gs1Evidence(barcode) {
     const raw = String(barcode || "").trim();
     if (GS1_SYMBOLOGIES.some((identifier) => raw.startsWith(identifier))) {
-        return true;
+        return "proof";
     }
     const normalized = normalizeBarcode(barcode);
-    if (normalized.includes("(") || normalized.includes(GS1_SEPARATOR)) {
-        return true;
+    if (PARENTHESISED_AI.test(normalized) || normalized.includes(GS1_SEPARATOR)) {
+        return "proof";
     }
-    return normalized.startsWith("01") && normalized.length > 13;
+    if (normalized.startsWith("01") && normalized.length > 13) {
+        return "hint";
+    }
+    return null;
+}
+
+/**
+ * True if the barcode may be GS1 data: proof of it, or the hint of a raw string
+ * starting with the GTIN AI (01) that is longer than a plain EAN13 (so genuine
+ * EAN13 codes fall through to the base parser).
+ */
+export function isGS1Barcode(barcode) {
+    return gs1Evidence(barcode) !== null;
 }
 
 /**
  * Registered barcode parser. Only claims GS1 data; returns null otherwise so
- * the base EAN13 fallback (and any other parser) can handle the scan.
+ * the base EAN13 fallback (and any other parser) can handle the scan. A code
+ * that only hinted at GS1 and yields no application identifier at all — an
+ * ITF-14 with indicator digit 0, an internal reference starting with "01" — is
+ * not GS1 data either.
  */
 export function parseGs1(barcode) {
-    if (!isGS1Barcode(barcode)) {
+    const evidence = gs1Evidence(barcode);
+    if (!evidence) {
         return null;
     }
-    return parseGS1Barcode(barcode);
+    const parsed = parseGS1Barcode(barcode);
+    if (evidence === "hint" && !Object.keys(parsed.ais).length) {
+        return null;
+    }
+    return parsed;
 }
 
 barcodeParsers.add("gs1", parseGs1, {sequence: 10});

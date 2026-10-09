@@ -4,7 +4,9 @@ import {afterEach, describe, expect, test} from "@odoo/hoot";
 import {gtinVariants, isGS1Barcode, parseGs1} from "@barcode_gs1/js/gs1_parser.esm";
 import {
     compileGs1Nomenclature,
+    getGs1Nomenclature,
     hasValidCheckDigit,
+    loadGs1Nomenclature,
     setGs1Nomenclature,
 } from "@barcode_gs1/js/gs1_nomenclature.esm";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
@@ -99,7 +101,7 @@ describe("BarcodeGs1", () => {
             lot: "LOT123",
             expiration: "2026-12-31",
             expiry: "2026-12-31",
-            qty: 1,
+            qty: null,
             errors: [],
         });
     });
@@ -121,7 +123,7 @@ describe("BarcodeGs1", () => {
             serial: "5830192",
             lot: "5830192",
             count: null,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("0109501101020917214711000123")).toMatchObject({
@@ -132,7 +134,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("010950110102091710A3712")).toMatchObject({
             lot: "A3712",
             count: null,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("01095011010209171020241130")).toMatchObject({
@@ -190,8 +192,8 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
             count: null,
-            qty: 1,
-            quantity: 1,
+            qty: null,
+            quantity: null,
         });
     });
 
@@ -307,6 +309,46 @@ describe("BarcodeGs1", () => {
         // 01... but too short to be anything but an EAN13.
         expect(parseGs1("0123456789012")).toBe(null);
         expect(isGS1Barcode("(01)09501101020917")).toBe(true);
+        // An ITF-14 with indicator digit 0 starts with "01" too, but no
+        // application identifier reads out of it: it is a plain code.
+        expect(parseGs1("01234567890128")).toBe(null);
+        // A parenthesis is not an application identifier.
+        expect(isGS1Barcode("PAL(3)-A")).toBe(false);
+        expect(parseGs1("PAL(3)-A")).toBe(null);
+    });
+
+    test("a parenthesised value its rule does not accept is reported, not read", () => {
+        expect(parseGs1("(01)09501101020917(30)12abc")).toMatchObject({
+            count: null,
+            qty: null,
+            errors: ["Invalid GS1 value for AI 30"],
+        });
+        expect(
+            parseGs1("(01)09501101020917(10)ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        ).toMatchObject({lot: null, errors: ["Invalid GS1 value for AI 10"]});
+        // A GTIN is always 14 digits.
+        expect(parseGs1("(01)9501101020917")).toMatchObject({
+            gtin: null,
+            errors: ["Invalid GS1 value for AI 01"],
+        });
+    });
+
+    test("what cannot be parsed is reported whole", () => {
+        expect(parseGs1(`0109501101020917${GS}ZZ${GS}YY${GS}XX`).errors).toEqual([
+            'Unparsed GS1 data "ZZYYXX"',
+        ]);
+    });
+
+    test("a nomenclature that cannot be read leaves the built-in identifiers", async () => {
+        loadNomenclature(ODOO_RULES);
+        const offline = () => Promise.reject(new Error("offline"));
+        const orm = {read: offline, searchRead: offline};
+        expect(await loadGs1Nomenclature(orm, 1)).toBe(null);
+        expect(getGs1Nomenclature()).toBe(null);
+        expect(parseGs1("(01)09501101020917(11)260115")).toMatchObject({
+            productionDate: "2026-01-15",
+            errors: [],
+        });
     });
 
     test("the parser is registered ahead of the built-in EAN13 fallback", () => {
@@ -320,7 +362,7 @@ describe("BarcodeGs1", () => {
             value: "9501101020917",
             lot: "LOT123",
             expiry: "2026-12-31",
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1(`0109501101020917${GS}10LOT123${GS}17261231`)).toMatchObject({
@@ -337,7 +379,7 @@ describe("BarcodeGs1", () => {
         });
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("(01)09501101020916")).toMatchObject({
@@ -404,7 +446,7 @@ describe("BarcodeGs1", () => {
             value: "98436038190867",
             lot: "L0892611",
             weight: 4.324,
-            qty: 1,
+            qty: null,
             expiry: "2026-09-26",
             errors: [],
         };
@@ -421,7 +463,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
             value: "98017024009181",
             weight: 3.09,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         // ... and the tracking data on a second one, which carries no GTIN. A
@@ -472,8 +514,8 @@ describe("BarcodeGs1", () => {
         );
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1,
-            quantity: 1,
+            qty: null,
+            quantity: null,
             errors: [],
         });
         // A counted quantity is the quantity.

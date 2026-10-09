@@ -1,6 +1,6 @@
 Install ``barcode_gs1`` alongside ``barcode_scanner`` (and a feature module such
-as ``barcode_stock``). No configuration is needed — once installed, GS1
-barcodes are parsed automatically wherever the app reads a scan.
+as ``barcode_stock``). Once installed, GS1 barcodes are parsed automatically
+wherever the app reads a scan.
 
 A scanned GS1 barcode produces a parsed object such as:
 
@@ -15,7 +15,7 @@ A scanned GS1 barcode produces a parsed object such as:
         useDate: "YYYY-MM-DD",    // AI 15 / 16 (best before, sell by)
         packDate: "YYYY-MM-DD",   // AI 13
         productionDate: "...",    // AI 11
-        qty: <number>,            // AI 30 / 37; 1 when the label states no count
+        qty: <number>,            // AI 30 / 37; null when the label states no count
         count: <number>,          // AI 30 / 37 (pieces), kept next to the weight
         weight: <number>,         // AI 310n–360n
         weightUom: {id, name},    // the unit that measure is in, per the rule
@@ -37,34 +37,12 @@ Odoo stores (13 digits, as ``sanitize_ean`` produces), which is what the screens
 match the product against; ``productCodes`` lists the other lengths a barcode may
 have been stored as, longest-standing form first.
 
-## The rules come from Odoo
-
-The application identifiers are read from a GS1 ``barcode.nomenclature``: the
-one set on the company when it is a GS1 nomenclature, otherwise the first GS1
-nomenclature found (the *Default GS1 Nomenclature* Odoo ships). Its GS1-128
-rules are fetched once, when the barcode app opens.
-
-So to teach the scanner a new application identifier, add a rule under
-*Inventory → Configuration → Barcode Nomenclatures* — no code change. A rule
-whose *Type* is one the app understands (product, lot, quantity, weighted
-product, priced product, package, package type, expiration date, best before
-date, pack date, location, destination location) lands on the matching field
-above; the value of any other rule is still available in ``ais``.
-
-Identifiers the nomenclature does not define keep working through the ones built
-into the module, and if the nomenclature cannot be read at all the module falls
-back to them entirely.
-
-## Variable-length values and the separator
+## Variable-length values
 
 GS1 ends a variable-length value (a lot, a serial…) with FNC1, except when it is
 the last element of the barcode, where none is needed. The parser reads it that
-way: up to the next separator, or to the end of the barcode.
-
-A keyboard-wedge scanner often sends nothing in place of FNC1. Odoo has a field
-for exactly that — *FNC1 Separator* on the nomenclature — so configure the
-scanner to send one of those characters (``#`` out of the box) and the scan is
-read as printed.
+way: up to the next separator, or to the end of the barcode (see Configuration
+for scanners that cannot send FNC1).
 
 Only when that reading is impossible — a value longer than its rule allows —
 was a separator clearly dropped. The value then ends at the next element that
@@ -83,11 +61,12 @@ of resolving to the wrong product or pallet.
 
 What the warehouse app does with it (with ``barcode_stock`` installed):
 
-- the quantity picked comes from the barcode instead of being a single unit: the
-  piece count (AI 30/37), or the measure — a net weight, say — when the product
-  is stocked in that kind of unit. Weighing that choice needs the unit the
-  product is stocked in, so it lives in ``barcode_gs1_stock``, which installs
-  itself as soon as both modules are there;
+- the quantity picked comes from the barcode: the piece count (AI 30/37), or the
+  measure — a net weight, say — when the product is stocked in that kind of
+  unit. Weighing that choice needs the unit the product is stocked in, so it
+  lives in ``barcode_gs1_stock``, which installs itself as soon as both modules
+  are there. A label stating neither picks a single unit, or the pack's
+  quantity when its GTIN is a packaging barcode;
 - the lot or serial is looked up for the scanned product and preselected in the
   move wizard; on a receipt an unknown lot opens the create-lot flow with the
   name and, when ``product_expiry`` is installed, the expiry date prefilled;
