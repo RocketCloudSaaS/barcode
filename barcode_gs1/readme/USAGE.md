@@ -15,7 +15,7 @@ A scanned GS1 barcode produces a parsed object such as:
         useDate: "YYYY-MM-DD",    // AI 15 / 16 (best before, sell by)
         packDate: "YYYY-MM-DD",   // AI 13
         productionDate: "...",    // AI 11
-        qty: <number>,            // AI 30 / 37; 1 when the label states no count
+        qty: <number>,            // AI 30 / 37; null when the label states no count
         count: <number>,          // AI 30 / 37 (pieces), kept next to the weight
         weight: <number>,         // AI 310n–360n
         weightUom: {id, name},    // the unit that measure is in, per the rule
@@ -61,11 +61,12 @@ of resolving to the wrong product or pallet.
 
 What the warehouse app does with it (with ``barcode_stock`` installed):
 
-- the quantity picked comes from the barcode instead of being a single unit: the
-  piece count (AI 30/37), or the measure — a net weight, say — when the product
-  is stocked in that kind of unit. Weighing that choice needs the unit the
-  product is stocked in, so it lives in ``barcode_gs1_stock``, which installs
-  itself as soon as both modules are there;
+- the quantity picked comes from the barcode: the piece count (AI 30/37), or the
+  measure — a net weight, say — when the product is stocked in that kind of
+  unit. Weighing that choice needs the unit the product is stocked in, so it
+  lives in ``barcode_gs1_stock``, which installs itself as soon as both modules
+  are there. A label stating neither picks a single unit, or the pack's
+  quantity when its GTIN is a packaging barcode;
 - the lot or serial is looked up for the scanned product and preselected in the
   move wizard; on a receipt an unknown lot opens the create-lot flow with the
   name and, when ``product_expiry`` is installed, the expiry date prefilled;
