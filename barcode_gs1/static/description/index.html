@@ -465,7 +465,7 @@ parsed automatically wherever the app reads a scan.</p>
     useDate: &quot;YYYY-MM-DD&quot;,    // AI 15 / 16 (best before, sell by)
     packDate: &quot;YYYY-MM-DD&quot;,   // AI 13
     productionDate: &quot;...&quot;,    // AI 11
-    qty: &lt;number&gt;,            // AI 30 / 37; 1 when the label states no count
+    qty: &lt;number&gt;,            // AI 30 / 37; null when the label states no count
     count: &lt;number&gt;,          // AI 30 / 37 (pieces), kept next to the weight
     weight: &lt;number&gt;,         // AI 310n–360n
     weightUom: {id, name},    // the unit that measure is in, per the rule
@@ -510,12 +510,13 @@ is read as GS1 says, as one value.</p>
 <h2><a class="toc-backref" href="#toc-entry-7">In the warehouse app</a></h2>
 <p>What the warehouse app does with it (with <tt class="docutils literal">barcode_stock</tt> installed):</p>
 <ul class="simple">
-<li>the quantity picked comes from the barcode instead of being a single
-unit: the piece count (AI 30/37), or the measure — a net weight, say —
-when the product is stocked in that kind of unit. Weighing that choice
-needs the unit the product is stocked in, so it lives in
-<tt class="docutils literal">barcode_gs1_stock</tt>, which installs itself as soon as both modules
-are there;</li>
+<li>the quantity picked comes from the barcode: the piece count (AI
+30/37), or the measure — a net weight, say — when the product is
+stocked in that kind of unit. Weighing that choice needs the unit the
+product is stocked in, so it lives in <tt class="docutils literal">barcode_gs1_stock</tt>, which
+installs itself as soon as both modules are there. A label stating
+neither picks a single unit, or the pack’s quantity when its GTIN is a
+packaging barcode;</li>
 <li>the lot or serial is looked up for the scanned product and preselected
 in the move wizard; on a receipt an unknown lot opens the create-lot
 flow with the name and, when <tt class="docutils literal">product_expiry</tt> is installed, the

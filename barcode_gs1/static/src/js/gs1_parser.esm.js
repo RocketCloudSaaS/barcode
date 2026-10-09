@@ -470,9 +470,10 @@ function parseRawGS1(barcode, rules) {
  *
  * The result follows the conventions the app already reads: `value`/`product`
  * hold the product code (screens and scan handlers look the product up with
- * it), `qty`/`quantity` the quantity to handle — the piece count when the
- * barcode carries one, a single unit otherwise — and `lot`/`serial`/`expiration`
- * the tracking data. A GS1 scan therefore flows through the existing screens
+ * it), `qty`/`quantity` the piece count the barcode states — null when it
+ * states none, so the screen applies its own default: a single unit, or the
+ * pack's quantity for a packaging barcode — and `lot`/`serial`/`expiration` the
+ * tracking data. A GS1 scan therefore flows through the existing screens
  * without them knowing anything about GS1.
  *
  * A measure (a net weight, say) is kept in `weight`/`weightUom` and never
@@ -513,8 +514,8 @@ export function parseGS1Barcode(barcode) {
         count: null,
         price: null,
         currency: null,
-        qty: 1,
-        quantity: 1,
+        qty: null,
+        quantity: null,
         errors: [],
     };
     let hasExpiration = false;
