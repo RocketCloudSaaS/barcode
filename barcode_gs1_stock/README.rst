@@ -63,9 +63,15 @@ Only the floating point noise of the conversion is rounded away, so the
 2.497 kg the label states does not become the 2.50 the unit's own
 rounding would give.
 
+When the GTIN is a packaging barcode (a carton of twelve, say), a label
+without a count picks the pack's quantity, and a count on the label wins
+over it. A measure in the product's own kind of unit wins over both: a
+carton of cheese weighing 4.32 kg is 4.32 for a product stocked in
+kilograms, not twelve.
+
 Without this module GS1 barcodes are still parsed, but a measure is
 never the quantity: the warehouse app takes the piece count, or a single
-unit.
+unit (the pack's quantity for a packaging barcode).
 
 Bug Tracker
 ===========

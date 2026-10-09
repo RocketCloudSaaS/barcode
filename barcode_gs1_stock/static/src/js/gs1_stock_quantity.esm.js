@@ -1,6 +1,6 @@
-import {patch} from "@web/core/utils/patch";
-import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
+import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
+import {patch} from "@web/core/utils/patch";
 
 /**
  * Read the quantity of a GS1 scan the way the warehouse means it.
@@ -32,24 +32,22 @@ patch(BarcodeScannerState.prototype, {
     },
 
     /**
-     * @override
-     * The measure a GS1 label carries becomes the quantity when its unit is the
-     * kind the product is stocked in, converted into that unit. When it is not —
-     * a weight for a product counted in units — the piece count is the quantity
-     * instead, and a single unit when the label states no count: a weight must
-     * never turn into a number of units.
+     * The measure a GS1 label carries, as a quantity of the product: converted
+     * into the unit the product is stocked in. Null when there is no measure,
+     * when its unit is not the kind the product is stocked in (a weight for a
+     * product counted in units), or when the units could not be read.
      */
-    scannedQuantity(scan, productUomId) {
+    measureQuantity(scan, productUomId) {
         const measure = parseFloat(scan?.weight);
         const measureUom = this.uomsById?.[scan?.weightUom?.id];
         const productUom = this.uomsById?.[productUomId];
-        if (!Number.isFinite(measure) || !measureUom || !productUom) {
-            // No measure, or units we could not read: the scan speaks for itself.
-            return super.scannedQuantity(...arguments);
-        }
-        if (measureUom.category_id?.[0] !== productUom.category_id?.[0]) {
-            const count = parseFloat(scan?.count);
-            return Number.isFinite(count) && count > 0 ? count : 1;
+        if (
+            !Number.isFinite(measure) ||
+            !measureUom ||
+            !productUom ||
+            measureUom.category_id?.[0] !== productUom.category_id?.[0]
+        ) {
+            return null;
         }
         // Odoo's factor is how many of a unit make one unit of its category's
         // reference, so converting is a ratio of the two. Only the floating point
@@ -58,6 +56,38 @@ patch(BarcodeScannerState.prototype, {
         const converted =
             (measure / (measureUom.factor || 1)) * (productUom.factor || 1);
         return Math.round(converted * 1e6) / 1e6;
+    },
+
+    /**
+     * @override
+     * The measure becomes the quantity when its unit is the kind the product is
+     * stocked in. Otherwise the base reading stands: the piece count on the
+     * label, or a single unit when it states none — a weight must never turn
+     * into a number of units.
+     */
+    scannedQuantity(scan, productUomId) {
+        const measured = this.measureQuantity(scan, productUomId);
+        return measured === null ? super.scannedQuantity(...arguments) : measured;
+    },
+
+    /**
+     * @override
+     * A packaging barcode stands for a whole pack, and the base takes the pack's
+     * quantity whenever the label states no count. A measure is more precise
+     * than that: a carton of cheese weighing 4.32 kg is 4.32 for a product
+     * stocked in kilograms, not the pack's nominal quantity.
+     */
+    applyScanResult(scan) {
+        const result = super.applyScanResult(...arguments);
+        const productId = result.candidates?.[0]?.product_id?.[0];
+        const measured = this.measureQuantity(
+            scan,
+            this.productsById?.[productId]?.uom_id?.[0]
+        );
+        if (measured !== null) {
+            result.quantity = measured;
+        }
+        return result;
     },
 });
 
