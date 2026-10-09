@@ -153,23 +153,29 @@ async function findGs1Nomenclature(orm, companyId) {
 
 /**
  * Fetch the GS1 nomenclature and its GS1-128 rules, and cache them for the
- * parser. Returns the cached nomenclature, or null when there is none to use.
+ * parser. Returns the cached nomenclature, or null when there is none to use —
+ * including when it cannot be read, so the parser falls back to its built-in
+ * identifiers instead of a half-read nomenclature.
  */
 export async function loadGs1Nomenclature(orm, companyId) {
-    const nomenclature = await findGs1Nomenclature(orm, companyId);
-    if (!nomenclature) {
+    try {
+        const nomenclature = await findGs1Nomenclature(orm, companyId);
+        if (!nomenclature) {
+            setGs1Nomenclature(null);
+            return null;
+        }
+        const rules = await orm.searchRead(
+            "barcode.rule",
+            [
+                ["barcode_nomenclature_id", "=", nomenclature.id],
+                ["encoding", "=", "gs1-128"],
+            ],
+            RULE_FIELDS,
+            {order: "sequence"}
+        );
+        setGs1Nomenclature(compileGs1Nomenclature(nomenclature, rules));
+    } catch {
         setGs1Nomenclature(null);
-        return null;
     }
-    const rules = await orm.searchRead(
-        "barcode.rule",
-        [
-            ["barcode_nomenclature_id", "=", nomenclature.id],
-            ["encoding", "=", "gs1-128"],
-        ],
-        RULE_FIELDS,
-        {order: "sequence"}
-    );
-    setGs1Nomenclature(compileGs1Nomenclature(nomenclature, rules));
     return getGs1Nomenclature();
 }

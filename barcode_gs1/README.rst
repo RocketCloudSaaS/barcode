@@ -55,13 +55,48 @@ so the module is safe to install next to the rest of the suite.
 .. contents::
    :local:
 
+Configuration
+=============
+
+No configuration is needed: once installed, GS1 barcodes are parsed
+wherever the app reads a scan. Two things can be adjusted.
+
+Application identifiers
+-----------------------
+
+The application identifiers are read from a GS1
+``barcode.nomenclature``: the one set on the company when it is a GS1
+nomenclature, otherwise the first GS1 nomenclature found (the *Default
+GS1 Nomenclature* Odoo ships). Its GS1-128 rules are fetched once, when
+the barcode app opens.
+
+To teach the scanner a new application identifier, add a rule under
+*Inventory → Configuration → Barcode Nomenclatures* — no code change. A
+rule whose *Type* is one the app understands (product, lot, quantity,
+weighted product, priced product, package, package type, expiration
+date, best before date, pack date, location, destination location) lands
+on the matching field of the parsed scan (see Usage); the value of any
+other rule is still available in ``ais``.
+
+Identifiers the nomenclature does not define keep working through the
+ones built into the module, and if the nomenclature cannot be read at
+all the module falls back to them entirely.
+
+Scanners that cannot send FNC1
+------------------------------
+
+GS1 ends a variable-length value with FNC1 unless it is the last element
+of the barcode, and a keyboard-wedge scanner often sends nothing in its
+place. Odoo has a field for exactly that — *FNC1 Separator* on the
+nomenclature — so configure the scanner to send one of those characters
+(``#`` out of the box) and the scan is read as printed.
+
 Usage
 =====
 
 Install ``barcode_gs1`` alongside ``barcode_scanner`` (and a feature
-module such as ``barcode_stock``). No configuration is needed — once
-installed, GS1 barcodes are parsed automatically wherever the app reads
-a scan.
+module such as ``barcode_stock``). Once installed, GS1 barcodes are
+parsed automatically wherever the app reads a scan.
 
 A scanned GS1 barcode produces a parsed object such as:
 
@@ -101,39 +136,13 @@ which is what the screens match the product against; ``productCodes``
 lists the other lengths a barcode may have been stored as,
 longest-standing form first.
 
-The rules come from Odoo
-------------------------
-
-The application identifiers are read from a GS1
-``barcode.nomenclature``: the one set on the company when it is a GS1
-nomenclature, otherwise the first GS1 nomenclature found (the *Default
-GS1 Nomenclature* Odoo ships). Its GS1-128 rules are fetched once, when
-the barcode app opens.
-
-So to teach the scanner a new application identifier, add a rule under
-*Inventory → Configuration → Barcode Nomenclatures* — no code change. A
-rule whose *Type* is one the app understands (product, lot, quantity,
-weighted product, priced product, package, package type, expiration
-date, best before date, pack date, location, destination location) lands
-on the matching field above; the value of any other rule is still
-available in ``ais``.
-
-Identifiers the nomenclature does not define keep working through the
-ones built into the module, and if the nomenclature cannot be read at
-all the module falls back to them entirely.
-
-Variable-length values and the separator
-----------------------------------------
+Variable-length values
+----------------------
 
 GS1 ends a variable-length value (a lot, a serial…) with FNC1, except
 when it is the last element of the barcode, where none is needed. The
 parser reads it that way: up to the next separator, or to the end of the
-barcode.
-
-A keyboard-wedge scanner often sends nothing in place of FNC1. Odoo has
-a field for exactly that — *FNC1 Separator* on the nomenclature — so
-configure the scanner to send one of those characters (``#`` out of the
-box) and the scan is read as printed.
+barcode (see Configuration for scanners that cannot send FNC1).
 
 Only when that reading is impossible — a value longer than its rule
 allows — was a separator clearly dropped. The value then ends at the
