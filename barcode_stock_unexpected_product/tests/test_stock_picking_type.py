@@ -45,13 +45,20 @@ class TestStockPickingTypeAllowInsertNewLine(TransactionCase):
         # QA-03 / EXP-07: "Storage" keeps False, "Ship to Jobs" keeps False
         # when present, and no module data enables any type retroactively.
         storage = self.env.ref("stock.picking_type_internal")
-        # Ensure isolation from previous manual changes (e.g., WH/INT/00001 set to True)
-        storage.allow_insert_new_line = False
-        self.assertIs(storage.allow_insert_new_line, False)
-        ship_to_jobs = self.env.ref(
-            "stock.picking_type_internal_ship_to_jobs", raise_if_not_found=False
-        )
-        if ship_to_jobs:
-            self.assertIs(ship_to_jobs.allow_insert_new_line, False)
-        enabled = self.picking_type_model.search([("allow_insert_new_line", "=", True)])
-        self.assertFalse(enabled)
+        previous_allow_insert_new_line = storage.allow_insert_new_line
+        try:
+            # Ensure isolation from previous manual changes (e.g., WH/INT/00001
+            # set to True) while checking the module's configured default.
+            storage.allow_insert_new_line = False
+            self.assertIs(storage.allow_insert_new_line, False)
+            ship_to_jobs = self.env.ref(
+                "stock.picking_type_internal_ship_to_jobs", raise_if_not_found=False
+            )
+            if ship_to_jobs:
+                self.assertIs(ship_to_jobs.allow_insert_new_line, False)
+            enabled = self.picking_type_model.search(
+                [("allow_insert_new_line", "=", True)]
+            )
+            self.assertFalse(enabled)
+        finally:
+            storage.allow_insert_new_line = previous_allow_insert_new_line
