@@ -307,6 +307,34 @@ describe("BarcodeGs1", () => {
         // 01... but too short to be anything but an EAN13.
         expect(parseGs1("0123456789012")).toBe(null);
         expect(isGS1Barcode("(01)09501101020917")).toBe(true);
+        // An ITF-14 with indicator digit 0 starts with "01" too, but no
+        // application identifier reads out of it: it is a plain code.
+        expect(parseGs1("01234567890128")).toBe(null);
+        // A parenthesis is not an application identifier.
+        expect(isGS1Barcode("PAL(3)-A")).toBe(false);
+        expect(parseGs1("PAL(3)-A")).toBe(null);
+    });
+
+    test("a parenthesised value its rule does not accept is reported, not read", () => {
+        expect(parseGs1("(01)09501101020917(30)12abc")).toMatchObject({
+            count: null,
+            qty: 1,
+            errors: ["Invalid GS1 value for AI 30"],
+        });
+        expect(
+            parseGs1("(01)09501101020917(10)ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        ).toMatchObject({lot: null, errors: ["Invalid GS1 value for AI 10"]});
+        // A GTIN is always 14 digits.
+        expect(parseGs1("(01)9501101020917")).toMatchObject({
+            gtin: null,
+            errors: ["Invalid GS1 value for AI 01"],
+        });
+    });
+
+    test("what cannot be parsed is reported whole", () => {
+        expect(parseGs1(`0109501101020917${GS}ZZ${GS}YY${GS}XX`).errors).toEqual([
+            'Unparsed GS1 data "ZZYYXX"',
+        ]);
     });
 
     test("the parser is registered ahead of the built-in EAN13 fallback", () => {
