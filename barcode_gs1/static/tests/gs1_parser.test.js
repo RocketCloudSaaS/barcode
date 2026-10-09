@@ -101,7 +101,7 @@ describe("BarcodeGs1", () => {
             lot: "LOT123",
             expiration: "2026-12-31",
             expiry: "2026-12-31",
-            qty: 1,
+            qty: null,
             errors: [],
         });
     });
@@ -123,7 +123,7 @@ describe("BarcodeGs1", () => {
             serial: "5830192",
             lot: "5830192",
             count: null,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("0109501101020917214711000123")).toMatchObject({
@@ -134,7 +134,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("010950110102091710A3712")).toMatchObject({
             lot: "A3712",
             count: null,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("01095011010209171020241130")).toMatchObject({
@@ -192,8 +192,8 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
             count: null,
-            qty: 1,
-            quantity: 1,
+            qty: null,
+            quantity: null,
         });
     });
 
@@ -320,7 +320,7 @@ describe("BarcodeGs1", () => {
     test("a parenthesised value its rule does not accept is reported, not read", () => {
         expect(parseGs1("(01)09501101020917(30)12abc")).toMatchObject({
             count: null,
-            qty: 1,
+            qty: null,
             errors: ["Invalid GS1 value for AI 30"],
         });
         expect(
@@ -362,7 +362,7 @@ describe("BarcodeGs1", () => {
             value: "9501101020917",
             lot: "LOT123",
             expiry: "2026-12-31",
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1(`0109501101020917${GS}10LOT123${GS}17261231`)).toMatchObject({
@@ -379,7 +379,7 @@ describe("BarcodeGs1", () => {
         });
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         expect(parseGs1("(01)09501101020916")).toMatchObject({
@@ -446,7 +446,7 @@ describe("BarcodeGs1", () => {
             value: "98436038190867",
             lot: "L0892611",
             weight: 4.324,
-            qty: 1,
+            qty: null,
             expiry: "2026-09-26",
             errors: [],
         };
@@ -463,7 +463,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
             value: "98017024009181",
             weight: 3.09,
-            qty: 1,
+            qty: null,
             errors: [],
         });
         // ... and the tracking data on a second one, which carries no GTIN. A
@@ -514,8 +514,8 @@ describe("BarcodeGs1", () => {
         );
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1,
-            quantity: 1,
+            qty: null,
+            quantity: null,
             errors: [],
         });
         // A counted quantity is the quantity.
