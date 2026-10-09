@@ -44,14 +44,14 @@ describe("Gs1StockQuantity", () => {
     test("a weight with no count is a single unit for a product in units", () => {
         // A cheese wheel label: 4.324 kg net and no count at all. Adding "4.324
         // units" would be wrong; one box was scanned.
-        const wheel = {qty: 4.324, weight: 4.324, weightUom: {id: 13, name: "kg"}};
+        const wheel = {qty: 1, weight: 4.324, weightUom: {id: 13, name: "kg"}};
         const state = stateWithUoms();
         expect(state.scannedQuantity(wheel, 13)).toBe(4.324);
         expect(state.scannedQuantity(wheel, 1)).toBe(1);
     });
 
     test("a measure in another unit of the same category is converted", () => {
-        const pounds = {qty: 5, weight: 5, weightUom: {id: 16, name: "lb"}};
+        const pounds = {qty: 1, weight: 5, weightUom: {id: 16, name: "lb"}};
         expect(stateWithUoms().scannedQuantity(pounds, 13)).toBe(2.267965);
     });
 

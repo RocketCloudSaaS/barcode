@@ -1,7 +1,3 @@
-.. image:: https://odoo-community.org/readme-banner-image
-   :target: https://odoo-community.org/get-involved?utm_source=readme
-   :alt: Odoo Community Association
-
 =================
 Barcode GS1 Stock
 =================
@@ -67,9 +63,9 @@ Only the floating point noise of the conversion is rounded away, so the
 2.497 kg the label states does not become the 2.50 the unit's own
 rounding would give.
 
-Without this module the warehouse app takes a scanned quantity as it
-comes, and GS1 barcodes are still parsed — only the unit of measure is
-not considered.
+Without this module GS1 barcodes are still parsed, but a measure is
+never the quantity: the warehouse app takes the piece count, or a single
+unit.
 
 Bug Tracker
 ===========
@@ -103,7 +99,7 @@ Maintainers
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
-Current maintainers:
+Current maintainer:
 
 |maintainer-szalatyzuzanna| 
 
