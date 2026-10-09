@@ -1,0 +1,3 @@
+# Ignore all JS files in barcode_scanner - use ESM override via file extension
+barcode_scanner/static/src/**/*.js
+barcode_scanner/static/src/**/*.esm.js
