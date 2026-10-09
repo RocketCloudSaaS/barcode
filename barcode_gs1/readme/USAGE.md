@@ -55,20 +55,23 @@ Identifiers the nomenclature does not define keep working through the ones built
 into the module, and if the nomenclature cannot be read at all the module falls
 back to them entirely.
 
-## Scanners that drop the separator
+## Variable-length values and the separator
 
-GS1 ends a variable-length value with FNC1, and a keyboard-wedge scanner often
-sends nothing in its place. Odoo has a field for exactly that — *FNC1 Separator*
-on the nomenclature — so configure the scanner to send one of those characters
-(``#`` out of the box) and the scan is read as printed.
+GS1 ends a variable-length value (a lot, a serial…) with FNC1, except when it is
+the last element of the barcode, where none is needed. The parser reads it that
+way: up to the next separator, or to the end of the barcode.
 
-With no separator at all the reading is a guess, and the parser makes an
-educated one: it ends a variable-length value only at a specific numeric
-identifier, never inside an alphanumeric one and never at a catch-all range.
-That reads a real pallet label — ``(01)…(3103)002497(10)534343(30)02(15)261006``
-— exactly as printed, where a naive scan cuts the lot number in half and turns
-the rest into a quantity. Two alphanumeric values in a row with nothing between
-them stay ambiguous, which is why GS1 does not allow it.
+A keyboard-wedge scanner often sends nothing in place of FNC1. Odoo has a field
+for exactly that — *FNC1 Separator* on the nomenclature — so configure the
+scanner to send one of those characters (``#`` out of the box) and the scan is
+read as printed.
+
+Only when that reading is impossible — a value longer than its rule allows —
+was a separator clearly dropped. The value then ends at the next element that
+reads cleanly: a specific numeric identifier (never an alphanumeric one, nor a
+catch-all range) with a value, a real date or a right check digit. Anything
+short of that is ambiguous — ``21 5830192`` is the serial 5830192, or the serial
+58 followed by a count of 192 — and is read as GS1 says, as one value.
 
 ## Misreads are refused
 
