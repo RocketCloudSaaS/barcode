@@ -396,28 +396,62 @@ so the module is safe to install next to the rest of the suite.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#usage" id="toc-entry-1">Usage</a><ul>
-<li><a class="reference internal" href="#the-rules-come-from-odoo" id="toc-entry-2">The rules come from Odoo</a></li>
-<li><a class="reference internal" href="#variable-length-values-and-the-separator" id="toc-entry-3">Variable-length values and the separator</a></li>
-<li><a class="reference internal" href="#misreads-are-refused" id="toc-entry-4">Misreads are refused</a></li>
-<li><a class="reference internal" href="#in-the-warehouse-app" id="toc-entry-5">In the warehouse app</a></li>
+<li><a class="reference internal" href="#configuration" id="toc-entry-1">Configuration</a><ul>
+<li><a class="reference internal" href="#application-identifiers" id="toc-entry-2">Application identifiers</a></li>
+<li><a class="reference internal" href="#scanners-that-cannot-send-fnc1" id="toc-entry-3">Scanners that cannot send FNC1</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-6">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-7">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-8">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-9">Contributors</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-10">Maintainers</a></li>
+<li><a class="reference internal" href="#usage" id="toc-entry-4">Usage</a><ul>
+<li><a class="reference internal" href="#variable-length-values" id="toc-entry-5">Variable-length values</a></li>
+<li><a class="reference internal" href="#misreads-are-refused" id="toc-entry-6">Misreads are refused</a></li>
+<li><a class="reference internal" href="#in-the-warehouse-app" id="toc-entry-7">In the warehouse app</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-8">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-9">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-10">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-11">Contributors</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-12">Maintainers</a></li>
 </ul>
 </li>
 </ul>
 </div>
+<div class="section" id="configuration">
+<h1><a class="toc-backref" href="#toc-entry-1">Configuration</a></h1>
+<p>No configuration is needed: once installed, GS1 barcodes are parsed
+wherever the app reads a scan. Two things can be adjusted.</p>
+<div class="section" id="application-identifiers">
+<h2><a class="toc-backref" href="#toc-entry-2">Application identifiers</a></h2>
+<p>The application identifiers are read from a GS1
+<tt class="docutils literal">barcode.nomenclature</tt>: the one set on the company when it is a GS1
+nomenclature, otherwise the first GS1 nomenclature found (the <em>Default
+GS1 Nomenclature</em> Odoo ships). Its GS1-128 rules are fetched once, when
+the barcode app opens.</p>
+<p>To teach the scanner a new application identifier, add a rule under
+<em>Inventory → Configuration → Barcode Nomenclatures</em> — no code change. A
+rule whose <em>Type</em> is one the app understands (product, lot, quantity,
+weighted product, priced product, package, package type, expiration
+date, best before date, pack date, location, destination location) lands
+on the matching field of the parsed scan (see Usage); the value of any
+other rule is still available in <tt class="docutils literal">ais</tt>.</p>
+<p>Identifiers the nomenclature does not define keep working through the
+ones built into the module, and if the nomenclature cannot be read at
+all the module falls back to them entirely.</p>
+</div>
+<div class="section" id="scanners-that-cannot-send-fnc1">
+<h2><a class="toc-backref" href="#toc-entry-3">Scanners that cannot send FNC1</a></h2>
+<p>GS1 ends a variable-length value with FNC1 unless it is the last element
+of the barcode, and a keyboard-wedge scanner often sends nothing in its
+place. Odoo has a field for exactly that — <em>FNC1 Separator</em> on the
+nomenclature — so configure the scanner to send one of those characters
+(<tt class="docutils literal">#</tt> out of the box) and the scan is read as printed.</p>
+</div>
+</div>
 <div class="section" id="usage">
-<h1><a class="toc-backref" href="#toc-entry-1">Usage</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-4">Usage</a></h1>
 <p>Install <tt class="docutils literal">barcode_gs1</tt> alongside <tt class="docutils literal">barcode_scanner</tt> (and a feature
-module such as <tt class="docutils literal">barcode_stock</tt>). No configuration is needed — once
-installed, GS1 barcodes are parsed automatically wherever the app reads
-a scan.</p>
+module such as <tt class="docutils literal">barcode_stock</tt>). Once installed, GS1 barcodes are
+parsed automatically wherever the app reads a scan.</p>
 <p>A scanned GS1 barcode produces a parsed object such as:</p>
 <pre class="literal-block">
 {
@@ -452,34 +486,12 @@ padding-free form Odoo stores (13 digits, as <tt class="docutils literal">saniti
 which is what the screens match the product against; <tt class="docutils literal">productCodes</tt>
 lists the other lengths a barcode may have been stored as,
 longest-standing form first.</p>
-<div class="section" id="the-rules-come-from-odoo">
-<h2><a class="toc-backref" href="#toc-entry-2">The rules come from Odoo</a></h2>
-<p>The application identifiers are read from a GS1
-<tt class="docutils literal">barcode.nomenclature</tt>: the one set on the company when it is a GS1
-nomenclature, otherwise the first GS1 nomenclature found (the <em>Default
-GS1 Nomenclature</em> Odoo ships). Its GS1-128 rules are fetched once, when
-the barcode app opens.</p>
-<p>So to teach the scanner a new application identifier, add a rule under
-<em>Inventory → Configuration → Barcode Nomenclatures</em> — no code change. A
-rule whose <em>Type</em> is one the app understands (product, lot, quantity,
-weighted product, priced product, package, package type, expiration
-date, best before date, pack date, location, destination location) lands
-on the matching field above; the value of any other rule is still
-available in <tt class="docutils literal">ais</tt>.</p>
-<p>Identifiers the nomenclature does not define keep working through the
-ones built into the module, and if the nomenclature cannot be read at
-all the module falls back to them entirely.</p>
-</div>
-<div class="section" id="variable-length-values-and-the-separator">
-<h2><a class="toc-backref" href="#toc-entry-3">Variable-length values and the separator</a></h2>
+<div class="section" id="variable-length-values">
+<h2><a class="toc-backref" href="#toc-entry-5">Variable-length values</a></h2>
 <p>GS1 ends a variable-length value (a lot, a serial…) with FNC1, except
 when it is the last element of the barcode, where none is needed. The
 parser reads it that way: up to the next separator, or to the end of the
-barcode.</p>
-<p>A keyboard-wedge scanner often sends nothing in place of FNC1. Odoo has
-a field for exactly that — <em>FNC1 Separator</em> on the nomenclature — so
-configure the scanner to send one of those characters (<tt class="docutils literal">#</tt> out of the
-box) and the scan is read as printed.</p>
+barcode (see Configuration for scanners that cannot send FNC1).</p>
 <p>Only when that reading is impossible — a value longer than its rule
 allows — was a separator clearly dropped. The value then ends at the
 next element that reads cleanly: a specific numeric identifier (never an
@@ -489,13 +501,13 @@ is the serial 5830192, or the serial 58 followed by a count of 192 — and
 is read as GS1 says, as one value.</p>
 </div>
 <div class="section" id="misreads-are-refused">
-<h2><a class="toc-backref" href="#toc-entry-4">Misreads are refused</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-6">Misreads are refused</a></h2>
 <p>A GTIN, SSCC or GLN is only accepted when its check digit (GS1 modulo
 10) matches. A misread identifier is left empty and reported in
 <tt class="docutils literal">errors</tt> instead of resolving to the wrong product or pallet.</p>
 </div>
 <div class="section" id="in-the-warehouse-app">
-<h2><a class="toc-backref" href="#toc-entry-5">In the warehouse app</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">In the warehouse app</a></h2>
 <p>What the warehouse app does with it (with <tt class="docutils literal">barcode_stock</tt> installed):</p>
 <ul class="simple">
 <li>the quantity picked comes from the barcode instead of being a single
@@ -514,7 +526,7 @@ reported instead of silently picking another one.</li>
 </div>
 </div>
 <div class="section" id="bug-tracker">
-<h1><a class="toc-backref" href="#toc-entry-6">Bug Tracker</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-8">Bug Tracker</a></h1>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -522,15 +534,15 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h1><a class="toc-backref" href="#toc-entry-7">Credits</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-9">Credits</a></h1>
 <div class="section" id="authors">
-<h2><a class="toc-backref" href="#toc-entry-8">Authors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-10">Authors</a></h2>
 <ul class="simple">
 <li>Binhex</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h2><a class="toc-backref" href="#toc-entry-9">Contributors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-11">Contributors</a></h2>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/antoniodavid">Antonio David Ruban Espinal</a></li>
 <li><a class="reference external" href="https://github.com/szalatyzuzanna">Zuzanna Elzbieta Szalaty
@@ -538,7 +550,7 @@ Szalaty</a></li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h2><a class="toc-backref" href="#toc-entry-10">Maintainers</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-12">Maintainers</a></h2>
 <p>Current maintainer:</p>
 <p><a class="reference external image-reference" href="https://github.com/szalatyzuzanna"><img alt="szalatyzuzanna" src="https://github.com/szalatyzuzanna.png?size=40px" /></a></p>
 <p>This module is part of the <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_gs1">RocketCloudSaaS/barcode</a> project on GitHub.</p>
