@@ -4,7 +4,9 @@ import {afterEach, describe, expect, test} from "@odoo/hoot";
 import {gtinVariants, isGS1Barcode, parseGs1} from "@barcode_gs1/js/gs1_parser.esm";
 import {
     compileGs1Nomenclature,
+    getGs1Nomenclature,
     hasValidCheckDigit,
+    loadGs1Nomenclature,
     setGs1Nomenclature,
 } from "@barcode_gs1/js/gs1_nomenclature.esm";
 import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
@@ -335,6 +337,18 @@ describe("BarcodeGs1", () => {
         expect(parseGs1(`0109501101020917${GS}ZZ${GS}YY${GS}XX`).errors).toEqual([
             'Unparsed GS1 data "ZZYYXX"',
         ]);
+    });
+
+    test("a nomenclature that cannot be read leaves the built-in identifiers", async () => {
+        loadNomenclature(ODOO_RULES);
+        const offline = () => Promise.reject(new Error("offline"));
+        const orm = {read: offline, searchRead: offline};
+        expect(await loadGs1Nomenclature(orm, 1)).toBe(null);
+        expect(getGs1Nomenclature()).toBe(null);
+        expect(parseGs1("(01)09501101020917(11)260115")).toMatchObject({
+            productionDate: "2026-01-15",
+            errors: [],
+        });
     });
 
     test("the parser is registered ahead of the built-in EAN13 fallback", () => {
