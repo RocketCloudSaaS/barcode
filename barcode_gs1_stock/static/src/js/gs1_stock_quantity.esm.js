@@ -1,3 +1,4 @@
+import {roundDecimals, roundPrecision} from "@web/core/utils/numbers";
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
 import {patch} from "@web/core/utils/patch";
@@ -14,28 +15,36 @@ import {patch} from "@web/core/utils/patch";
  */
 patch(BarcodeScannerState.prototype, {
     /**
-     * Fetch every unit of measure once. There are a handful of them, they are
-     * needed to compare a measure with a product, and the scan path itself is
-     * synchronous — so they are warmed up when the app starts.
+     * Fetch every unit of measure once, with the number of decimals a quantity
+     * is stored with. There are a handful of units, they are needed to compare
+     * a measure with a product, and the scan path itself is synchronous — so
+     * they are warmed up when the app starts.
      */
     async loadUoms() {
         if (this.uomsById && Object.keys(this.uomsById).length) {
             return this.uomsById;
         }
-        const uoms = await this.orm.searchRead(
-            "uom.uom",
-            [],
-            ["name", "category_id", "factor"]
-        );
+        const [uoms, digits] = await Promise.all([
+            this.orm.searchRead(
+                "uom.uom",
+                [],
+                ["name", "category_id", "factor", "rounding"]
+            ),
+            this.orm
+                .call("decimal.precision", "precision_get", ["Product Unit of Measure"])
+                .catch(() => null),
+        ]);
+        this.quantityDigits = Number.isInteger(digits) ? digits : null;
         this.uomsById = Object.fromEntries(uoms.map((uom) => [uom.id, uom]));
         return this.uomsById;
     },
 
     /**
      * The measure a GS1 label carries, as a quantity of the product: converted
-     * into the unit the product is stocked in. Null when there is no measure,
-     * when its unit is not the kind the product is stocked in (a weight for a
-     * product counted in units), or when the units could not be read.
+     * into the unit the product is stocked in, and rounded the way the server
+     * will store it. Null when there is no measure, when its unit is not the
+     * kind the product is stocked in (a weight for a product counted in units),
+     * or when the units could not be read.
      */
     measureQuantity(scan, productUomId) {
         const measure = parseFloat(scan?.weight);
@@ -50,12 +59,26 @@ patch(BarcodeScannerState.prototype, {
             return null;
         }
         // Odoo's factor is how many of a unit make one unit of its category's
-        // reference, so converting is a ratio of the two. Only the floating point
-        // noise is rounded away: the unit's own rounding would coarsen the
-        // 2.497 kg the label states to 2.50.
-        const converted =
+        // reference, so converting is a ratio of the two.
+        const quantity =
             (measure / (measureUom.factor || 1)) * (productUom.factor || 1);
-        return Math.round(converted * 1e6) / 1e6;
+        return this.roundAsStored(quantity, productUom);
+    },
+
+    /**
+     * A quantity in `uom` as the server will store it. What lands in stock is
+     * rounded to the unit's rounding and to the decimals of "Product Unit of
+     * Measure": with the defaults (0.01 kg, two decimals) the 2.497 kg a label
+     * states is stored as 2.50. Rounding here too shows the quantity that will
+     * be stored, not one that will change once saved.
+     */
+    roundAsStored(quantity, uom) {
+        let rounded =
+            uom.rounding > 0 ? roundPrecision(quantity, uom.rounding) : quantity;
+        if (Number.isInteger(this.quantityDigits)) {
+            rounded = roundDecimals(rounded, this.quantityDigits);
+        }
+        return rounded;
     },
 
     /**
