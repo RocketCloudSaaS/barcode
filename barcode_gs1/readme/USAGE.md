@@ -15,7 +15,7 @@ A scanned GS1 barcode produces a parsed object such as:
         useDate: "YYYY-MM-DD",    // AI 15 / 16 (best before, sell by)
         packDate: "YYYY-MM-DD",   // AI 13
         productionDate: "...",    // AI 11
-        qty: <number>,            // AI 30 / 37, or the net weight (AI 310n)
+        qty: <number>,            // AI 30 / 37; 1 when the label states no count
         count: <number>,          // AI 30 / 37 (pieces), kept next to the weight
         weight: <number>,         // AI 310n–360n
         weightUom: {id, name},    // the unit that measure is in, per the rule

@@ -184,15 +184,18 @@ describe("BarcodeGs1", () => {
         });
     });
 
-    test("a net weight (AI 310n) is decoded with its decimals and used as the quantity", () => {
+    test("a net weight (AI 310n) is decoded with its decimals, not as the quantity", () => {
+        // Whether a weight is the quantity depends on the unit the product is
+        // stocked in, which the parser does not know: 1.25 kg is not 1.25 units.
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
-            quantity: 1.25,
+            count: null,
+            qty: 1,
+            quantity: 1,
         });
     });
 
-    test("an explicit count wins over the weight", () => {
+    test("a count next to the weight is the quantity", () => {
         expect(parseGs1("(01)09501101020917(3103)001250(30)4")).toMatchObject({
             weight: 1.25,
             qty: 4,
@@ -334,7 +337,7 @@ describe("BarcodeGs1", () => {
         });
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
+            qty: 1,
             errors: [],
         });
         expect(parseGs1("(01)09501101020916")).toMatchObject({
@@ -401,7 +404,7 @@ describe("BarcodeGs1", () => {
             value: "98436038190867",
             lot: "L0892611",
             weight: 4.324,
-            qty: 4.324,
+            qty: 1,
             expiry: "2026-09-26",
             errors: [],
         };
@@ -418,7 +421,7 @@ describe("BarcodeGs1", () => {
         expect(parseGs1("(01)98017024009181(3102)000309")).toMatchObject({
             value: "98017024009181",
             weight: 3.09,
-            qty: 3.09,
+            qty: 1,
             errors: [],
         });
         // ... and the tracking data on a second one, which carries no GTIN. A
@@ -451,7 +454,7 @@ describe("BarcodeGs1", () => {
         });
     });
 
-    test("a rule configured as a weighted product is the quantity", () => {
+    test("a rule configured as a weighted product is a measure, not the quantity", () => {
         loadNomenclature(
             [
                 ODOO_RULES[1],
@@ -469,11 +472,11 @@ describe("BarcodeGs1", () => {
         );
         expect(parseGs1("(01)09501101020917(3103)001250")).toMatchObject({
             weight: 1.25,
-            qty: 1.25,
-            quantity: 1.25,
+            qty: 1,
+            quantity: 1,
             errors: [],
         });
-        // A counted quantity still wins over the weight.
+        // A counted quantity is the quantity.
         expect(parseGs1("(01)09501101020917(3103)001250(30)4")).toMatchObject({
             weight: 1.25,
             qty: 4,

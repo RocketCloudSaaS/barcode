@@ -465,10 +465,14 @@ function parseRawGS1(barcode, rules) {
  *
  * The result follows the conventions the app already reads: `value`/`product`
  * hold the product code (screens and scan handlers look the product up with
- * it), `qty`/`quantity` the quantity to handle — the counted or weighed amount
- * when the barcode carries one, a single unit otherwise — and
- * `lot`/`serial`/`expiration` the tracking data. A GS1 scan therefore flows
- * through the existing screens without them knowing anything about GS1.
+ * it), `qty`/`quantity` the quantity to handle — the piece count when the
+ * barcode carries one, a single unit otherwise — and `lot`/`serial`/`expiration`
+ * the tracking data. A GS1 scan therefore flows through the existing screens
+ * without them knowing anything about GS1.
+ *
+ * A measure (a net weight, say) is kept in `weight`/`weightUom` and never
+ * becomes the quantity here: whether it is one depends on the unit the product
+ * is stocked in, which only the warehouse knows.
  *
  * What each application identifier means comes from Odoo's GS1 nomenclature
  * when one is configured, so a rule added in Settings is honoured here too.
@@ -508,7 +512,6 @@ export function parseGS1Barcode(barcode) {
         quantity: 1,
         errors: [],
     };
-    let hasCount = false;
     let hasExpiration = false;
     let rejectedGtin = false;
 
@@ -549,26 +552,17 @@ export function parseGS1Barcode(barcode) {
                 if (token.rule.decimalUsage) {
                     parsed.weight = value;
                     parsed.weightUom = token.rule.uom;
-                    if (!hasCount) {
-                        parsed.qty = value;
-                        parsed.quantity = value;
-                    }
                 } else {
                     parsed.count = value;
                     parsed.qty = value;
                     parsed.quantity = value;
-                    hasCount = true;
                 }
                 break;
             case "weight":
-                // A rule configured as a weighted product: the weight is what
-                // there is to pick, exactly like a variable-weight measure.
+                // A rule configured as a weighted product: a measure, exactly
+                // like a variable-weight one.
                 parsed.weight = value;
                 parsed.weightUom = token.rule.uom;
-                if (!hasCount) {
-                    parsed.qty = value;
-                    parsed.quantity = value;
-                }
                 break;
             case "price":
                 parsed.price = value;

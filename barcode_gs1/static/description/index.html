@@ -377,9 +377,8 @@ GS1-128 barcodes, whether written with parenthesised application
 identifiers (<tt class="docutils literal"><span class="pre">(01)...(10)...</span></tt>) or as raw FNC1-separated data, are
 decoded into structured fields: GTIN (AI 01), batch/lot (10), serial
 (21), production/pack/best-before/ expiry dates (11/13/15/16/17), count
-(30/37), net weight and other measures (310n–360n, with the variable
-weight used as the quantity), amounts payable (390n–393n), SSCC (00) and
-location GLNs (410/413/414).</p>
+(30/37), net weight and other measures (310n–360n), amounts payable
+(390n–393n), SSCC (00) and location GLNs (410/413/414).</p>
 <p>What each application identifier means is read from <strong>Odoo’s own GS1
 nomenclature</strong> (<tt class="docutils literal">barcode.nomenclature</tt> and its rules, as shipped by
 the standard <em>Barcode - GS1 Nomenclature</em> module), so a rule added or
@@ -432,7 +431,7 @@ a scan.</p>
     useDate: &quot;YYYY-MM-DD&quot;,    // AI 15 / 16 (best before, sell by)
     packDate: &quot;YYYY-MM-DD&quot;,   // AI 13
     productionDate: &quot;...&quot;,    // AI 11
-    qty: &lt;number&gt;,            // AI 30 / 37, or the net weight (AI 310n)
+    qty: &lt;number&gt;,            // AI 30 / 37; 1 when the label states no count
     count: &lt;number&gt;,          // AI 30 / 37 (pieces), kept next to the weight
     weight: &lt;number&gt;,         // AI 310n–360n
     weightUom: {id, name},    // the unit that measure is in, per the rule
