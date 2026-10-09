@@ -299,35 +299,89 @@ function ruleForAi(ai, rules) {
 }
 
 /**
- * Whether an identifier may be taken as the end of the variable-length value
- * that precedes it, when the scanner sent no separator to say so.
- *
- * Only a specific, non-alphanumeric identifier qualifies. A digit sequence in a
- * lot number happens to look like plenty of identifiers — a real label reads
- * `10 534343 30 02 15 261006`, where a catch-all measure range would also match
- * "3434" inside the lot, and an alphanumeric lot such as "L0892611" contains
- * "92" — and breaking there silently invents a quantity or truncates the lot.
+ * Read a token's value the way its rule says to: a numeric identifier is only
+ * accepted when its check digit is right, a date becomes an ISO date, and a
+ * measure gets its decimal point from the last digit of the AI.
  */
-function canEndValue(rule) {
-    return !rule.generic && rule.contentType !== "alpha";
+function readValue(token) {
+    const {rule, ai, value} = token;
+    switch (rule && rule.contentType) {
+        case "identifier":
+            if (!hasValidCheckDigit(value)) {
+                return {error: `Invalid GS1 check digit for AI ${ai}`};
+            }
+            return {value};
+        case "date": {
+            const date = toISODate(value);
+            return date ? {value: date} : {error: `Invalid GS1 date for AI ${ai}`};
+        }
+        case "measure": {
+            const decimals = rule.decimalUsage ? parseInt(ai.slice(-1), 10) : 0;
+            let amount = value;
+            let currency = null;
+            // AI 391n and 393n put the ISO 4217 currency code before the amount.
+            if (rule.type === "price" && /^39[13]/.test(ai) && amount.length > 3) {
+                currency = amount.slice(0, 3);
+                amount = amount.slice(3);
+            }
+            const digits = parseInt(amount, 10);
+            if (!Number.isFinite(digits)) {
+                return {error: `Invalid GS1 measure for AI ${ai}`};
+            }
+            return {
+                value: decimals > 0 ? digits / Math.pow(10, decimals) : digits,
+                currency,
+            };
+        }
+        default:
+            return {value};
+    }
 }
 
 /**
- * Where a variable-length value ends: at the FNC1 separator, or — when the
- * scanner sends none — heuristically at the next application identifier that
- * may end it. GS1 requires the separator unless the value is the last element,
- * so this is a best effort at reading a barcode that omits it. `matchAt(index)`
- * returns the rule match at a position, as `matchRule` does.
+ * Whether the element found at a position may be taken as the end of the
+ * variable-length value that precedes it, when a separator was dropped.
+ *
+ * Only a specific, non-alphanumeric identifier qualifies. A digit sequence in a
+ * lot number happens to look like plenty of identifiers -- an alphanumeric lot
+ * such as "L0892611" contains "92", and a catch-all measure range matches
+ * almost any four digits -- and breaking there silently invents a quantity or
+ * truncates the lot. The element must also read cleanly: a value, a real date,
+ * a right check digit.
  */
-function findVariableEnd(barcode, start, maxLength, matchAt) {
+function canEndValue(match) {
+    return (
+        Boolean(match) &&
+        !match.rule.generic &&
+        match.rule.contentType !== "alpha" &&
+        match.value !== "" &&
+        !readValue(match).error
+    );
+}
+
+/**
+ * Where a variable-length value ends.
+ *
+ * GS1 ends it at the FNC1 separator, or at the end of the barcode when it is
+ * the last element -- where no separator is needed, and where GS1 recommends
+ * putting it. That reading comes first. Only when it is impossible -- the value
+ * would be longer than its rule allows, or not match it -- was a separator
+ * dropped, and the value is then ended at the next element that may end it.
+ * `matchAt(index)` returns the rule match at a position, as `matchRule` does.
+ */
+function findVariableEnd(barcode, start, ai, rule, matchAt) {
     const separatorIndex = barcode.indexOf(GS1_SEPARATOR, start);
-    if (separatorIndex !== -1 && separatorIndex - start <= maxLength) {
-        return separatorIndex;
+    const end = separatorIndex === -1 ? barcode.length : separatorIndex;
+    const maxLength = rule.maxLength || 20;
+    if (
+        end - start <= maxLength &&
+        rule.fullRegex.test(ai + barcode.slice(start, end))
+    ) {
+        return end;
     }
-    const maxIndex = Math.min(barcode.length, start + maxLength);
+    const maxIndex = Math.min(end, start + maxLength);
     for (let index = start + 1; index < maxIndex; index++) {
-        const match = matchAt(index);
-        if (match && canEndValue(match.rule)) {
+        if (canEndValue(matchAt(index))) {
             return index;
         }
     }
@@ -363,8 +417,7 @@ function matchRule(barcode, index, rules, cache = new Map()) {
                 continue;
             }
         } else {
-            const maxLength = rule.maxLength || 20;
-            valueEnd = findVariableEnd(barcode, valueStart, maxLength, matchAt);
+            valueEnd = findVariableEnd(barcode, valueStart, ai, rule, matchAt);
         }
         const value = barcode.slice(valueStart, valueEnd);
         if (!rule.fullRegex.test(ai + value)) {
@@ -408,54 +461,18 @@ function parseRawGS1(barcode, rules) {
 }
 
 /**
- * Read a token's value the way its rule says to: a numeric identifier is only
- * accepted when its check digit is right, a date becomes an ISO date, and a
- * measure gets its decimal point from the last digit of the AI.
- */
-function readValue(token) {
-    const {rule, ai, value} = token;
-    switch (rule && rule.contentType) {
-        case "identifier":
-            if (!hasValidCheckDigit(value)) {
-                return {error: `Invalid GS1 check digit for AI ${ai}`};
-            }
-            return {value};
-        case "date": {
-            const date = toISODate(value);
-            return date ? {value: date} : {error: `Invalid GS1 date for AI ${ai}`};
-        }
-        case "measure": {
-            const decimals = rule.decimalUsage ? parseInt(ai.slice(-1), 10) : 0;
-            let amount = value;
-            let currency = null;
-            // AI 391n and 393n put the ISO 4217 currency code before the amount.
-            if (rule.type === "price" && /^39[13]/.test(ai) && amount.length > 3) {
-                currency = amount.slice(0, 3);
-                amount = amount.slice(3);
-            }
-            const digits = parseInt(amount, 10);
-            if (!Number.isFinite(digits)) {
-                return {error: `Invalid GS1 measure for AI ${ai}`};
-            }
-            return {
-                value: decimals > 0 ? digits / Math.pow(10, decimals) : digits,
-                currency,
-            };
-        }
-        default:
-            return {value};
-    }
-}
-
-/**
  * Decode a GS1 barcode into structured fields.
  *
  * The result follows the conventions the app already reads: `value`/`product`
  * hold the product code (screens and scan handlers look the product up with
- * it), `qty`/`quantity` the quantity to handle — the counted or weighed amount
- * when the barcode carries one, a single unit otherwise — and
- * `lot`/`serial`/`expiration` the tracking data. A GS1 scan therefore flows
- * through the existing screens without them knowing anything about GS1.
+ * it), `qty`/`quantity` the quantity to handle — the piece count when the
+ * barcode carries one, a single unit otherwise — and `lot`/`serial`/`expiration`
+ * the tracking data. A GS1 scan therefore flows through the existing screens
+ * without them knowing anything about GS1.
+ *
+ * A measure (a net weight, say) is kept in `weight`/`weightUom` and never
+ * becomes the quantity here: whether it is one depends on the unit the product
+ * is stocked in, which only the warehouse knows.
  *
  * What each application identifier means comes from Odoo's GS1 nomenclature
  * when one is configured, so a rule added in Settings is honoured here too.
@@ -495,7 +512,6 @@ export function parseGS1Barcode(barcode) {
         quantity: 1,
         errors: [],
     };
-    let hasCount = false;
     let hasExpiration = false;
     let rejectedGtin = false;
 
@@ -536,26 +552,17 @@ export function parseGS1Barcode(barcode) {
                 if (token.rule.decimalUsage) {
                     parsed.weight = value;
                     parsed.weightUom = token.rule.uom;
-                    if (!hasCount) {
-                        parsed.qty = value;
-                        parsed.quantity = value;
-                    }
                 } else {
                     parsed.count = value;
                     parsed.qty = value;
                     parsed.quantity = value;
-                    hasCount = true;
                 }
                 break;
             case "weight":
-                // A rule configured as a weighted product: the weight is what
-                // there is to pick, exactly like a variable-weight measure.
+                // A rule configured as a weighted product: a measure, exactly
+                // like a variable-weight one.
                 parsed.weight = value;
                 parsed.weightUom = token.rule.uom;
-                if (!hasCount) {
-                    parsed.qty = value;
-                    parsed.quantity = value;
-                }
                 break;
             case "price":
                 parsed.price = value;
