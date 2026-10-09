@@ -382,43 +382,70 @@ are installed, and neither needs the other without it.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#usage" id="toc-entry-1">Usage</a></li>
-<li><a class="reference internal" href="#bug-tracker" id="toc-entry-2">Bug Tracker</a></li>
-<li><a class="reference internal" href="#credits" id="toc-entry-3">Credits</a><ul>
-<li><a class="reference internal" href="#authors" id="toc-entry-4">Authors</a></li>
-<li><a class="reference internal" href="#contributors" id="toc-entry-5">Contributors</a></li>
-<li><a class="reference internal" href="#maintainers" id="toc-entry-6">Maintainers</a></li>
+<li><a class="reference internal" href="#configuration" id="toc-entry-1">Configuration</a></li>
+<li><a class="reference internal" href="#usage" id="toc-entry-2">Usage</a></li>
+<li><a class="reference internal" href="#bug-tracker" id="toc-entry-3">Bug Tracker</a></li>
+<li><a class="reference internal" href="#credits" id="toc-entry-4">Credits</a><ul>
+<li><a class="reference internal" href="#authors" id="toc-entry-5">Authors</a></li>
+<li><a class="reference internal" href="#contributors" id="toc-entry-6">Contributors</a></li>
+<li><a class="reference internal" href="#maintainers" id="toc-entry-7">Maintainers</a></li>
 </ul>
 </li>
 </ul>
 </div>
+<div class="section" id="configuration">
+<h1><a class="toc-backref" href="#toc-entry-1">Configuration</a></h1>
+<p>Nothing to configure for the module itself. The precision a measure is
+kept at is Odoo’s, though, and its defaults are coarser than most GS1
+labels.</p>
+<p>A measure becomes a quantity rounded twice, as anywhere in stock: to the
+<em>Rounding Precision</em> of the product’s unit, and to the decimals of the
+<em>Product Unit of Measure</em> accuracy. Both default to two decimals, so the
+2.497 kg a label states is stored as 2.50 kg, and the app shows 2.50 so
+that the quantity on screen is the one that will be stored.</p>
+<p>To keep the grams a label states, for products stocked in kilograms:</p>
+<ul class="simple">
+<li>set the <em>Rounding Precision</em> of <em>kg</em> to 0.001, under <em>Inventory →
+Configuration → Units of Measures → UoM Categories → Weight</em> (the
+<em>Units of Measure</em> option must be enabled in the Inventory settings);</li>
+<li>set the digits of <em>Product Unit of Measure</em> to 3, under <em>Settings →
+Technical → Database Structure → Decimal Accuracy</em> (developer mode).</li>
+</ul>
+<p>The accuracy applies to every quantity in the database, not only to
+scans.</p>
+</div>
 <div class="section" id="usage">
-<h1><a class="toc-backref" href="#toc-entry-1">Usage</a></h1>
-<p>Nothing to configure: installing <tt class="docutils literal">barcode_gs1</tt> next to
-<tt class="docutils literal">barcode_stock</tt> brings this module in, and every screen that applies a
-scanned quantity uses it.</p>
+<h1><a class="toc-backref" href="#toc-entry-2">Usage</a></h1>
+<p>Installing <tt class="docutils literal">barcode_gs1</tt> next to <tt class="docutils literal">barcode_stock</tt> brings this module
+in, and every screen that applies a scanned quantity uses it.</p>
 <p>When a scanned GS1 barcode carries a measure, the unit that measure is
 in comes from the rule that read it (<em>Unit of Measure</em> on the barcode
 rule — AI 310n is kilograms, 320n pounds, 311n metres). It is then
 compared with the unit the product is stocked in:</p>
 <ul class="simple">
 <li><strong>same kind of unit</strong> — the measure is the quantity, converted into
-the product’s own unit: 2.497 kg on the label is 2.497 for a product
-in kilograms and 2497 for one in grams;</li>
+the product’s own unit: 2.497 kg on the label is 2497 for a product in
+grams;</li>
 <li><strong>a different kind</strong> — a weight for a product counted in units, say —
 the measure says nothing about how many to pick, so the piece count on
 the label (AI 30/37) is the quantity, and a single unit when the label
 states none.</li>
 </ul>
-<p>Only the floating point noise of the conversion is rounded away, so the
-2.497 kg the label states does not become the 2.50 the unit’s own
-rounding would give.</p>
+<p>The quantity is rounded the way it will be stored, so what the screen
+shows is what ends up in stock. With Odoo’s defaults that is two
+decimals: 2.497 kg is 2.50 for a product in kilograms (see Configuration
+to keep the grams).</p>
+<p>When the GTIN is a packaging barcode (a carton of twelve, say), a label
+without a count picks the pack’s quantity, and a count on the label wins
+over it. A measure in the product’s own kind of unit wins over both: a
+carton of cheese weighing 4.32 kg is 4.32 for a product stocked in
+kilograms, not twelve.</p>
 <p>Without this module GS1 barcodes are still parsed, but a measure is
 never the quantity: the warehouse app takes the piece count, or a single
-unit.</p>
+unit (the pack’s quantity for a packaging barcode).</p>
 </div>
 <div class="section" id="bug-tracker">
-<h1><a class="toc-backref" href="#toc-entry-2">Bug Tracker</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-3">Bug Tracker</a></h1>
 <p>Bugs are tracked on <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/issues">GitHub Issues</a>.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
@@ -426,15 +453,15 @@ If you spotted it first, help us to smash it by providing a detailed and welcome
 <p>Do not contact contributors directly about support or help with technical issues.</p>
 </div>
 <div class="section" id="credits">
-<h1><a class="toc-backref" href="#toc-entry-3">Credits</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-4">Credits</a></h1>
 <div class="section" id="authors">
-<h2><a class="toc-backref" href="#toc-entry-4">Authors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-5">Authors</a></h2>
 <ul class="simple">
 <li>Binhex</li>
 </ul>
 </div>
 <div class="section" id="contributors">
-<h2><a class="toc-backref" href="#toc-entry-5">Contributors</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-6">Contributors</a></h2>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/antoniodavid">Antonio David Ruban Espinal</a></li>
 <li><a class="reference external" href="https://github.com/szalatyzuzanna">Zuzanna Elzbieta Szalaty
@@ -442,7 +469,7 @@ Szalaty</a></li>
 </ul>
 </div>
 <div class="section" id="maintainers">
-<h2><a class="toc-backref" href="#toc-entry-6">Maintainers</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">Maintainers</a></h2>
 <p>Current maintainer:</p>
 <p><a class="reference external image-reference" href="https://github.com/szalatyzuzanna"><img alt="szalatyzuzanna" src="https://github.com/szalatyzuzanna.png?size=40px" /></a></p>
 <p>This module is part of the <a class="reference external" href="https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_gs1_stock">RocketCloudSaaS/barcode</a> project on GitHub.</p>
