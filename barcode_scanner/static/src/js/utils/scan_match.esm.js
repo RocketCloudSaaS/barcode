@@ -1,3 +1,4 @@
+/** @odoo-module **/
 /**
  * A physical reader can deliver a barcode with surrounding whitespace (a
  * keyboard-wedge prefix/suffix) or in a different letter case than what is

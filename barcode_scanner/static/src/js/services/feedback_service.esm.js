@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {Reactive} from "@web/core/utils/reactive";
 import {registry} from "@web/core/registry";
 

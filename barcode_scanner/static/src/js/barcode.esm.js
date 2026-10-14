@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {EventBus} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {session} from "@web/session";

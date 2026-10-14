@@ -1,6 +1,6 @@
 {
     "name": "Barcode Scanner",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Hidden",
     "summary": "Base scanning framework: client action, registries, scanner input and hooks",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -33,7 +33,7 @@
             "barcode_scanner/static/src/js/hooks/use_inventory.esm.js",
             "barcode_scanner/static/src/js/screens/main_screen.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_scanner/static/tests/**/*",
         ],
     },

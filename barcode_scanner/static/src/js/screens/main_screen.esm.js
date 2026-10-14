@@ -1,15 +1,20 @@
-import {Component, useState} from "@odoo/owl";
+/** @odoo-module **/
+import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
-import {imageUrl} from "@web/core/utils/urls";
+import {url} from "@web/core/utils/urls";
 import {useBarcodeDispatcher} from "@barcode_scanner/js/hooks/use_barcode_dispatcher.esm";
 import {barcodeMenuTiles, barcodeScreens} from "@barcode_scanner/js/registries.esm";
 
 export class MainScreen extends Component {
     setup() {
         this.store = useState(useService("barcodeStore"));
-        this.avatarState = useState({failed: false});
+        this.user = useService("user");
+        this.orm = useService("orm");
+        this.avatarState = useState({failed: false, unique: null});
+        onWillStart(() => {
+            this.loadAvatarUnique();
+        });
         useBarcodeDispatcher();
     }
 
@@ -22,7 +27,7 @@ export class MainScreen extends Component {
     }
 
     get greeting() {
-        const tz = user.tz || "UTC";
+        const tz = this.user.tz || "UTC";
         const hour = new Intl.DateTimeFormat("en", {
             hour: "numeric",
             hour12: false,
@@ -35,7 +40,7 @@ export class MainScreen extends Component {
     }
 
     get userName() {
-        return user.name || "Operational Lead";
+        return this.user.name || "Operational Lead";
     }
 
     get userInitials() {
@@ -49,8 +54,29 @@ export class MainScreen extends Component {
     }
 
     get avatarUrl() {
-        const {partnerId, writeDate} = user;
-        return imageUrl("res.partner", partnerId, "avatar_128", {unique: writeDate});
+        const {partnerId} = this.user;
+        const params = {
+            model: "res.partner",
+            id: partnerId,
+            field: "avatar_128",
+        };
+        if (this.avatarState.unique) {
+            params.unique = this.avatarState.unique;
+        }
+        return url("/web/image", params);
+    }
+
+    async loadAvatarUnique() {
+        try {
+            const [partner] = await this.orm.read(
+                "res.partner",
+                [this.user.partnerId],
+                ["write_date"]
+            );
+            this.avatarState.unique = partner ? partner.write_date : null;
+        } catch {
+            this.avatarState.unique = null;
+        }
     }
 
     onAvatarError() {
