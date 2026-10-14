@@ -1,1 +1,1 @@
-from . import test_camera
+from . import test_js
