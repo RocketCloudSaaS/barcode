@@ -47,5 +47,7 @@ export function barcodeMatchAnyDomain(values, field = "barcode") {
     }
     const leaves = terms.map((t) => [field, "=ilike", t.replace(/([\\%_])/g, "\\$1")]);
     // OR the leaves together: N leaves need N-1 leading "|" operators.
-    return Array(leaves.length - 1).fill("|").concat(leaves);
+    return Array(leaves.length - 1)
+        .fill("|")
+        .concat(leaves);
 }

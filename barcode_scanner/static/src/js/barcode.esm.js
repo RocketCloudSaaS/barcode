@@ -72,9 +72,7 @@ function isUserEditable(element) {
     if (element.classList && element.classList.contains("o-barcode-input")) {
         return false;
     }
-    return element.matches(
-        "input, textarea, select, [contenteditable]"
-    );
+    return element.matches("input, textarea, select, [contenteditable]");
 }
 
 // Keep the Android soft keyboard closed. Our hidden input is focused() while
@@ -173,7 +171,10 @@ export const barcodeService = {
             const code = normalizeGs1Separators(received);
             const significant = code.replace(/[\r\n]/g, "");
             if (significant.length >= 3) {
-                bus.trigger("barcode_scanned", {barcode: code, parsed: parseBarcode(code)});
+                bus.trigger("barcode_scanned", {
+                    barcode: code,
+                    parsed: parseBarcode(code),
+                });
             }
             // Always show what the PDA just read (permanent feedback), even when
             // it is too short/garbled to emit, so the operator/support can tell a
@@ -241,7 +242,8 @@ export const barcodeService = {
             }
 
             const isSpecialKey =
-                !["Control", "Alt"].includes(ev.key) && (ev.key.length > 1 || ev.metaKey);
+                !["Control", "Alt"].includes(ev.key) &&
+                (ev.key.length > 1 || ev.metaKey);
             const isEndCharacter = /(Enter|Tab)/.test(ev.key);
 
             // Don't capture while the user is deliberately typing into a real
