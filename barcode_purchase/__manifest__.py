@@ -1,6 +1,6 @@
 {
     "name": "Barcode Purchase",
-    "version": "18.0.1.0.1",
+    "version": "18.0.1.1.0",
     "category": "Inventory/Purchase",
     "summary": "Create purchase orders by barcode: scan products against a "
     "vendor and confirm the order from the scanner",
@@ -11,9 +11,6 @@
     "depends": [
         "barcode_scanner",
         "purchase_stock",
-    ],
-    "data": [
-        "security/security.xml",
     ],
     "assets": {
         "web.assets_backend": [
