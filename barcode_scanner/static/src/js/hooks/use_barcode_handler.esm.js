@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {useBarcode} from "@barcode_scanner/js/hooks/use_barcode.esm";
 
 export function useBarcodeHandler({onScan}) {

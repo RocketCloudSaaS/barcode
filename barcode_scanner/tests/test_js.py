@@ -4,6 +4,20 @@
 from odoo.tests.common import HttpCase, tagged
 
 
+def qunit_error_checker(message):
+    """Keep the run alive on individual QUnit failures.
+
+    Mirror of the 17.0 core checker (``addons/web/tests/test_js.py``), which is
+    not importable: individual failures do not abort the run, while the final
+    failure tally does.
+    """
+    if "QUnit test failed:" in message:
+        return False
+    if "tests failed." in message:
+        return True
+    return True
+
+
 @tagged("post_install", "-at_install")
 class TestBarcodeScannerJs(HttpCase):
     """Run the module's JS unit tests (``static/tests``) in the browser.
@@ -18,6 +32,6 @@ class TestBarcodeScannerJs(HttpCase):
             "",
             "",
             login="admin",
-            success_signal="[HOOT] Test suite succeeded",
-            error_checker=lambda message: "[HOOT]" not in message,
+            timeout=120,
+            error_checker=qunit_error_checker,
         )

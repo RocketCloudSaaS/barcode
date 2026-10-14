@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {onMounted, onWillUnmount} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 

@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {useEnv} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useService} from "@web/core/utils/hooks";
