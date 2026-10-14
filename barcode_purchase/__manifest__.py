@@ -19,7 +19,6 @@
         "web.assets_backend": [
             "barcode_purchase/static/src/scss/purchase.scss",
             "barcode_purchase/static/src/xml/purchase_templates.xml",
-            "barcode_purchase/static/src/js/utils/scan_match.esm.js",
             "barcode_purchase/static/src/js/utils/avatar.esm.js",
             "barcode_purchase/static/src/js/camera_routes.esm.js",
             "barcode_purchase/static/src/js/screens/supplier_selector_screen.esm.js",

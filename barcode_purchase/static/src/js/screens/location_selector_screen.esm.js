@@ -3,7 +3,7 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
-import {barcodeMatchDomain} from "@barcode_purchase/js/utils/scan_match.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 /**
  * Pick the destination location for a purchase receipt. The candidate list is
@@ -37,7 +37,7 @@ export class PurchaseLocationSelectorScreen extends Component {
         const locations = domain
             ? await this.inventory.searchRead(
                   "stock.location",
-                  domain,
+                  [["usage", "=", "internal"], ...domain],
                   ["display_name"]
               )
             : [];
