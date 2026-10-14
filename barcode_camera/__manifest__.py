@@ -16,6 +16,9 @@
             "barcode_camera/static/src/xml/camera_fab.xml",
             "barcode_camera/static/src/js/camera_fab.esm.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_camera/static/tests/**/*",
+        ],
     },
     "installable": True,
     "auto_install": False,
