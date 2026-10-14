@@ -10,7 +10,7 @@
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
-        "purchase",
+        "purchase_stock",
     ],
     "data": [
         "security/security.xml",
@@ -28,6 +28,9 @@
             "barcode_purchase/static/src/js/screens/product_selector_screen.esm.js",
             "barcode_purchase/static/src/js/screens/purchase_screen.esm.js",
             "barcode_purchase/static/src/js/tiles/purchase_menu_tiles.esm.js",
+        ],
+        "web.assets_unit_tests": [
+            "barcode_purchase/static/tests/**/*",
         ],
     },
     "installable": True,
