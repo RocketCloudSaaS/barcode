@@ -22,14 +22,18 @@ const BY_SERIAL = {
 
 /**
  * A scrap screen on a location holding `stock`, without mounting it. What it
- * tells the operator lands in `notes`, where it navigates in `moves`, and what
- * it searches for in `searches`, answered with `found`.
+ * tells the operator lands in `notes`, where it navigates in `moves`, what it
+ * searches for in `searches` (answered with `found`), the scraps it asks the
+ * server for in `calls` (answered in turn with `answers`) and the dialogs it
+ * opens in `dialogs`.
  */
-function scrapScreen({stock = [], lines = [], found = []} = {}) {
+function scrapScreen({stock = [], lines = [], found = [], answers = []} = {}) {
     const screen = Object.create(ScrapScreen.prototype);
     const notes = [];
     const moves = [];
     const searches = [];
+    const calls = [];
+    const dialogs = [];
     screen._seq = lines.length;
     screen.state = {
         locationId: 3,
@@ -46,13 +50,18 @@ function scrapScreen({stock = [], lines = [], found = []} = {}) {
             searches.push(domain);
             return found;
         },
+        call: async (model, method, args, kwargs) => {
+            calls.push({lines: args[1], ...kwargs});
+            return answers[calls.length - 1];
+        },
+        openDialog: (component, props) => dialogs.push(props),
     };
     screen.store = {
         navigate: (route, params) => moves.push({route, params}),
         goBack: (params) => moves.push({route: "back", params}),
     };
     screen.flashLine = () => undefined;
-    return {screen, notes, moves, searches};
+    return {screen, notes, moves, searches, calls, dialogs};
 }
 
 const STOCK = [
@@ -215,5 +224,104 @@ describe("BarcodeScrap", () => {
             scrapLocationId: 4,
             addProduct: {id: 8, tracking: "lot", uom_id: [12, "kg"]},
         });
+    });
+
+    test("a scan waits while the scrap is on its way", async () => {
+        const {screen, notes, searches} = scrapScreen({found: [UNTRACKED]});
+        screen.state.scrapping = true;
+        await screen.onBarcodeScanned("9501101020917", {value: "9501101020917"});
+        expect(searches).toEqual([]);
+        expect(screen.state.lines).toEqual([]);
+        expect(notes).toEqual([
+            {message: "Wait until the scrap is done to scan again.", type: "warning"},
+        ]);
+    });
+
+    test("scrapping anyway only covers the lines the warning was about", async () => {
+        await makeMockEnv();
+        const short = {
+            product_name: "Bolts",
+            lot_name: false,
+            requested: 12,
+            available: 10,
+            uom: "Units",
+        };
+        const line = {
+            _id: 1,
+            product_id: 7,
+            product_name: "Bolts",
+            tracking: "none",
+            uom: "Units",
+            lot_id: false,
+            lot_name: "",
+            qty: "12",
+        };
+        const {screen, calls, dialogs, moves} = scrapScreen({
+            lines: [line],
+            answers: [
+                {done: false, insufficient: [short]},
+                {done: true, count: 1, names: ["SP/1"]},
+            ],
+        });
+        await screen.scrap();
+        expect(calls[0]).toMatchObject({force: false, scrap_location_id: 4});
+        // Confirmed as warned: forced.
+        await dialogs[0].confirm();
+        expect(calls[1]).toMatchObject({force: true});
+        expect(moves[0].route).toBe("main");
+
+        // Lines changed between the warning and the confirmation: checked again.
+        const again = scrapScreen({
+            lines: [{...line}],
+            answers: [
+                {done: false, insufficient: [short]},
+                {done: false, insufficient: [short]},
+            ],
+        });
+        await again.screen.scrap();
+        again.screen.state.lines[0].qty = "20";
+        await again.dialogs[0].confirm();
+        expect(again.calls[1]).toMatchObject({force: false});
+        expect(again.calls[1].lines[0].qty).toBe(20);
+    });
+
+    test("without a destination there is nothing to scrap into", async () => {
+        const line = {
+            _id: 1,
+            product_id: 7,
+            tracking: "none",
+            lot_id: false,
+            lot_name: "",
+            qty: "1",
+        };
+        const {screen, calls, notes} = scrapScreen({lines: [line]});
+        expect(screen.canScrap).toBe(true);
+        screen.state.scrapLocationId = null;
+        expect(screen.canScrap).toBe(false);
+        await screen.scrap();
+        expect(calls).toEqual([]);
+        expect(notes).toEqual([
+            {message: "Choose where the scrapped goods go.", type: "warning"},
+        ]);
+    });
+
+    test("a search answered late never overwrites a later one", async () => {
+        const selector = Object.create(ScrapProductSelectorScreen.prototype);
+        const pending = [];
+        selector.props = {params: {stockProductIds: []}};
+        selector.state = {search: "", results: [], loading: true};
+        selector.inventory = {
+            searchRead: () => new Promise((resolve) => pending.push(resolve)),
+        };
+        selector.state.search = "bo";
+        const first = selector.search();
+        selector.state.search = "bolt";
+        const second = selector.search();
+        // The later search answers first, the earlier one after it.
+        pending[1]([BY_LOT]);
+        await second;
+        pending[0]([UNTRACKED, BY_LOT]);
+        await first;
+        expect(selector.state.results).toEqual([BY_LOT]);
     });
 });

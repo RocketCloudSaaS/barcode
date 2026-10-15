@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-14 11:23+0000\n"
-"PO-Revision-Date: 2026-10-14 11:23+0000\n"
+"POT-Creation-Date: 2026-10-14 12:41+0000\n"
+"PO-Revision-Date: 2026-10-14 12:41+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es\n"
@@ -33,6 +33,12 @@ msgstr "Añadir producto"
 #: code:addons/barcode_scrap/static/src/xml/scrap_templates.xml:0
 msgid "Choose the lot/serial"
 msgstr "Elija el lote/número de serie"
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
+msgid "Choose where the scrapped goods go."
+msgstr "Elija adónde van los productos desechados."
 
 #. module: barcode_scrap
 #. odoo-javascript
@@ -334,6 +340,12 @@ msgid "There is no lot/serial number %(lot)s for %(name)s."
 msgstr "No existe el lote/número de serie %(lot)s para %(name)s."
 
 #. module: barcode_scrap
+#. odoo-python
+#: code:addons/barcode_scrap/models/stock_scrap.py:0
+msgid "There is no scrap location for %(company)s: create one first."
+msgstr "No hay ninguna ubicación de desecho para %(company)s: cree una primero."
+
+#. module: barcode_scrap
 #. odoo-javascript
 #: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
 msgid "This location does not hold enough stock for:"
@@ -344,6 +356,12 @@ msgstr "Esta ubicación no tiene existencias suficientes de:"
 #: code:addons/barcode_scrap/models/stock_scrap.py:0
 msgid "Type a name for the scrap reason."
 msgstr "Escriba un nombre para el motivo del desecho."
+
+#. module: barcode_scrap
+#. odoo-javascript
+#: code:addons/barcode_scrap/static/src/js/screens/scrap_screen.esm.js:0
+msgid "Wait until the scrap is done to scan again."
+msgstr "Espere a que termine el desecho para volver a escanear."
 
 #. module: barcode_scrap
 #. odoo-javascript

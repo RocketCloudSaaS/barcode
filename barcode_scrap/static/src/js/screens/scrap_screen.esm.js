@@ -120,6 +120,14 @@ export class ScrapScreen extends Component {
     // --- scanning -------------------------------------------------------------
 
     async onBarcodeScanned(barcode, parsed) {
+        if (this.state.scrapping) {
+            // The lines are on their way to the server: a scan now would show
+            // up as scrapped without being so, then vanish with the screen.
+            this.inventory.notify(_t("Wait until the scrap is done to scan again."), {
+                type: "warning",
+            });
+            return;
+        }
         // Match the product the same tolerant, all-candidates way the other
         // screens do: a GS1 GTIN has several equivalent variant forms, and the
         // parser's value can differ from the raw scan.
@@ -420,7 +428,24 @@ export class ScrapScreen extends Component {
 
     // --- scrap ----------------------------------------------------------------
 
-    async scrap(force = false) {
+    /** Whether the Scrap button can be used: lines, a destination, no scrap running. */
+    get canScrap() {
+        return (
+            !this.state.scrapping &&
+            this.state.lines.length > 0 &&
+            Boolean(this.state.scrapLocationId)
+        );
+    }
+
+    /**
+     * Scrap the lines. `confirmed` is the payload the operator agreed to scrap
+     * anyway after the not-enough-stock warning: the scrap is only forced when
+     * the lines are still exactly those, otherwise they are checked again.
+     *
+     * @param {Boolean} force scrap even what the location does not hold
+     * @param {String} [confirmed] the payload the warning was about
+     */
+    async scrap(force = false, confirmed = null) {
         const lines = this.state.lines;
         if (!lines.length) {
             this.inventory.notify(_t("Scan at least one product to scrap."), {
@@ -450,29 +475,37 @@ export class ScrapScreen extends Component {
             );
             return;
         }
+        if (!this.state.scrapLocationId) {
+            this.inventory.notify(_t("Choose where the scrapped goods go."), {
+                type: "warning",
+            });
+            return;
+        }
+        const sent = lines.map((l) => ({...l}));
+        const payload = sent.map((l) => ({
+            product_id: l.product_id,
+            lot_id: l.lot_id || false,
+            lot_name: l.lot_name || "",
+            qty: parseFloat(l.qty) || 0,
+        }));
+        const signature = JSON.stringify(payload);
         this.state.scrapping = true;
         try {
             const result = await this.inventory.call(
                 "stock.scrap",
                 "action_barcode_scrap",
-                [
-                    this.state.locationId,
-                    lines.map((l) => ({
-                        product_id: l.product_id,
-                        lot_id: l.lot_id || false,
-                        lot_name: l.lot_name || "",
-                        qty: parseFloat(l.qty) || 0,
-                    })),
-                    this.state.reasonIds,
-                ],
-                {force, scrap_location_id: this.state.scrapLocationId || false}
+                [this.state.locationId, payload, this.state.reasonIds],
+                {
+                    force: force && confirmed === signature,
+                    scrap_location_id: this.state.scrapLocationId,
+                }
             );
             if (!result.done) {
                 this.state.scrapping = false;
-                this.confirmInsufficient(result.insufficient || []);
+                this.confirmInsufficient(result.insufficient || [], signature);
                 return;
             }
-            this.inventory.notify(this.scrappedMessage(lines), {type: "success"});
+            this.inventory.notify(this.scrappedMessage(sent), {type: "success"});
             this.store.navigate("main", {}, {clearHistory: true});
         } catch {
             // The API wrapper already surfaced the server error to the operator.
@@ -480,7 +513,7 @@ export class ScrapScreen extends Component {
         }
     }
 
-    confirmInsufficient(insufficient) {
+    confirmInsufficient(insufficient, signature) {
         const rows = insufficient.map((s) => {
             // Built apart from the _t() call: a template literal among its
             // arguments hides the message from Odoo's translation extractor.
@@ -509,7 +542,7 @@ export class ScrapScreen extends Component {
                 _t("The full quantity will be scrapped. Scrap anyway?"),
             ].join("\n"),
             confirmLabel: _t("Scrap anyway"),
-            confirm: () => this.scrap(true),
+            confirm: () => this.scrap(true, signature),
             cancel: () => undefined,
         });
     }

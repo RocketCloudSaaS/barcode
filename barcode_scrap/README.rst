@@ -78,13 +78,29 @@ location. When the location holds a single lot of the product, it is
 filled in. A serial number is scrapped one unit at a time and can only
 appear once.
 
-Not enough stock
-----------------
+Stock shown and not enough stock
+--------------------------------
 
-When a line asks for more than the location holds, nothing is scrapped
-yet: the scanner lists what is short and asks whether to **scrap
-anyway** — the same choice the back office offers through its
-insufficient-quantity wizard.
+The quantity each line shows is what a scrap made from the scanner can
+take: the net quantity at the location itself, outside packages and not
+owned by a partner, as validating the scrap counts it. Goods in a
+package or owned by a partner are scrapped from the back office, where
+the scrap takes a package and an owner.
+
+When a line asks for more than that, nothing is scrapped yet: the
+scanner lists what is short and asks whether to **scrap anyway** — the
+same choice the back office offers through its insufficient-quantity
+wizard. Confirming scraps the lines it was asked about; lines changed in
+between are checked again.
+
+Destination
+-----------
+
+The goods go to the scrap location the back office preselects for the
+company, and can be sent to any scrap location of the company or a
+shared one instead. When the company has none of its own, the first
+shared one is taken; with no scrap location at all, scrapping waits
+until one is created.
 
 Reading more from a label
 -------------------------

@@ -35,6 +35,10 @@ export class ScrapProductSelectorScreen extends Component {
     }
 
     async search() {
+        // Searches run as the operator types: only the latest one may fill the
+        // list, whatever order the answers come back in.
+        this._searchSeq = (this._searchSeq || 0) + 1;
+        const query = this._searchSeq;
         const term = this.state.search;
         let domain = [];
         if (term) {
@@ -42,12 +46,16 @@ export class ScrapProductSelectorScreen extends Component {
         } else {
             domain = [["id", "in", this.props.params?.stockProductIds || []]];
         }
-        this.state.results = await this.inventory.searchRead(
+        const results = await this.inventory.searchRead(
             "product.product",
             [...SCRAPPABLE_PRODUCTS, ...domain],
             ["id", "display_name", "tracking", "uom_id"],
             {limit: 50}
         );
+        if (query !== this._searchSeq) {
+            return;
+        }
+        this.state.results = results;
         this.state.loading = false;
     }
 

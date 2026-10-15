@@ -68,6 +68,47 @@ class TestBarcodeScrap(TransactionCase):
         self.assertEqual(lot_entry["lot_name"], "LOT-SCRAP-1")
         self.assertEqual(lot_entry["quantity"], 5)
 
+    def test_location_stock_is_what_a_scrap_can_take(self):
+        # The same lot spread over several quants: loose ones (one of them
+        # negative), one in a package, one owned by a partner.
+        Quant = self.env["stock.quant"].sudo()
+        for quantity in (2, -1):
+            Quant.create(
+                {
+                    "product_id": self.lot_product.id,
+                    "location_id": self.location.id,
+                    "lot_id": self.lot.id,
+                    "quantity": quantity,
+                }
+            )
+        package = self.env["stock.quant.package"].create({"name": "SCRAP-PACK"})
+        owner = self.env["res.partner"].create({"name": "Scrap Owner"})
+        Quant._update_available_quantity(
+            self.lot_product, self.location, 4, lot_id=self.lot, package_id=package
+        )
+        Quant._update_available_quantity(
+            self.lot_product, self.location, 3, lot_id=self.lot, owner_id=owner
+        )
+        data = self.Scrap.action_barcode_scrap_location_stock(self.location.id)
+        lots = [s for s in data["stock"] if s["product_id"] == self.lot_product.id]
+        # One entry for the lot, with the net quantity outside packages and
+        # owners: 5 + 2 - 1. Exactly what validating a scrap counts.
+        self.assertEqual(len(lots), 1)
+        self.assertEqual(lots[0]["quantity"], 6)
+        vals = {
+            "product_id": self.lot_product.id,
+            "product_uom_id": self.lot_product.uom_id.id,
+            "lot_id": self.lot.id,
+            "location_id": self.location.id,
+        }
+        self.assertTrue(self.Scrap.new(dict(vals, scrap_qty=6)).check_available_qty())
+        self.assertFalse(self.Scrap.new(dict(vals, scrap_qty=7)).check_available_qty())
+        result = self.Scrap.action_barcode_scrap(
+            self.location.id,
+            [{"product_id": self.lot_product.id, "lot_id": self.lot.id, "qty": 7}],
+        )
+        self.assertEqual(result["insufficient"][0]["available"], 6)
+
     def test_invalid_location(self):
         view = self.env["stock.location"].create(
             {"name": "Barcode Scrap View", "usage": "view"}
@@ -271,6 +312,49 @@ class TestBarcodeScrap(TransactionCase):
         )
         scrap = self.Scrap.search([("name", "in", result["names"])])
         self.assertEqual(scrap.scrap_location_id, other)
+
+    def test_destination_when_the_company_has_none_of_its_own(self):
+        company = self.env["res.company"].create({"name": "Scrap Shared Co"})
+        Location = self.env["stock.location"]
+        Location.search(
+            [("company_id", "=", company.id), ("scrap_location", "=", True)]
+        ).write({"scrap_location": False})
+        Location.create(
+            {
+                "name": "Shared Scrap",
+                "usage": "inventory",
+                "scrap_location": True,
+                "company_id": False,
+            }
+        )
+        shelf = Location.create(
+            {"name": "Shared Co Shelf", "usage": "internal", "company_id": company.id}
+        )
+        self.env["stock.quant"]._update_available_quantity(self.product, shelf, 3)
+        # The back office would preselect nothing: the first shared one is taken.
+        data = self.Scrap.action_barcode_scrap_location_stock(shelf.id)
+        default = Location.browse(data["scrap_location_id"])
+        self.assertTrue(default.scrap_location)
+        self.assertFalse(default.company_id)
+        result = self.Scrap.action_barcode_scrap(
+            shelf.id, [{"product_id": self.product.id, "qty": 1}]
+        )
+        scrap = self.Scrap.search([("name", "in", result["names"])])
+        self.assertEqual(scrap.scrap_location_id, default)
+
+    def test_no_destination_at_all(self):
+        with patch.object(
+            type(self.Scrap),
+            "_barcode_scrap_destinations",
+            return_value=self.env["stock.location"],
+        ):
+            data = self.Scrap.action_barcode_scrap_location_stock(self.location.id)
+            self.assertEqual(data["scrap_locations"], [])
+            self.assertFalse(data["scrap_location_id"])
+            with self.assertRaises(UserError):
+                self.Scrap.action_barcode_scrap(
+                    self.location.id, [{"product_id": self.product.id, "qty": 1}]
+                )
 
     def test_destination_must_be_a_scrap_location(self):
         with self.assertRaises(UserError):
