@@ -3,6 +3,7 @@ import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 import {recordImageUrl} from "@barcode_purchase/js/utils/avatar.esm";
 
 // `bin_size` keeps the images themselves off the wire -- see recordImageUrl.
@@ -37,12 +38,15 @@ export class SupplierSelectorScreen extends Component {
     }
 
     async onBarcodeScanned(barcode) {
-        const suppliers = await this.inventory.searchRead(
-            "res.partner",
-            [["barcode", "=", barcode]],
-            AVATAR_FIELDS,
-            AVATAR_OPTIONS
-        );
+        const domain = barcodeMatchDomain(barcode);
+        const suppliers = domain
+            ? await this.inventory.searchRead(
+                  "res.partner",
+                  domain,
+                  AVATAR_FIELDS,
+                  AVATAR_OPTIONS
+              )
+            : [];
         if (suppliers.length) {
             this.state.selectedSupplier = this._withImage(suppliers[0]);
             this.confirmSelection();
