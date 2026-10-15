@@ -70,7 +70,9 @@ export class PickingListScreen extends Component {
             date: _t("Date"),
         };
         this.filterLabels = FILTER_LABELS;
-        this.groupOrder = GROUP_ORDER;
+        // Grouping levels, outermost first. The Group menu and
+        // toggleGroupLevel follow it, so a module adds a level by extending it.
+        this.groupOrder = [...GROUP_ORDER];
 
         // Close any open filter/group menu when tapping outside the toolbar; the
         // toolbar itself stops propagation so its own taps do not trigger this.
@@ -219,39 +221,8 @@ export class PickingListScreen extends Component {
         );
     }
 
-    toggleGroupBy(group, ev) {
-        if (ev.target.checked) {
-            if (!this.state.groupByLevels.includes(group)) {
-                this.state.groupByLevels = GROUP_ORDER.filter((g) =>
-                    g === group
-                        ? ev.target.checked
-                        : this.state.groupByLevels.includes(g)
-                );
-            }
-        } else {
-            this.state.groupByLevels = this.state.groupByLevels.filter(
-                (g) => g !== group
-            );
-        }
-        this.computeGroups();
-    }
-
     toggleGroup(path) {
         this.state.collapsedGroups[path] = !this.state.collapsedGroups[path];
-    }
-
-    addGroup(ev) {
-        const value = ev.target.value;
-        if (!value) {
-            return;
-        }
-        if (!this.state.groupByLevels.includes(value)) {
-            this.state.groupByLevels = GROUP_ORDER.filter(
-                (group) => group === value || this.state.groupByLevels.includes(group)
-            );
-        }
-        this.computeGroups();
-        ev.target.value = "";
     }
 
     removeGroup(group) {
@@ -312,10 +283,6 @@ export class PickingListScreen extends Component {
                 tone: "info",
             },
         ];
-    }
-
-    get availableGroupingOptions() {
-        return GROUP_ORDER.filter((group) => !this.state.groupByLevels.includes(group));
     }
 
     normalizeSearchValue(value) {
@@ -698,13 +665,17 @@ export class PickingListScreen extends Component {
         this.computeGroups();
     }
 
-    /** Add or remove a grouping level from the Group menu, keeping GROUP_ORDER. */
+    /**
+     * Add or remove a grouping level from the Group menu, keeping groupOrder.
+     *
+     * @param {String} group the grouping level to toggle
+     */
     toggleGroupLevel(group) {
         if (this.state.groupByLevels.includes(group)) {
             this.removeGroup(group);
             return;
         }
-        this.state.groupByLevels = GROUP_ORDER.filter(
+        this.state.groupByLevels = this.groupOrder.filter(
             (level) => level === group || this.state.groupByLevels.includes(level)
         );
         this.computeGroups();
