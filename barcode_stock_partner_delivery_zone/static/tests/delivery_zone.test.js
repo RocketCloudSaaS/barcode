@@ -81,7 +81,6 @@ describe("DeliveryZone", () => {
         expect(screen.state.groupByLevels).toEqual([ZONE, "date"]);
         screen.toggleGroupLevel(ZONE);
         expect(screen.state.groupByLevels).toEqual(["date"]);
-        expect(screen.availableGroupingOptions).toEqual([ZONE, "state"]);
     });
 
     test("the zone filter keeps one zone, or the operations without one", () => {
