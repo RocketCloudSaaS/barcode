@@ -100,9 +100,9 @@ describe("BarcodePurchase", () => {
             ["LOT-E", 2, "Dozens"],
             [null, 1.5, "Dozens"],
         ]);
-        // Bought by the unit: the pieces as they come, the lot or serial kept.
-        screen.addPicked({product: CHEESE, parsed: {serial: "SN-1", qty: 3}});
-        expect(screen.state.lines[2]).toMatchObject({lot_name: "SN-1", qty: 3});
+        // Bought by the unit: the pieces as they come, the lot kept.
+        screen.addPicked({product: CHEESE, parsed: {lot: "LOT-C", qty: 3}});
+        expect(screen.state.lines[2]).toMatchObject({lot_name: "LOT-C", qty: 3});
         // A weight is no count: converting it is left to a bridge module.
         expect(screen.scannedQuantity({qty: null, weight: 1.25}, BOLTS)).toBe(1);
     });
@@ -167,6 +167,41 @@ describe("BarcodePurchase", () => {
         expect(calls[0].method).toBe("barcode_purchase_prices");
     });
 
+    test("a serial number is listed once, one unit", async () => {
+        const {screen, notes} = await purchaseScreen();
+        const drill = {...BOLTS, id: 10, display_name: "Drill", tracking: "serial"};
+        screen.addPicked({product: drill, parsed: {serial: "SN-1", qty: 3}});
+        screen.addPicked({product: drill, parsed: {serial: "SN-1"}});
+        expect(screen.state.lines.map((l) => [l.lot_name, l.qty])).toEqual([
+            ["SN-1", 1],
+        ]);
+        expect(notes).toEqual([
+            {message: "Serial number SN-1 is already on the list.", type: "warning"},
+        ]);
+    });
+
+    test("a scan the save overtakes adds nothing", async () => {
+        let answer = null;
+        const {screen, notes} = await purchaseScreen();
+        screen.inventory.searchRead = (model) =>
+            model === "product.product"
+                ? new Promise((resolve) => {
+                      answer = resolve;
+                  })
+                : Promise.resolve([]);
+        const scanning = screen.onBarcodeScanned("9501101020917", null);
+        await Promise.resolve();
+        await Promise.resolve();
+        // The order goes off while the product is being looked up.
+        screen.state.saving = true;
+        answer([BOLTS]);
+        await scanning;
+        expect(screen.state.lines).toEqual([]);
+        expect(notes.map((n) => n.message)).toEqual([
+            "Wait until the order is saved to scan again.",
+        ]);
+    });
+
     test("an unknown product and a scan while saving add nothing", async () => {
         const {screen, notes} = await purchaseScreen();
         await screen.onBarcodeScanned("NOPE", null);
@@ -187,7 +222,6 @@ describe("BarcodePurchase", () => {
                     state: "purchase",
                     missing_lots: [],
                     unplaced_lots: [],
-                    pending_lots: [],
                 },
             },
             state: {
@@ -226,6 +260,26 @@ describe("BarcodePurchase", () => {
         expect(screen.state.saving).toBe(false);
     });
 
+    test("a draft is saved without touching the validate box", async () => {
+        const {screen, calls, notes} = await purchaseScreen({
+            answers: {
+                action_barcode_purchase: {
+                    name: "P00043",
+                    state: "draft",
+                    missing_lots: [],
+                    unplaced_lots: [],
+                },
+            },
+        });
+        screen.addLine(BOLTS, null, 1);
+        await screen.saveDraft();
+        expect(calls[0].kwargs.confirm).toBe(false);
+        expect(screen.state.autoValidate).toBe(true);
+        expect(notes).toEqual([
+            {message: "Purchase order P00043 saved as a draft.", type: "success"},
+        ]);
+    });
+
     test("nothing is sent without a vendor or a product", async () => {
         const noVendor = await purchaseScreen({state: {supplier: null}});
         await noVendor.screen.createPurchase();
@@ -239,14 +293,12 @@ describe("BarcodePurchase", () => {
     });
 
     test("the operator is told what the order ended up as", async () => {
-        const told = async (result, state = {}) => {
-            const {screen, notes} = await purchaseScreen({state});
-            screen.notifyOutcome({
-                missing_lots: [],
-                unplaced_lots: [],
-                pending_lots: [],
-                ...result,
-            });
+        const told = async (result, confirm = true) => {
+            const {screen, notes} = await purchaseScreen();
+            screen.notifyOutcome(
+                {missing_lots: [], unplaced_lots: [], ...result},
+                confirm
+            );
             return notes.map((n) => [n.message, n.type]);
         };
         expect(
@@ -260,9 +312,9 @@ describe("BarcodePurchase", () => {
         expect(await told({name: "P1", state: "draft"})).toEqual([
             ["Purchase order P1 was created but is still a draft.", "warning"],
         ]);
-        expect(await told({name: "P1", state: "draft"}, {autoValidate: false})).toEqual(
-            [["Purchase order P1 saved as a draft.", "success"]]
-        );
+        expect(await told({name: "P1", state: "draft"}, false)).toEqual([
+            ["Purchase order P1 saved as a draft.", "success"],
+        ]);
         expect(
             await told({
                 name: "P1",
@@ -272,19 +324,6 @@ describe("BarcodePurchase", () => {
         ).toEqual([
             ["Set these lots on the receipt by hand: Cheese (LOT-X)", "warning"],
             ["Purchase order P1 confirmed.", "success"],
-        ]);
-        // No receipt yet: the lots read were not kept, and that is said apart.
-        expect(
-            await told(
-                {name: "P1", state: "draft", pending_lots: ["Cheese (LOT-A)"]},
-                {autoValidate: false}
-            )
-        ).toEqual([
-            [
-                "These lots were not saved with the order: set them on the receipt once it exists: Cheese (LOT-A)",
-                "warning",
-            ],
-            ["Purchase order P1 saved as a draft.", "success"],
         ]);
     });
 
