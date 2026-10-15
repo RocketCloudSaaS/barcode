@@ -95,13 +95,9 @@ export class PickingListScreen extends Component {
             () => {
                 this.computeGroups();
                 this.persistSessionView();
-                const collapsed = {};
-                const groups = this.state.groupedPickings;
-                const keys = Object.keys(groups);
-                keys.forEach((key, index) => {
-                    collapsed["root-" + key] = this.state.search ? false : index !== 0;
-                });
-                this.state.collapsedGroups = collapsed;
+                this.state.collapsedGroups = this.initialCollapsedGroups(
+                    this.state.groupedPickings
+                );
             },
             () => [
                 this.state.pickings,
@@ -957,6 +953,23 @@ export class PickingListScreen extends Component {
             (count, childGroup) => count + this.countGroupEntries(childGroup),
             0
         );
+    }
+
+    /**
+     * Which groups start collapsed: all but the first one shown, so the
+     * operator lands on the top of the list -- the groups are drawn in
+     * sortedGroupKeys order, not in the order the operations came in -- and
+     * none while searching, so every match is in sight.
+     *
+     * @param {Object} groups the operations grouped by their first level
+     * @returns {Object} collapsed state by group path
+     */
+    initialCollapsedGroups(groups) {
+        const collapsed = {};
+        this.sortedGroupKeys(groups).forEach((key, index) => {
+            collapsed["root-" + key] = this.state.search ? false : index !== 0;
+        });
+        return collapsed;
     }
 
     sortedGroupKeys(groups) {
