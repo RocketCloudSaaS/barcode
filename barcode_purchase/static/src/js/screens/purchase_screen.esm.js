@@ -72,13 +72,23 @@ export class PurchaseScreen extends Component {
         });
     }
 
+    /**
+     * Whether a scan must wait because the order is on its way to the server:
+     * a scan now would show up on it without being so, then vanish with the
+     * screen. Checked again after each lookup, which the save may overtake.
+     */
+    scanMustWait() {
+        if (!this.state.saving) {
+            return false;
+        }
+        this.inventory.notify(_t("Wait until the order is saved to scan again."), {
+            type: "warning",
+        });
+        return true;
+    }
+
     async onBarcodeScanned(barcode, parsedData) {
-        if (this.state.saving) {
-            // The order is on its way to the server: a scan now would show up
-            // on it without being so, then vanish with the screen.
-            this.inventory.notify(_t("Wait until the order is saved to scan again."), {
-                type: "warning",
-            });
+        if (this.scanMustWait()) {
             return;
         }
         // A scanned location barcode sets the destination; anything else is
@@ -91,6 +101,9 @@ export class PurchaseScreen extends Component {
                   ["display_name"]
               )
             : [];
+        if (this.scanMustWait()) {
+            return;
+        }
         if (locations.length) {
             this.state.destinationLocation = {
                 id: locations[0].id,
@@ -121,6 +134,9 @@ export class PurchaseScreen extends Component {
                   PRODUCT_FIELDS
               )
             : [];
+        if (this.scanMustWait()) {
+            return;
+        }
         if (!products.length) {
             this.inventory.notify(_t("Product not found."), {type: "warning"});
             return;
@@ -180,12 +196,21 @@ export class PurchaseScreen extends Component {
     }
 
     /**
-     * One line per product and lot: scanning them again adds to it.
+     * One line per product and lot: scanning them again adds to it. A serial
+     * number stands for a single unit, so it is listed once.
      */
     addLine(product, lotName, qty) {
+        const serial = product.tracking === "serial" && Boolean(lotName);
         const existing = this.state.lines.find(
             (l) => l.product_id === product.id && l.lot_name === lotName
         );
+        if (existing && serial) {
+            this.inventory.notify(
+                _t("Serial number %(lot)s is already on the list.", {lot: lotName}),
+                {type: "warning"}
+            );
+            return;
+        }
         if (existing) {
             existing.qty += qty;
             return;
@@ -194,7 +219,7 @@ export class PurchaseScreen extends Component {
             product_id: product.id,
             product_name: product.display_name,
             default_code: product.default_code || null,
-            qty: qty,
+            qty: serial ? 1 : qty,
             uom_name: product.uom_po_id?.[1] || "",
             // Empty until the operator types one: the order prices the line
             // from the vendor, in the purchase unit and its own currency. The
@@ -295,12 +320,18 @@ export class PurchaseScreen extends Component {
 
     // --- Create the order ---
 
+    /** Save the order as a draft, whatever the "validate" box says. */
     async saveDraft() {
-        this.state.autoValidate = false;
-        await this.createPurchase();
+        await this.createPurchase(false);
     }
 
-    async createPurchase() {
+    /**
+     * Create the order in one call to the server.
+     *
+     * @param {Boolean} [confirm] confirm it too; by default, as the "validate
+     *     automatically" box says
+     */
+    async createPurchase(confirm = this.state.autoValidate) {
         if (this.state.saving) {
             return;
         }
@@ -330,13 +361,13 @@ export class PurchaseScreen extends Component {
                     })),
                 ],
                 {
-                    confirm: this.state.autoValidate,
+                    confirm,
                     location_dest_id: this.state.destinationLocation?.id || false,
                     user_id: this.state.buyer?.id || false,
                     partner_ref: this.state.vendorRef || false,
                 }
             );
-            this.notifyOutcome(result);
+            this.notifyOutcome(result, confirm);
             this.store.navigate("main");
         } catch {
             // The API wrapper already surfaced the server error to the operator,
@@ -349,20 +380,13 @@ export class PurchaseScreen extends Component {
     /**
      * Say what actually happened, by order number and by the state the server
      * ended up in. A confirmation does not always confirm: with two-step
-     * validation the order lands on "To Approve" and raises no receipt.
+     * validation the order lands on "To Approve" and raises no receipt yet
+     * (the lots read wait on the order for it).
      *
-     * @param {{name: String, state: String, missing_lots: String[], unplaced_lots: String[], pending_lots: String[]}} result
+     * @param {{name: String, state: String, missing_lots: String[], unplaced_lots: String[]}} result
+     * @param {Boolean} confirm whether the order was meant to be confirmed
      */
-    notifyOutcome({name, state, missing_lots, unplaced_lots, pending_lots}) {
-        if (pending_lots?.length) {
-            this.inventory.notify(
-                _t(
-                    "These lots were not saved with the order: set them on the receipt once it exists: %(lots)s",
-                    {lots: pending_lots.join(", ")}
-                ),
-                {type: "warning"}
-            );
-        }
+    notifyOutcome({name, state, missing_lots, unplaced_lots}, confirm) {
         if (unplaced_lots?.length) {
             this.inventory.notify(
                 _t("Set these lots on the receipt by hand: %(lots)s", {
@@ -397,12 +421,12 @@ export class PurchaseScreen extends Component {
             return;
         }
         this.inventory.notify(
-            this.state.autoValidate
+            confirm
                 ? _t("Purchase order %(name)s was created but is still a draft.", {
                       name,
                   })
                 : _t("Purchase order %(name)s saved as a draft.", {name}),
-            {type: this.state.autoValidate ? "warning" : "success"}
+            {type: confirm ? "warning" : "success"}
         );
     }
 

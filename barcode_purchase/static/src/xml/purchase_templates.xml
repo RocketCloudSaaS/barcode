@@ -111,6 +111,7 @@
                                         min="0"
                                         step="any"
                                         t-model.number="line.qty"
+                                        t-att-readonly="line.tracking === 'serial' and line.lot_name"
                                         t-on-change="() => this.refreshPrices()"
                                     />
                                     <span
@@ -175,13 +176,13 @@
             </main>
 
             <footer class="ilx-po-v2-footer">
-                <button class="ilx-po-v2-draft-btn" t-on-click="saveDraft">
+                <button class="ilx-po-v2-draft-btn" t-on-click="() => this.saveDraft()">
                     <i class="fa fa-save" /> Save Draft
                 </button>
                 <button
                     class="ilx-po-v2-confirm-btn"
                     t-att-disabled="state.saving"
-                    t-on-click="createPurchase"
+                    t-on-click="() => this.createPurchase()"
                 >
                     <i class="fa fa-check-circle-o" /> CONFIRM ORDER
                 </button>
