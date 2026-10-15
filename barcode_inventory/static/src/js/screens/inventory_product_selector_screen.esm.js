@@ -6,6 +6,7 @@ import {useService} from "@web/core/utils/hooks";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {COUNTABLE_PRODUCTS} from "@barcode_inventory/js/screens/inventory_count_screen.esm";
 
 /**
  * Product selector for the inventory count, opened from the count screen's "+"
@@ -37,7 +38,7 @@ export class InventoryProductSelectorScreen extends Component {
     async search() {
         const term = this.state.search;
         const exclude = this.props.params?.excludeProductIds || [];
-        const domain = [];
+        const domain = [...COUNTABLE_PRODUCTS];
         if (term) {
             domain.push("|", ["name", "ilike", term], ["barcode", "ilike", term]);
         }
@@ -63,11 +64,13 @@ export class InventoryProductSelectorScreen extends Component {
         const code = parsed?.gtin || parsed?.value || barcode;
         const domain = barcodeMatchDomain(code);
         const products = domain
-            ? await this.inventory.searchRead(
-                  "product.product",
-                  domain,
-                  ["id", "display_name", "tracking", "uom_id"]
-              )
+            ? await this.inventory.searchRead("product.product", domain, [
+                  "id",
+                  "display_name",
+                  "tracking",
+                  "uom_id",
+                  "is_storable",
+              ])
             : [];
         if (!products.length) {
             this.inventory.notify(_t("No product matches “%(code)s”.", {code}), {
@@ -75,7 +78,17 @@ export class InventoryProductSelectorScreen extends Component {
             });
             return;
         }
-        this.pickProduct(products[0]);
+        const product = products.find((p) => p.is_storable);
+        if (!product) {
+            this.inventory.notify(
+                _t("%(name)s is not a storable product: it has no stock to count.", {
+                    name: products[0].display_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
+        this.pickProduct(product);
     }
 
     pickProduct(product) {
