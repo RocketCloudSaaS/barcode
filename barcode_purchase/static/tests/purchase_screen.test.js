@@ -7,23 +7,30 @@ import {beforeEach, describe, expect, test} from "@odoo/hoot";
 import {PurchaseProductSelectorScreen} from "@barcode_purchase/js/screens/product_selector_screen.esm";
 import {patchTranslations} from "@web/../tests/web_test_helpers";
 
+// Units of measure as a database holds them; a dozen is a twelfth of a unit.
+const UOMS = [
+    {id: 1, factor: 1, rounding: 0.01},
+    {id: 2, factor: 1 / 12, rounding: 0.01},
+];
 const BOLTS = {
     id: 7,
     display_name: "Bolts",
     default_code: "B-7",
-    standard_price: 2,
     tracking: "none",
+    uom_id: [1, "Units"],
     uom_po_id: [1, "Units"],
 };
 const CHEESE = {...BOLTS, id: 8, display_name: "Cheese", tracking: "lot"};
+// Stocked by the unit, bought by the dozen.
+const EGGS = {...BOLTS, id: 9, display_name: "Eggs", uom_po_id: [2, "Dozens"]};
 
 /**
- * A purchase screen, without mounting it. What it tells the operator lands in
- * `notes`, where it navigates in `moves`, what it searches for in `searches`
- * (answered by model with `found`) and the orders it sends in `calls`, answered
- * with `answer`.
+ * A purchase screen, without mounting it, with the units of measure loaded.
+ * What it tells the operator lands in `notes`, where it navigates in `moves`,
+ * what it searches for in `searches` (answered by model with `found`) and the
+ * calls it makes in `calls`, answered by method with `answers`.
  */
-function purchaseScreen({found = {}, answer = null, state = {}} = {}) {
+async function purchaseScreen({found = {}, answers = {}, state = {}} = {}) {
     const screen = Object.create(PurchaseScreen.prototype);
     const notes = [];
     const moves = [];
@@ -44,22 +51,24 @@ function purchaseScreen({found = {}, answer = null, state = {}} = {}) {
             notes.push({message: String(message), ...options}),
         searchRead: async (model, domain) => {
             searches.push({model, domain});
-            return found[model] || [];
+            return model === "uom.uom" ? UOMS : found[model] || [];
         },
         call: async (model, method, args, kwargs) => {
             calls.push({model, method, args, kwargs});
-            return answer;
+            const answer = answers[method];
+            return typeof answer === "function" ? answer(args) : answer;
         },
     };
     screen.store = {navigate: (route, params) => moves.push({route, params})};
+    await screen.loadUoms();
     return {screen, notes, moves, searches, calls};
 }
 
 describe("BarcodePurchase", () => {
     beforeEach(() => patchTranslations());
 
-    test("the same product and lot add up on one line", () => {
-        const {screen} = purchaseScreen();
+    test("the same product and lot add up on one line, priced by the order", async () => {
+        const {screen} = await purchaseScreen();
         screen.addLine(BOLTS, null, 1);
         screen.addLine(BOLTS, null, 2);
         screen.addLine(CHEESE, "LOT-A", 1);
@@ -71,43 +80,95 @@ describe("BarcodePurchase", () => {
             [8, "LOT-A", 1],
             [8, "LOT-B", 1],
         ]);
-        expect(screen.state.lines[0]).toMatchObject({price_unit: 2, tracking: "none"});
+        // No price of its own: the order will price it from the vendor.
+        expect(screen.state.lines[0]).toMatchObject({
+            price_unit: null,
+            uom_name: "Units",
+            tracking: "none",
+        });
         screen.removeLine(screen.state.lines[1]);
         expect(screen.state.lines.map((l) => l.lot_name)).toEqual([null, "LOT-B"]);
     });
 
-    test("a picked product brings the lot and the pieces its label states", () => {
-        const {screen} = purchaseScreen();
-        screen.addPicked({product: CHEESE, parsed: {lot: "LOT-A", qty: 3}});
-        screen.addPicked({product: CHEESE, parsed: {serial: "SN-1", qty: null}});
-        screen.addPicked({product: BOLTS, parsed: null});
-        expect(screen.state.lines.map((l) => [l.lot_name, l.qty])).toEqual([
-            ["LOT-A", 3],
-            ["SN-1", 1],
-            [null, 1],
+    test("a line is in the purchase unit, and a label's pieces are converted", async () => {
+        const {screen} = await purchaseScreen();
+        // 24 eggs on the label are 2 dozens; a plain scan is one dozen.
+        screen.addPicked({product: EGGS, parsed: {lot: "LOT-E", qty: 24}});
+        screen.addPicked({product: EGGS, parsed: null});
+        screen.addPicked({product: EGGS, parsed: {qty: 6}});
+        expect(screen.state.lines.map((l) => [l.lot_name, l.qty, l.uom_name])).toEqual([
+            ["LOT-E", 2, "Dozens"],
+            [null, 1.5, "Dozens"],
         ]);
+        // Bought by the unit: the pieces as they come, the lot or serial kept.
+        screen.addPicked({product: CHEESE, parsed: {serial: "SN-1", qty: 3}});
+        expect(screen.state.lines[2]).toMatchObject({lot_name: "SN-1", qty: 3});
         // A weight is no count: converting it is left to a bridge module.
-        expect(screen.scannedQuantity({qty: null, weight: 1.25}, 12)).toBe(1);
+        expect(screen.scannedQuantity({qty: null, weight: 1.25}, BOLTS)).toBe(1);
+    });
+
+    test("the vendor's prices are shown until the operator types one", async () => {
+        const {screen, calls} = await purchaseScreen({
+            answers: {barcode_purchase_prices: ([, lines]) => lines.map(() => 7)},
+        });
+        screen.addLine(BOLTS, null, 2);
+        screen.addLine(CHEESE, "LOT-A", 1);
+        screen.state.lines[1].price_unit = 0;
+        await screen.refreshPrices();
+        // Only the line without a typed price is asked about.
+        expect(calls[0].args).toEqual([3, [{product_id: 7, qty: 2}]]);
+        expect(screen.state.lines.map((l) => screen.linePrice(l))).toEqual([7, 0]);
+        expect(screen.state.lines.map((l) => screen.lineSubtotal(l))).toEqual([
+            "14.00",
+            "0.00",
+        ]);
+        // No vendor yet: nothing to ask.
+        screen.state.supplier = null;
+        await screen.refreshPrices();
+        expect(calls.length).toBe(1);
+    });
+
+    test("an older price answer never overwrites a later one", async () => {
+        const pending = [];
+        const {screen} = await purchaseScreen({
+            answers: {
+                barcode_purchase_prices: () => new Promise((r) => pending.push(r)),
+            },
+        });
+        screen.addLine(BOLTS, null, 1);
+        const first = screen.refreshPrices();
+        const second = screen.refreshPrices();
+        pending[1]([5]);
+        await second;
+        pending[0]([9]);
+        await first;
+        expect(screen.state.lines[0].price_estimate).toBe(5);
     });
 
     test("a scanned location sets the destination, anything else a product", async () => {
         const shelf = {id: 5, display_name: "WH/Stock/Shelf"};
-        const withShelf = purchaseScreen({found: {"stock.location": [shelf]}});
+        const withShelf = await purchaseScreen({found: {"stock.location": [shelf]}});
         await withShelf.screen.onBarcodeScanned("LOC-SHELF", null);
         expect(withShelf.screen.state.destinationLocation).toEqual(shelf);
-        expect(withShelf.searches[0].domain[0]).toEqual(["usage", "=", "internal"]);
+        const located = withShelf.searches.find(
+            (search) => search.model === "stock.location"
+        );
+        expect(located.domain[0]).toEqual(["usage", "=", "internal"]);
         expect(withShelf.screen.state.lines).toEqual([]);
 
-        const {screen, searches} = purchaseScreen({
+        const {screen, searches, calls} = await purchaseScreen({
             found: {"product.product": [BOLTS]},
+            answers: {barcode_purchase_prices: [4]},
         });
         await screen.onBarcodeScanned("9501101020917", {value: "9501101020917"});
-        expect(searches[1].domain.slice(0, 2)).toEqual(PURCHASABLE_PRODUCTS);
-        expect(screen.state.lines[0].product_id).toBe(7);
+        const products = searches.find((search) => search.model === "product.product");
+        expect(products.domain.slice(0, 2)).toEqual(PURCHASABLE_PRODUCTS);
+        expect(screen.state.lines[0]).toMatchObject({product_id: 7, price_estimate: 4});
+        expect(calls[0].method).toBe("barcode_purchase_prices");
     });
 
     test("an unknown product and a scan while saving add nothing", async () => {
-        const {screen, notes} = purchaseScreen();
+        const {screen, notes} = await purchaseScreen();
         await screen.onBarcodeScanned("NOPE", null);
         screen.state.saving = true;
         await screen.onBarcodeScanned("NOPE", null);
@@ -118,13 +179,16 @@ describe("BarcodePurchase", () => {
         ]);
     });
 
-    test("the order is sent in one call, with all the operator chose", async () => {
-        const {screen, calls, moves, notes} = purchaseScreen({
-            answer: {
-                name: "P00042",
-                state: "purchase",
-                missing_lots: [],
-                unplaced_lots: [],
+    test("the order is sent in one call, priced only where the operator typed", async () => {
+        const {screen, calls, moves, notes} = await purchaseScreen({
+            answers: {
+                action_barcode_purchase: {
+                    name: "P00042",
+                    state: "purchase",
+                    missing_lots: [],
+                    unplaced_lots: [],
+                    pending_lots: [],
+                },
             },
             state: {
                 destinationLocation: {id: 5, display_name: "Shelf"},
@@ -133,12 +197,20 @@ describe("BarcodePurchase", () => {
             },
         });
         screen.addLine(CHEESE, "LOT-A", 2);
+        screen.addLine(BOLTS, null, 1);
+        screen.state.lines[1].price_unit = 0;
         await screen.createPurchase();
         expect(calls).toEqual([
             {
                 model: "purchase.order",
                 method: "action_barcode_purchase",
-                args: [3, [{product_id: 8, qty: 2, price_unit: 2, lot_name: "LOT-A"}]],
+                args: [
+                    3,
+                    [
+                        {product_id: 8, qty: 2, price_unit: null, lot_name: "LOT-A"},
+                        {product_id: 7, qty: 1, price_unit: 0, lot_name: false},
+                    ],
+                ],
                 kwargs: {
                     confirm: true,
                     location_dest_id: 5,
@@ -155,9 +227,9 @@ describe("BarcodePurchase", () => {
     });
 
     test("nothing is sent without a vendor or a product", async () => {
-        const noVendor = purchaseScreen({state: {supplier: null}});
+        const noVendor = await purchaseScreen({state: {supplier: null}});
         await noVendor.screen.createPurchase();
-        const noLines = purchaseScreen();
+        const noLines = await purchaseScreen();
         await noLines.screen.createPurchase();
         expect([...noVendor.calls, ...noLines.calls]).toEqual([]);
         expect([noVendor.notes[0].message, noLines.notes[0].message]).toEqual([
@@ -166,34 +238,53 @@ describe("BarcodePurchase", () => {
         ]);
     });
 
-    test("the operator is told what the order ended up as", () => {
-        const told = (result, state = {}) => {
-            const {screen, notes} = purchaseScreen({state});
-            screen.notifyOutcome({missing_lots: [], unplaced_lots: [], ...result});
+    test("the operator is told what the order ended up as", async () => {
+        const told = async (result, state = {}) => {
+            const {screen, notes} = await purchaseScreen({state});
+            screen.notifyOutcome({
+                missing_lots: [],
+                unplaced_lots: [],
+                pending_lots: [],
+                ...result,
+            });
             return notes.map((n) => [n.message, n.type]);
         };
-        expect(told({name: "P1", state: "purchase", missing_lots: ["Cheese"]})).toEqual(
-            [
-                [
-                    "P1 confirmed -- set the lot/serial of Cheese on the receipt.",
-                    "warning",
-                ],
-            ]
-        );
-        expect(told({name: "P1", state: "to approve"})).toEqual([
+        expect(
+            await told({name: "P1", state: "purchase", missing_lots: ["Cheese"]})
+        ).toEqual([
+            ["P1 confirmed -- set the lot/serial of Cheese on the receipt.", "warning"],
+        ]);
+        expect(await told({name: "P1", state: "to approve"})).toEqual([
             ["Purchase order P1 created -- it is waiting for approval.", "warning"],
         ]);
-        expect(told({name: "P1", state: "draft"})).toEqual([
+        expect(await told({name: "P1", state: "draft"})).toEqual([
             ["Purchase order P1 was created but is still a draft.", "warning"],
         ]);
-        expect(told({name: "P1", state: "draft"}, {autoValidate: false})).toEqual([
-            ["Purchase order P1 saved as a draft.", "success"],
-        ]);
+        expect(await told({name: "P1", state: "draft"}, {autoValidate: false})).toEqual(
+            [["Purchase order P1 saved as a draft.", "success"]]
+        );
         expect(
-            told({name: "P1", state: "purchase", unplaced_lots: ["Cheese (LOT-X)"]})
+            await told({
+                name: "P1",
+                state: "purchase",
+                unplaced_lots: ["Cheese (LOT-X)"],
+            })
         ).toEqual([
             ["Set these lots on the receipt by hand: Cheese (LOT-X)", "warning"],
             ["Purchase order P1 confirmed.", "success"],
+        ]);
+        // No receipt yet: the lots read were not kept, and that is said apart.
+        expect(
+            await told(
+                {name: "P1", state: "draft", pending_lots: ["Cheese (LOT-A)"]},
+                {autoValidate: false}
+            )
+        ).toEqual([
+            [
+                "These lots were not saved with the order: set them on the receipt once it exists: Cheese (LOT-A)",
+                "warning",
+            ],
+            ["Purchase order P1 saved as a draft.", "success"],
         ]);
     });
 
@@ -203,13 +294,13 @@ describe("BarcodePurchase", () => {
         const lines = [{product_id: 7, lot_name: null, qty: 1}];
         selector.props = {params: {supplier: {id: 3}, lines}};
         selector.store = {navigate: (route, params) => moves.push({route, params})};
-        selector.confirmSelection({...CHEESE, image_url: "/x.png"}, {lot: "LOT-A"});
+        selector.confirmSelection({...EGGS, image_url: "/x.png"}, {lot: "LOT-A"});
         expect(moves[0].route).toBe("purchase");
         expect(moves[0].params).toMatchObject({
             supplier: {id: 3},
             lines,
             addProduct: {
-                product: {id: 8, uom_po_id: [1, "Units"]},
+                product: {id: 9, uom_po_id: [2, "Dozens"]},
                 parsed: {lot: "LOT-A"},
             },
         });

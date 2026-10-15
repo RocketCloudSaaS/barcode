@@ -7,13 +7,19 @@ From the Barcode app home screen, tap **Purchase Orders**.
 2. Optionally set the **destination location** (only the destinations of
    incoming operation types are offered) and the **buyer** (Odoo's native
    purchase-order responsible user), and type a **vendor reference**.
-3. **Add the products.** Scan each product: a plain barcode adds one unit. With
-   a GS1 parser installed, a GS1 label also gives its **lot/serial** and its
-   **piece count** (AI 30/37); a net weight on the label is not taken as the
-   quantity. Scanning the same product and lot again adds to its line. You can
-   also tap **"+"** to search and add a product, and edit the quantity and unit
-   price on each line. Only goods that can be purchased are offered.
-4. Tap **Confirm Order** to create and confirm the purchase order, or **Save
+3. **Add the products.** Each line is ordered in the product's **purchase unit**,
+   shown under its quantity. Scanning a product adds one purchase unit. With a
+   GS1 parser installed, a GS1 label also gives its **lot/serial** and its
+   **piece count** (AI 30/37), which is converted from the product's unit into
+   the purchase unit (24 pieces of a product bought by the dozen are 2 Dozens);
+   a net weight on the label is not taken as the quantity. Scanning the same
+   product and lot again adds to its line. You can also tap **"+"** to search
+   and add a product, and edit the quantity on each line. Only goods that can be
+   purchased are offered.
+4. The **price** shown on each line is the one the order will take, as in the
+   back office: the vendor's price, in the purchase unit and the order's
+   currency. Type a price to use another one instead, 0 included.
+5. Tap **Confirm Order** to create and confirm the purchase order, or **Save
    Draft** to create it without confirming.
 
 ## Automatic validation
@@ -31,12 +37,15 @@ That message names the order and the state it ended in, because a confirmation
 does not always confirm: with two-step validation the order lands on **To
 Approve** and raises no receipt until somebody approves it in the back office.
 
+A draft, or an order waiting for approval, has no receipt to keep the lots read
+on: the message lists them, to be entered on the receipt once it exists.
+
 Creating and confirming a purchase order requires the **Purchase** user rights,
 as in the back office.
 
 ## Reading more from a label
 
 The quantity a scan stands for comes from ``PurchaseScreen.scannedQuantity(scan,
-productUomId)``: the piece count, or one unit. A module that reads more from a
-label (a GS1 net weight, say) can patch it to convert that into the product's
-purchase unit.
+product)``, in the purchase unit: the pieces the label counts, converted, or one
+purchase unit. A module that reads more from a label (a GS1 net weight, say) can
+patch it to convert that into the purchase unit.

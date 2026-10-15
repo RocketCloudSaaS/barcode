@@ -111,6 +111,11 @@
                                         min="0"
                                         step="any"
                                         t-model.number="line.qty"
+                                        t-on-change="() => this.refreshPrices()"
+                                    />
+                                    <span
+                                        class="ilx-po-v2-uom"
+                                        t-esc="line.uom_name"
                                     />
                                 </div>
                                 <div class="ilx-po-v2-col">
@@ -120,6 +125,7 @@
                                         type="number"
                                         step="any"
                                         min="0"
+                                        t-att-placeholder="line.price_estimate === null ? '' : line.price_estimate"
                                         t-model.number="line.price_unit"
                                     />
                                 </div>
@@ -136,9 +142,7 @@
                                 >
                                     <span class="ilx-po-v2-col-header">SUBTOTAL</span>
                                     <span class="ilx-po-v2-col-val ilx-po-v2-subtotal">
-                                        <t
-                                            t-esc="(line.qty * line.price_unit).toFixed(2)"
-                                        />
+                                        <t t-esc="lineSubtotal(line)" />
                                     </span>
                                 </div>
                             </div>
