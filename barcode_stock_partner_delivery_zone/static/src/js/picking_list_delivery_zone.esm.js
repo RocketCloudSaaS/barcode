@@ -89,28 +89,6 @@ patch(PickingListScreen.prototype, {
     },
 
     /**
-     * Add or remove a grouping level, keeping the zone as the outermost one.
-     *
-     * @param {String} group the grouping level to toggle
-     */
-    toggleGroupLevel(group) {
-        if (this.state.groupByLevels.includes(group)) {
-            this.removeGroup(group);
-            return;
-        }
-        this.state.groupByLevels = this.groupOrder.filter(
-            (level) => level === group || this.state.groupByLevels.includes(level)
-        );
-        this.computeGroups();
-    },
-
-    get availableGroupingOptions() {
-        return this.groupOrder.filter(
-            (group) => !this.state.groupByLevels.includes(group)
-        );
-    },
-
-    /**
      * Restoring this session's working view keeps the operator's grouping.
      *
      * @returns {*} what the restore itself returns
