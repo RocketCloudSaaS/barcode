@@ -21,7 +21,7 @@ class TestBarcodePurchase(TransactionCase):
         cls.serial_product = Product.create(
             {"name": "PO Serial", "is_storable": True, "tracking": "serial"}
         )
-        warehouse = cls.env["stock.warehouse"].search(
+        cls.warehouse = warehouse = cls.env["stock.warehouse"].search(
             [("company_id", "=", cls.env.company.id)], limit=1
         )
         cls.shelf = cls.env["stock.location"].create(
@@ -116,8 +116,10 @@ class TestBarcodePurchase(TransactionCase):
         self.assertEqual(result["state"], "purchase")
         self.assertEqual(result["missing_lots"], [])
         self.assertEqual(result["unplaced_lots"], [])
+        # Received by the warehouse's own receipt, straight into the shelf.
+        self.assertEqual(order.picking_type_id, self.warehouse.in_type_id)
+        self.assertEqual(order.order_line.location_final_id, self.shelf)
         receipt = order.picking_ids
-        self.assertEqual(receipt.location_dest_id, self.shelf)
         self.assertEqual(receipt.move_ids.location_dest_id, self.shelf)
         # Every lot sits on the move of its own order line.
         for order_line, lot_name in zip(
@@ -144,30 +146,71 @@ class TestBarcodePurchase(TransactionCase):
             confirm=True,
         )
         order = self._order(result)
+        # Placing the lots again (another receipt run) does not write it twice.
+        order._barcode_purchase_place_lots()
+        move_lines = order.order_line.move_ids.move_line_ids
+        self.assertEqual(move_lines.mapped("lot_name"), ["LOT-A"])
+        # Another lot for the same line: its only move line already holds one.
+        order.order_line.barcode_lot_name = "LOT-X"
+        order._barcode_purchase_place_lots()
         self.assertEqual(
-            order._barcode_purchase_place_lots(["LOT-X"]),
+            order._barcode_purchase_unplaced_lots(),
             [f"{self.lot_product.display_name} (LOT-X)"],
         )
 
-    def test_lots_without_a_receipt_are_reported(self):
-        lines = [{"product_id": self.lot_product.id, "qty": 1, "lot_name": "LOT-A"}]
-        # A draft raises no receipt: the lots read have nowhere to go yet.
-        draft = self.PO.action_barcode_purchase(self.vendor.id, lines)
-        self.assertEqual(
-            draft["pending_lots"], [f"{self.lot_product.display_name} (LOT-A)"]
+    def test_a_draft_keeps_its_destination_and_lots_until_confirmed(self):
+        result = self.PO.action_barcode_purchase(
+            self.vendor.id,
+            [{"product_id": self.lot_product.id, "qty": 1, "lot_name": "LOT-A"}],
+            location_dest_id=self.shelf.id,
         )
-        self.assertEqual(draft["unplaced_lots"], [])
-        self.assertEqual(draft["missing_lots"], [])
-        # Nor does an order waiting for approval.
+        order = self._order(result)
+        self.assertEqual((result["state"], result["unplaced_lots"]), ("draft", []))
+        self.assertEqual(order.order_line.barcode_lot_name, "LOT-A")
+        # Confirmed later, in the back office.
+        order.button_confirm()
+        move = order.picking_ids.move_ids
+        self.assertEqual(move.location_dest_id, self.shelf)
+        self.assertEqual(move.move_line_ids.lot_name, "LOT-A")
+
+    def test_an_order_awaiting_approval_keeps_its_lots(self):
         self.env.company.write(
             {"po_double_validation": "two_step", "po_double_validation_amount": 0}
         )
-        waiting = self.PO.with_user(self.buyer).action_barcode_purchase(
-            self.vendor.id, [dict(lines[0], price_unit=10)], confirm=True
+        result = self.PO.with_user(self.buyer).action_barcode_purchase(
+            self.vendor.id,
+            [
+                {
+                    "product_id": self.lot_product.id,
+                    "qty": 1,
+                    "price_unit": 10,
+                    "lot_name": "LOT-A",
+                }
+            ],
+            confirm=True,
+            location_dest_id=self.shelf.id,
         )
-        self.assertEqual(waiting["state"], "to approve")
-        self.assertEqual(waiting["pending_lots"], draft["pending_lots"])
-        self.assertEqual(waiting["unplaced_lots"], [])
+        order = self._order(result)
+        self.assertEqual(result["state"], "to approve")
+        self.assertFalse(order.picking_ids)
+        order.button_approve()
+        move = order.picking_ids.move_ids
+        self.assertEqual(move.location_dest_id, self.shelf)
+        self.assertEqual(move.move_line_ids.lot_name, "LOT-A")
+
+    def test_a_reception_in_steps_ends_at_the_destination(self):
+        self.warehouse.reception_steps = "two_steps"
+        result = self.PO.action_barcode_purchase(
+            self.vendor.id,
+            [{"product_id": self.product.id, "qty": 1}],
+            confirm=True,
+            location_dest_id=self.shelf.id,
+        )
+        receipt = self._order(result).picking_ids
+        # The receipt goes to the input as the route says; the goods end on
+        # the shelf, through the steps that follow.
+        self.assertEqual(receipt.location_dest_id, self.warehouse.wh_input_stock_loc_id)
+        self.assertEqual(receipt.move_ids.location_final_id, self.shelf)
 
     def test_two_step_approval(self):
         self.env.company.write(
@@ -186,6 +229,9 @@ class TestBarcodePurchase(TransactionCase):
             {"name": "PO Not Purchasable", "purchase_ok": False}
         )
         customers = self.env.ref("stock.stock_location_customers")
+        outside = self.env["stock.location"].create(
+            {"name": "PO Outside Any Warehouse", "usage": "internal"}
+        )
         cases = [
             (self.vendor.id, [], {}),
             (0, [{"product_id": self.product.id, "qty": 1}], {}),
@@ -196,6 +242,17 @@ class TestBarcodePurchase(TransactionCase):
                 self.vendor.id,
                 [{"product_id": self.product.id, "qty": 1}],
                 {"location_dest_id": customers.id},
+            ),
+            (
+                self.vendor.id,
+                [{"product_id": self.product.id, "qty": 1}],
+                {"location_dest_id": outside.id},
+            ),
+            # A serial number stands for a single unit.
+            (
+                self.vendor.id,
+                [{"product_id": self.serial_product.id, "qty": 3, "lot_name": "SN-1"}],
+                {},
             ),
         ]
         for partner_id, lines, kwargs in cases:

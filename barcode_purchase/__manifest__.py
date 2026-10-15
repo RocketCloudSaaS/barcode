@@ -12,6 +12,9 @@
         "barcode_scanner",
         "purchase_stock",
     ],
+    "data": [
+        "views/purchase_order_views.xml",
+    ],
     "assets": {
         "web.assets_backend": [
             "barcode_purchase/static/src/scss/purchase.scss",
