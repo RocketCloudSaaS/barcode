@@ -45,9 +45,9 @@
                                     </div>
                                 </div>
                                 <div class="ilx-emp-v2-info">
-                                    <span class="ilx-emp-v2-name"><t
-                                            t-esc="loc.display_name"
-                                        /></span>
+                                    <span class="ilx-emp-v2-name">
+                                        <t t-esc="loc.display_name" />
+                                    </span>
                                 </div>
                                 <div class="ilx-emp-v2-status">
                                     <i
@@ -144,8 +144,8 @@
                                         >Choose the lot/serial</t>
                                         <t t-elif="here > 0">
                                             In this location: <t
-                                                t-esc="formatQty(here)"
-                                            /> <t t-esc="line.uom" />
+                                            t-esc="formatQty(here)"
+                                        /> <t t-esc="line.uom" />
                                         </t>
                                         <t t-else="">
                                             <span

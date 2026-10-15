@@ -111,6 +111,50 @@ class TestBarcodeScrap(TransactionCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(self._qty(self.lot_product, self.lot), 2)
 
+    def test_lot_name_is_matched_exactly_first(self):
+        Lot = self.env["stock.lot"]
+
+        def lot(name):
+            return Lot.create(
+                {
+                    "name": name,
+                    "product_id": self.lot_product.id,
+                    "company_id": self.company.id,
+                }
+            )
+
+        def resolve(name):
+            return self.Scrap._barcode_scrap_resolve_lot(
+                self.lot_product, {"lot_name": name}, self.location
+            )
+
+        # GS1 allows "_" and "%" in a lot: they are no wildcards here.
+        underscore, lookalike = lot("LOT_1"), lot("LOTA1")
+        self.assertEqual(resolve("LOT_1"), underscore)
+        self.assertEqual(resolve("LOTA1"), lookalike)
+        with self.assertRaises(UserError):
+            resolve("LOT%")
+        # Lots that differ only in case are distinct lots.
+        upper, lower = lot("ABC"), lot("abc")
+        self.assertEqual(resolve("ABC"), upper)
+        self.assertEqual(resolve("abc"), lower)
+        # Another case finds the one lot it names, and refuses to pick among two.
+        self.assertEqual(resolve("lot_1"), underscore)
+        with self.assertRaises(UserError):
+            resolve("Abc")
+
+    def test_only_goods_are_scrapped(self):
+        service = self.env["product.product"].create(
+            {"name": "Scrap Service", "type": "service"}
+        )
+        with self.assertRaises(UserError):
+            self.Scrap.action_barcode_scrap(
+                self.location.id,
+                [{"product_id": service.id, "qty": 1}],
+                force=True,
+            )
+        self.assertFalse(self.Scrap.search([("product_id", "=", service.id)]))
+
     def test_insufficient_asks_then_forces(self):
         lines = [{"product_id": self.product.id, "qty": 12}]
         result = self.Scrap.action_barcode_scrap(self.location.id, lines)

@@ -1,9 +1,15 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, models
+from odoo import Command, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
+
+
+def _exact_ilike(value):
+    """A pattern for ``=ilike`` that matches ``value`` exactly, in any case:
+    ``%`` and ``_`` are wildcards there, so they are escaped."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 class StockScrap(models.Model):
@@ -13,7 +19,7 @@ class StockScrap(models.Model):
     def _barcode_scrap_location(self, location_id):
         location = self.env["stock.location"].browse(location_id).exists()
         if not location or location.usage != "internal":
-            raise UserError(_("The selected location is no longer valid."))
+            raise UserError(self.env._("The selected location is no longer valid."))
         return location
 
     @api.model
@@ -40,14 +46,11 @@ class StockScrap(models.Model):
         """
         name = " ".join((name or "").split())
         if not name:
-            raise UserError(_("Type a name for the scrap reason."))
+            raise UserError(self.env._("Type a name for the scrap reason."))
         Tag = self.env["stock.scrap.reason.tag"]
-        # `=ilike` reads % and _ as wildcards: escape them so the match stays an
-        # exact, case-insensitive one.
-        pattern = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        tag = Tag.search([("name", "=ilike", pattern)], limit=1) or Tag.create(
-            {"name": name}
-        )
+        tag = Tag.search(
+            [("name", "=ilike", _exact_ilike(name))], limit=1
+        ) or Tag.create({"name": name})
         return {"id": tag.id, "name": tag.name}
 
     @api.model
@@ -94,6 +97,10 @@ class StockScrap(models.Model):
         stock or a lot name read from a GS1 label or typed in. A scrap only makes
         sense for a lot that exists, so an unknown name is refused instead of
         creating a new lot.
+
+        The name is matched exactly first: lots that differ only in case are
+        distinct lots. Failing that, a name typed in another case finds its lot,
+        but only when it names a single one.
         """
         Lot = self.env["stock.lot"]
         if line.get("lot_id"):
@@ -101,7 +108,7 @@ class StockScrap(models.Model):
             if lot and lot.product_id == product:
                 return lot
             raise UserError(
-                _(
+                self.env._(
                     "The lot/serial number chosen for %(name)s is no longer valid.",
                     name=product.display_name,
                 )
@@ -110,17 +117,27 @@ class StockScrap(models.Model):
         if not lot_name:
             return Lot
         company = product.company_id or location.company_id or self.env.company
-        lot = Lot.search(
-            [
-                ("product_id", "=", product.id),
-                ("name", "=ilike", lot_name),
-                ("company_id", "in", [company.id, False]),
-            ],
-            limit=1,
-        )
+        domain = [
+            ("product_id", "=", product.id),
+            ("company_id", "in", [company.id, False]),
+        ]
+        lot = Lot.search(domain + [("name", "=", lot_name)], limit=1)
+        if not lot:
+            lot = Lot.search(
+                domain + [("name", "=ilike", _exact_ilike(lot_name))], limit=2
+            )
+        if len(lot) > 1:
+            raise UserError(
+                self.env._(
+                    "Several lots/serial numbers of %(name)s match %(lot)s: type "
+                    "it exactly as it is written.",
+                    lot=lot_name,
+                    name=product.display_name,
+                )
+            )
         if not lot:
             raise UserError(
-                _(
+                self.env._(
                     "There is no lot/serial number %(lot)s for %(name)s.",
                     lot=lot_name,
                     name=product.display_name,
@@ -144,11 +161,22 @@ class StockScrap(models.Model):
                 self.env["product.product"].browse(line.get("product_id")).exists()
             )
             if not product:
-                raise UserError(_("One of the scanned products no longer exists."))
+                raise UserError(
+                    self.env._("One of the scanned products no longer exists.")
+                )
+            if product.type != "consu":
+                # What the back office's product field offers on a scrap: a service
+                # or a combo has no stock to write off.
+                raise UserError(
+                    self.env._(
+                        "%(name)s is not a goods product and cannot be scrapped.",
+                        name=product.display_name,
+                    )
+                )
             qty = float(line.get("qty") or 0)
             if float_compare(qty, 0, precision_rounding=product.uom_id.rounding) <= 0:
                 raise UserError(
-                    _(
+                    self.env._(
                         "The quantity to scrap for %(name)s must be positive.",
                         name=product.display_name,
                     )
@@ -158,7 +186,7 @@ class StockScrap(models.Model):
                 lot = self._barcode_scrap_resolve_lot(product, line, location)
                 if not lot:
                     raise UserError(
-                        _(
+                        self.env._(
                             "Product %(name)s is tracked: scan or choose its "
                             "lot/serial number before scrapping it.",
                             name=product.display_name,
@@ -170,7 +198,7 @@ class StockScrap(models.Model):
             else:
                 merged[key] = [product, lot, qty]
         if not merged:
-            raise UserError(_("Scan at least one product to scrap."))
+            raise UserError(self.env._("Scan at least one product to scrap."))
         for product, lot, qty in merged.values():
             if (
                 product.tracking == "serial"
@@ -178,7 +206,7 @@ class StockScrap(models.Model):
                 != 0
             ):
                 raise UserError(
-                    _(
+                    self.env._(
                         "Serial number %(lot)s of %(name)s can only be scrapped "
                         "once, one unit.",
                         lot=lot.name,
@@ -221,7 +249,7 @@ class StockScrap(models.Model):
         if scrap_location_id:
             scrap_location = self.env["stock.location"].browse(scrap_location_id)
             if scrap_location not in self._barcode_scrap_destinations(company):
-                raise UserError(_("The selected scrap location is not valid."))
+                raise UserError(self.env._("The selected scrap location is not valid."))
             destination = {"scrap_location_id": scrap_location.id}
         vals_list = [
             {
@@ -231,7 +259,7 @@ class StockScrap(models.Model):
                 "lot_id": lot.id,
                 "location_id": location.id,
                 "company_id": company.id,
-                "scrap_reason_tag_ids": [(6, 0, reasons.ids)],
+                "scrap_reason_tag_ids": [Command.set(reasons.ids)],
                 **destination,
             }
             for product, lot, qty in prepared
@@ -270,7 +298,7 @@ class StockScrap(models.Model):
                 # The stock moved after it was checked: never scrap more than
                 # there is without the operator confirming it.
                 raise UserError(
-                    _(
+                    self.env._(
                         "The stock of %(name)s changed while scrapping. "
                         "Please try again.",
                         name=scrap.product_id.display_name,
