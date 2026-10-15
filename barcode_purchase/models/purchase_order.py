@@ -43,18 +43,46 @@ class PurchaseOrder(models.Model):
                         name=product.display_name,
                     )
                 )
+            # No price is not a price of 0 (a free sample): only an empty one
+            # leaves the line to the vendor's prices.
             price_unit = line.get("price_unit")
+            no_price = price_unit is None or price_unit is False or price_unit == ""
             prepared.append(
                 (
                     product,
                     qty,
-                    None if price_unit in (None, False, "") else float(price_unit),
+                    None if no_price else float(price_unit),
                     (line.get("lot_name") or "").strip() or False,
                 )
             )
         if not prepared:
             raise UserError(self.env._("Add at least one product to the order."))
         return prepared
+
+    @api.model
+    def barcode_purchase_prices(self, partner_id, lines):
+        """The unit price each line would get on an order for the vendor, so
+        the scanner can show it before the order exists: computed as the order
+        computes it, from the vendor's prices, in the purchase unit and in the
+        order's currency. ``lines`` are ``{product_id, qty}``; a line whose
+        product is gone gets None."""
+        partner = self.env["res.partner"].browse(partner_id).exists()
+        order = self.new({"partner_id": partner.id, "company_id": self.env.company.id})
+        OrderLine = self.env["purchase.order.line"]
+        prices = []
+        for line in lines or []:
+            product = (
+                self.env["product.product"].browse(line.get("product_id")).exists()
+            )
+            if not partner or not product:
+                prices.append(None)
+                continue
+            order_line = OrderLine.new(
+                {"product_id": product.id, "product_qty": float(line.get("qty") or 1)}
+            )
+            order_line.order_id = order
+            prices.append(order_line.price_unit)
+        return prices
 
     @api.model
     def _barcode_purchase_destination(self, location_id, company):
@@ -109,7 +137,9 @@ class PurchaseOrder(models.Model):
 
         A lot-tracked product without a lot does not hold the order back: a
         vendor's lot is usually unknown until the goods turn up, and it belongs
-        on the receipt. Those products are returned in ``missing_lots``.
+        on the receipt. Those products are returned in ``missing_lots``. An
+        order that raises no receipt yet (a draft, or one waiting for approval)
+        has nowhere to keep the lots read: they come back in ``pending_lots``.
         """
         partner = self.env["res.partner"].browse(partner_id).exists()
         if not partner:
@@ -132,22 +162,29 @@ class PurchaseOrder(models.Model):
                 "order_line": order_lines,
             }
         )
-        unplaced = []
-        missing = []
         if confirm:
             order.button_confirm()
-            receipts = order.picking_ids.filtered(
-                lambda p: p.state not in ("done", "cancel")
-            )
-            if destination and receipts:
+        receipts = order.picking_ids.filtered(
+            lambda p: p.state not in ("done", "cancel")
+        )
+        lot_names = [lot_name for _product, _qty, _price, lot_name in prepared]
+        unplaced = []
+        missing = []
+        pending = []
+        if receipts:
+            if destination:
                 receipts.location_dest_id = destination
-            unplaced = order._barcode_purchase_place_lots(
-                [lot_name for _product, _qty, _price, lot_name in prepared]
-            )
+            unplaced = order._barcode_purchase_place_lots(lot_names)
             missing = [
                 product.display_name
                 for product, _qty, _price, lot_name in prepared
                 if product.tracking != "none" and not lot_name
+            ]
+        else:
+            pending = [
+                f"{product.display_name} ({lot_name})"
+                for product, _qty, _price, lot_name in prepared
+                if lot_name
             ]
         return {
             "id": order.id,
@@ -155,4 +192,5 @@ class PurchaseOrder(models.Model):
             "state": order.state,
             "missing_lots": missing,
             "unplaced_lots": unplaced,
+            "pending_lots": pending,
         }

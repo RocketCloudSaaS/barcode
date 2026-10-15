@@ -2,11 +2,12 @@ import {
     barcodeMatchAnyDomain,
     barcodeMatchDomain,
 } from "@barcode_scanner/js/utils/scan_match.esm";
-import {Component, useState} from "@odoo/owl";
+import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {roundPrecision} from "@web/core/utils/numbers";
 import {useService} from "@web/core/utils/hooks";
 
 // The products the scanner offers for an order: goods that can be purchased.
@@ -15,14 +16,18 @@ export const PURCHASABLE_PRODUCTS = [
     ["purchase_ok", "=", true],
 ];
 
-// What a product search reads: enough to draw a line and price it.
+// What a product search reads: enough to draw a line (the order prices it).
 export const PRODUCT_FIELDS = [
     "display_name",
     "default_code",
-    "standard_price",
     "tracking",
+    "uom_id",
     "uom_po_id",
 ];
+
+// The units of measure, read once: a label counts pieces in the product's unit,
+// while an order line is in its purchase unit.
+let uomsById = null;
 
 /**
  * Create a purchase order from the scanner: pick a vendor, a destination
@@ -51,10 +56,14 @@ export class PurchaseScreen extends Component {
             autoValidate: params.autoValidate ?? true,
             saving: false,
         });
-        if (params.addProduct) {
-            // Back from the product selector with the product picked there.
-            this.addPicked(params.addProduct);
-        }
+        onWillStart(async () => {
+            await this.loadUoms();
+            if (params.addProduct) {
+                // Back from the product selector with the product picked there.
+                this.addPicked(params.addProduct);
+            }
+            await this.refreshPrices();
+        });
 
         useBarcodeHandler({
             onScan: async (barcode, parsedData) => {
@@ -117,6 +126,32 @@ export class PurchaseScreen extends Component {
             return;
         }
         this.addPicked({product: products[0], parsed: parsedData || null});
+        await this.refreshPrices();
+    }
+
+    async loadUoms() {
+        if (!uomsById) {
+            const uoms = await this.inventory.searchRead(
+                "uom.uom",
+                [],
+                ["factor", "rounding"]
+            );
+            uomsById = Object.fromEntries(uoms.map((uom) => [uom.id, uom]));
+        }
+    }
+
+    /**
+     * `qty` in the product's unit, converted into its purchase unit (24 pieces
+     * are 2 Dozens), rounded as that unit rounds. As it comes when the units
+     * are unknown.
+     */
+    toPurchaseUnit(qty, product) {
+        const from = uomsById?.[product.uom_id?.[0]];
+        const to = uomsById?.[product.uom_po_id?.[0]];
+        if (!from || !to || from === to) {
+            return qty;
+        }
+        return roundPrecision((qty / from.factor) * to.factor, to.rounding);
     }
 
     /**
@@ -127,21 +162,21 @@ export class PurchaseScreen extends Component {
      */
     addPicked({product, parsed}) {
         const lotName = parsed?.lot || parsed?.serial || null;
-        const qty = this.scannedQuantity(parsed, product.uom_po_id?.[0]);
-        this.addLine(product, lotName, qty);
+        this.addLine(product, lotName, this.scannedQuantity(parsed, product));
     }
 
     /**
-     * How much of the product a scan stands for: the piece count the barcode
-     * states (a GS1 count, AI 30/37), or one unit.
+     * How much of the product a scan stands for, in its purchase unit -- the
+     * unit the order line is in, shown on the line: the pieces the barcode
+     * counts (a GS1 count, AI 30/37, in the product's own unit) converted into
+     * it, or else one purchase unit.
      *
-     * `productUomId` is the unit the product is purchased in. This base reading
-     * ignores it, as barcode_stock's does; it is the seam a module that reads
-     * richer barcodes patches, to turn a GS1 net weight into that unit.
+     * This is the seam a module that reads richer barcodes patches, to turn a
+     * GS1 net weight into the purchase unit.
      */
-    // eslint-disable-next-line no-unused-vars
-    scannedQuantity(scan, productUomId) {
-        return parseFloat(scan?.qty ?? scan?.quantity ?? 0) || 1;
+    scannedQuantity(scan, product) {
+        const pieces = parseFloat(scan?.qty ?? scan?.quantity ?? 0);
+        return pieces > 0 ? this.toPurchaseUnit(pieces, product) : 1;
     }
 
     /**
@@ -160,9 +195,59 @@ export class PurchaseScreen extends Component {
             product_name: product.display_name,
             default_code: product.default_code || null,
             qty: qty,
-            price_unit: product.standard_price || 0,
+            uom_name: product.uom_po_id?.[1] || "",
+            // Empty until the operator types one: the order prices the line
+            // from the vendor, in the purchase unit and its own currency. The
+            // estimate shows that price meanwhile.
+            price_unit: null,
+            price_estimate: null,
             lot_name: lotName,
             tracking: product.tracking || "none",
+        });
+    }
+
+    /** Whether the operator typed a price for the line (0 included). */
+    hasTypedPrice(line) {
+        return line.price_unit !== null && line.price_unit !== "";
+    }
+
+    /** The unit price a line will get: the one typed, or the vendor's. */
+    linePrice(line) {
+        return this.hasTypedPrice(line) ? line.price_unit : line.price_estimate;
+    }
+
+    lineSubtotal(line) {
+        return ((parseFloat(line.qty) || 0) * (this.linePrice(line) || 0)).toFixed(2);
+    }
+
+    /**
+     * Ask the server what the order would price the lines without a typed
+     * price at, for the vendor chosen and their quantities. Only the latest
+     * answer is kept, whatever order they come back in.
+     */
+    async refreshPrices() {
+        const lines = this.state.lines.filter((line) => !this.hasTypedPrice(line));
+        if (!this.state.supplier || !lines.length) {
+            return;
+        }
+        this._pricesSeq = (this._pricesSeq || 0) + 1;
+        const query = this._pricesSeq;
+        const prices = await this.inventory.call(
+            "purchase.order",
+            "barcode_purchase_prices",
+            [
+                this.state.supplier.id,
+                lines.map((line) => ({
+                    product_id: line.product_id,
+                    qty: parseFloat(line.qty) || 1,
+                })),
+            ]
+        );
+        if (query !== this._pricesSeq) {
+            return;
+        }
+        lines.forEach((line, index) => {
+            line.price_estimate = prices[index] ?? null;
         });
     }
 
@@ -239,7 +324,8 @@ export class PurchaseScreen extends Component {
                     this.state.lines.map((line) => ({
                         product_id: line.product_id,
                         qty: parseFloat(line.qty) || 0,
-                        price_unit: line.price_unit,
+                        // No price lets the server use the vendor's.
+                        price_unit: this.hasTypedPrice(line) ? line.price_unit : null,
                         lot_name: line.lot_name || false,
                     })),
                 ],
@@ -265,9 +351,18 @@ export class PurchaseScreen extends Component {
      * ended up in. A confirmation does not always confirm: with two-step
      * validation the order lands on "To Approve" and raises no receipt.
      *
-     * @param {{name: String, state: String, missing_lots: String[], unplaced_lots: String[]}} result
+     * @param {{name: String, state: String, missing_lots: String[], unplaced_lots: String[], pending_lots: String[]}} result
      */
-    notifyOutcome({name, state, missing_lots, unplaced_lots}) {
+    notifyOutcome({name, state, missing_lots, unplaced_lots, pending_lots}) {
+        if (pending_lots?.length) {
+            this.inventory.notify(
+                _t(
+                    "These lots were not saved with the order: set them on the receipt once it exists: %(lots)s",
+                    {lots: pending_lots.join(", ")}
+                ),
+                {type: "warning"}
+            );
+        }
         if (unplaced_lots?.length) {
             this.inventory.notify(
                 _t("Set these lots on the receipt by hand: %(lots)s", {

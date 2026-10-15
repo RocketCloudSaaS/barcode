@@ -297,3 +297,9 @@
 .ilx-po-v2-confirm-btn:disabled {
     opacity: 0.6;
 }
+
+// The purchase unit a line is ordered in, under its quantity.
+.ilx-po-v2-uom {
+    font-size: 0.75rem;
+    color: var(--ilx-on-surface-variant);
+}

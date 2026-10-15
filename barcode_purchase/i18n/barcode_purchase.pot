@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-14 14:03+0000\n"
-"PO-Revision-Date: 2026-10-14 14:03+0000\n"
+"POT-Creation-Date: 2026-10-15 07:21+0000\n"
+"PO-Revision-Date: 2026-10-15 07:21+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -349,6 +349,14 @@ msgstr ""
 #. odoo-python
 #: code:addons/barcode_purchase/models/purchase_order.py:0
 msgid "The selected vendor no longer exists."
+msgstr ""
+
+#. module: barcode_purchase
+#. odoo-javascript
+#: code:addons/barcode_purchase/static/src/js/screens/purchase_screen.esm.js:0
+msgid ""
+"These lots were not saved with the order: set them on the receipt once it "
+"exists: %(lots)s"
 msgstr ""
 
 #. module: barcode_purchase

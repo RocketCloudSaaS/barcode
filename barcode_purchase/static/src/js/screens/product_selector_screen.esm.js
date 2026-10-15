@@ -107,14 +107,10 @@ export class PurchaseProductSelectorScreen extends Component {
         this.store.navigate("purchase", {
             ...this.props.params,
             addProduct: {
-                product: {
-                    id: product.id,
-                    display_name: product.display_name,
-                    default_code: product.default_code,
-                    standard_price: product.standard_price,
-                    tracking: product.tracking,
-                    uom_po_id: product.uom_po_id,
-                },
+                // Only the fields a line needs ride along.
+                product: Object.fromEntries(
+                    ["id", ...PRODUCT_FIELDS].map((field) => [field, product[field]])
+                ),
                 parsed,
             },
         });

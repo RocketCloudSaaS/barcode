@@ -63,10 +63,42 @@ class TestBarcodePurchase(TransactionCase):
                 "price": 7,
             }
         )
-        result = self.PO.action_barcode_purchase(
-            self.vendor.id, [{"product_id": self.product.id, "qty": 1}]
+        by_dozen = self.env["product.product"].create(
+            {
+                "name": "PO By Dozen",
+                "is_storable": True,
+                "standard_price": 3,
+                "uom_po_id": self.env.ref("uom.product_uom_dozen").id,
+            }
         )
-        self.assertEqual(self._order(result).order_line.price_unit, 7)
+        lines = [
+            {"product_id": self.product.id, "qty": 1, "price_unit": None},
+            {"product_id": by_dozen.id, "qty": 1},
+            # A price typed as 0 (a free sample) is kept, not replaced.
+            {"product_id": self.product.id, "qty": 1, "price_unit": 0},
+        ]
+        order = self._order(self.PO.action_barcode_purchase(self.vendor.id, lines))
+        # The vendor's price, and a dozen at 12 times the unit cost, in dozens.
+        self.assertEqual(order.order_line.mapped("price_unit"), [7, 36, 0])
+        self.assertEqual(
+            order.order_line[1].product_uom, self.env.ref("uom.product_uom_dozen")
+        )
+        # The scanner is shown the very prices the order takes.
+        self.assertEqual(
+            self.PO.barcode_purchase_prices(
+                self.vendor.id,
+                [
+                    {"product_id": self.product.id, "qty": 1},
+                    {"product_id": by_dozen.id, "qty": 1},
+                    {"product_id": 0, "qty": 1},
+                ],
+            ),
+            [7, 36, None],
+        )
+        self.assertEqual(
+            self.PO.barcode_purchase_prices(0, [{"product_id": self.product.id}]),
+            [None],
+        )
 
     def test_confirmed_order_receives_where_and_with_the_lots_scanned(self):
         result = self.PO.action_barcode_purchase(
@@ -116,6 +148,26 @@ class TestBarcodePurchase(TransactionCase):
             order._barcode_purchase_place_lots(["LOT-X"]),
             [f"{self.lot_product.display_name} (LOT-X)"],
         )
+
+    def test_lots_without_a_receipt_are_reported(self):
+        lines = [{"product_id": self.lot_product.id, "qty": 1, "lot_name": "LOT-A"}]
+        # A draft raises no receipt: the lots read have nowhere to go yet.
+        draft = self.PO.action_barcode_purchase(self.vendor.id, lines)
+        self.assertEqual(
+            draft["pending_lots"], [f"{self.lot_product.display_name} (LOT-A)"]
+        )
+        self.assertEqual(draft["unplaced_lots"], [])
+        self.assertEqual(draft["missing_lots"], [])
+        # Nor does an order waiting for approval.
+        self.env.company.write(
+            {"po_double_validation": "two_step", "po_double_validation_amount": 0}
+        )
+        waiting = self.PO.with_user(self.buyer).action_barcode_purchase(
+            self.vendor.id, [dict(lines[0], price_unit=10)], confirm=True
+        )
+        self.assertEqual(waiting["state"], "to approve")
+        self.assertEqual(waiting["pending_lots"], draft["pending_lots"])
+        self.assertEqual(waiting["unplaced_lots"], [])
 
     def test_two_step_approval(self):
         self.env.company.write(

@@ -411,13 +411,20 @@ away; otherwise choose one from the searchable list of suppliers.</li>
 incoming operation types are offered) and the <strong>buyer</strong> (Odoo’s
 native purchase-order responsible user), and type a <strong>vendor
 reference</strong>.</li>
-<li><strong>Add the products.</strong> Scan each product: a plain barcode adds one
-unit. With a GS1 parser installed, a GS1 label also gives its
-<strong>lot/serial</strong> and its <strong>piece count</strong> (AI 30/37); a net weight on
-the label is not taken as the quantity. Scanning the same product and
-lot again adds to its line. You can also tap <strong>“+”</strong> to search and
-add a product, and edit the quantity and unit price on each line.
-Only goods that can be purchased are offered.</li>
+<li><strong>Add the products.</strong> Each line is ordered in the product’s
+<strong>purchase unit</strong>, shown under its quantity. Scanning a product adds
+one purchase unit. With a GS1 parser installed, a GS1 label also
+gives its <strong>lot/serial</strong> and its <strong>piece count</strong> (AI 30/37), which is
+converted from the product’s unit into the purchase unit (24 pieces
+of a product bought by the dozen are 2 Dozens); a net weight on the
+label is not taken as the quantity. Scanning the same product and lot
+again adds to its line. You can also tap <strong>“+”</strong> to search and add a
+product, and edit the quantity on each line. Only goods that can be
+purchased are offered.</li>
+<li>The <strong>price</strong> shown on each line is the one the order will take, as
+in the back office: the vendor’s price, in the purchase unit and the
+order’s currency. Type a price to use another one instead, 0
+included.</li>
 <li>Tap <strong>Confirm Order</strong> to create and confirm the purchase order, or
 <strong>Save Draft</strong> to create it without confirming.</li>
 </ol>
@@ -436,15 +443,19 @@ receipt.</p>
 confirmation does not always confirm: with two-step validation the order
 lands on <strong>To Approve</strong> and raises no receipt until somebody approves it
 in the back office.</p>
+<p>A draft, or an order waiting for approval, has no receipt to keep the
+lots read on: the message lists them, to be entered on the receipt once
+it exists.</p>
 <p>Creating and confirming a purchase order requires the <strong>Purchase</strong> user
 rights, as in the back office.</p>
 </div>
 <div class="section" id="reading-more-from-a-label">
 <h2><a class="toc-backref" href="#toc-entry-4">Reading more from a label</a></h2>
 <p>The quantity a scan stands for comes from
-<tt class="docutils literal">PurchaseScreen.scannedQuantity(scan, productUomId)</tt>: the piece count,
-or one unit. A module that reads more from a label (a GS1 net weight,
-say) can patch it to convert that into the product’s purchase unit.</p>
+<tt class="docutils literal">PurchaseScreen.scannedQuantity(scan, product)</tt>, in the purchase unit:
+the pieces the label counts, converted, or one purchase unit. A module
+that reads more from a label (a GS1 net weight, say) can patch it to
+convert that into the purchase unit.</p>
 </div>
 </div>
 <div class="section" id="bug-tracker">
