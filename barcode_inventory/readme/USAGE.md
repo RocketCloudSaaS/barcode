@@ -12,6 +12,8 @@ From the Barcode app home screen, tap **Inventory Adjustment**.
 3. To count something not shown, tap **"+"** and scan or search the
    product. A freshly scanned or added product jumps to the top of the
    list and is highlighted, so you always see what the scan just changed.
+   Only storable products can be counted: services and non-storable
+   consumables are not offered, and scanning one says why it is refused.
 4. Tap **Apply Adjustment** to record the count.
 
 ## Lots and serial numbers

@@ -8,6 +8,13 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.e
 import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 
 /**
+ * Only storable products have stock to count. A service, a non-storable
+ * consumable or a combo has no quant, and Odoo refuses to create one when the
+ * adjustment is applied, so they are kept out of the count from the start.
+ */
+export const COUNTABLE_PRODUCTS = [["is_storable", "=", true]];
+
+/**
  * Count step of an inventory adjustment. Shows the location's current on-hand
  * stock as theoretical lines; the operator counts by scanning (GS1 lot/serial
  * and quantity are used when present), by adding a product from the "+" product
@@ -100,11 +107,13 @@ export class InventoryCountScreen extends Component {
         ];
         const domain = barcodeMatchAnyDomain(candidates);
         const products = domain
-            ? await this.inventory.searchRead(
-                  "product.product",
-                  domain,
-                  ["id", "display_name", "tracking", "uom_id"]
-              )
+            ? await this.inventory.searchRead("product.product", domain, [
+                  "id",
+                  "display_name",
+                  "tracking",
+                  "uom_id",
+                  "is_storable",
+              ])
             : [];
         if (!products.length) {
             this.inventory.notify(
@@ -113,7 +122,18 @@ export class InventoryCountScreen extends Component {
             );
             return;
         }
-        const product = products[0];
+        // Say why a scanned service or consumable is refused, rather than
+        // "no match" for a product the operator can see in the catalogue.
+        const product = products.find((p) => p.is_storable);
+        if (!product) {
+            this.inventory.notify(
+                _t("%(name)s is not a storable product: it has no stock to count.", {
+                    name: products[0].display_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
         const lotName = parsed?.lot || parsed?.serial || null;
         const qty = parseFloat(parsed?.quantity ?? parsed?.qty) || 1;
         await this.addOrIncrement(product, lotName, qty);
