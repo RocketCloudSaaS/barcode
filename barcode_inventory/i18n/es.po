@@ -18,6 +18,15 @@ msgstr ""
 
 #. module: barcode_inventory
 #. odoo-javascript
+#. odoo-python
+#: code:addons/barcode_inventory/models/stock_inventory.py:0
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_product_selector_screen.esm.js:0
+msgid "%(name)s is not a storable product: it has no stock to count."
+msgstr "%(name)s no es un producto almacenable: no tiene existencias que contar."
+
+#. module: barcode_inventory
+#. odoo-javascript
 #: code:addons/barcode_inventory/static/src/xml/inventory_templates.xml:0
 msgid "Add Product"
 msgstr "Añadir producto"

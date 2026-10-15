@@ -103,6 +103,16 @@ class StockInventory(models.Model):
             )
             if not product:
                 raise UserError(_("One of the scanned products no longer exists."))
+            # Checked here so the operator gets this message instead of Odoo's
+            # quant error when the adjustment is applied.
+            if not product.is_storable:
+                raise UserError(
+                    _(
+                        "%(name)s is not a storable product: it has no stock to "
+                        "count.",
+                        name=product.display_name,
+                    )
+                )
             counted = float(line.get("counted_qty") or 0)
             if float_compare(counted, 0, precision_rounding=product.uom_id.rounding) < 0:
                 raise UserError(
