@@ -21,6 +21,9 @@
             "barcode_scrap/static/src/js/screens/scrap_screen.esm.js",
             "barcode_scrap/static/src/js/tiles/scrap_menu_tiles.esm.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_scrap/static/tests/**/*",
+        ],
     },
     "installable": True,
     "application": False,
