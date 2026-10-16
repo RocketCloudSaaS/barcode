@@ -117,9 +117,26 @@ export class InventoryCountScreen extends Component {
             );
             return;
         }
-        // Match the product the same tolerant, all-candidates way the other
-        // screens do: a GS1 GTIN has several equivalent variant forms, and the
-        // parser's value can differ from the raw scan.
+        const product = await this.findScannedProduct(barcode, parsed);
+        if (!product) {
+            return;
+        }
+        const lotName = parsed?.lot || parsed?.serial || null;
+        const qty = this.scannedQuantity(parsed, product.uom_id?.[0]);
+        await this.addOrIncrement(product, lotName, qty);
+    }
+
+    /**
+     * The product a scan names, matched the same tolerant, all-candidates way
+     * the other screens do: a GS1 GTIN has several equivalent variant forms,
+     * and the parser's value can differ from the raw scan. When it names none
+     * that can be counted, the operator is told why and null comes back.
+     *
+     * @param {String} barcode the raw scan
+     * @param {Object} [parsed] what the parsers read from it
+     * @returns {Promise<Object|null>} the product to count, if any
+     */
+    async findScannedProduct(barcode, parsed) {
         const candidates = [
             ...(parsed?.productCodes || []),
             parsed?.gtin,
@@ -141,18 +158,16 @@ export class InventoryCountScreen extends Component {
                 _t("No product matches “%(code)s”.", {code: parsed?.value || barcode}),
                 {type: "warning"}
             );
-            return;
+            return null;
         }
         // Say why a scanned service or consumable is refused, rather than
         // "no match" for a product the operator can see in the catalogue.
         const product = products.find((p) => p.is_storable);
         if (!product) {
             this.inventory.notify(notStorableMessage(products[0]), {type: "warning"});
-            return;
+            return null;
         }
-        const lotName = parsed?.lot || parsed?.serial || null;
-        const qty = this.scannedQuantity(parsed, product.uom_id?.[0]);
-        await this.addOrIncrement(product, lotName, qty);
+        return product;
     }
 
     /**
