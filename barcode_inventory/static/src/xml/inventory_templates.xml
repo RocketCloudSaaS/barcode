@@ -11,7 +11,11 @@
             </header>
 
             <main class="ilx-emp-v2-main">
-                <div class="ilx-emp-v2-search-box">
+                <div t-if="!state.canApply" class="ilx-inv-no-access">
+                    <i class="fa fa-lock" />
+                    <span>Only inventory administrators can apply a count.</span>
+                </div>
+                <div t-else="" class="ilx-emp-v2-search-box">
                     <i class="fa fa-search ilx-emp-v2-search-icon" />
                     <input
                         type="text"
@@ -21,8 +25,11 @@
                     />
                 </div>
 
-                <h2 class="ilx-emp-v2-section-title">SELECT A LOCATION TO COUNT</h2>
-                <div class="ilx-emp-v2-list">
+                <h2
+                    t-if="state.canApply"
+                    class="ilx-emp-v2-section-title"
+                >SELECT A LOCATION TO COUNT</h2>
+                <div t-if="state.canApply" class="ilx-emp-v2-list">
                     <t t-if="state.loading">
                         <div class="text-center p-4">Loading locations...</div>
                     </t>

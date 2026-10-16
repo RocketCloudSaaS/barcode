@@ -1,0 +1,14 @@
+// Count screens. Reuses the shared design tokens (--ilx-*) defined by
+// barcode_scanner so the look matches the rest of the suite.
+
+// Shown instead of the locations to an operator who cannot apply a count.
+.ilx-inv-no-access {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--ilx-warning-bg);
+    color: var(--ilx-on-surface);
+    font-size: 0.9rem;
+}
