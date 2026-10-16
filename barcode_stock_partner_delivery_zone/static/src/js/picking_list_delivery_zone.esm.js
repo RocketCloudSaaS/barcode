@@ -25,10 +25,12 @@ patch(PickingListScreen.prototype, {
         this.initDeliveryZone();
         this.state.deliveryZones = [];
         onWillStart(async () => {
+            // Archived zones too: a filter saved on a zone archived since then
+            // must still read as that zone (see zoneFilterOptions).
             this.state.deliveryZones = await this.inventory.searchRead(
                 "partner.delivery.zone",
-                [],
-                ["id", "name"]
+                [["active", "in", [true, false]]],
+                ["id", "name", "active"]
             );
         });
     },
@@ -125,16 +127,30 @@ patch(PickingListScreen.prototype, {
         return zone === NO_ZONE ? !zoneId : zoneId === zone;
     },
 
-    /** Radio options for the Delivery Zone section of the Filters menu. */
+    /**
+     * Radio options for the Delivery Zone section of the Filters menu: the
+     * active zones, and an archived one only while it is the zone filtered on,
+     * so that a saved filter still shows what it keeps and can be changed.
+     */
     get zoneFilterOptions() {
+        const selected = this.state.activeFilters.includes(ZONE)
+            ? this.state.filterValues[ZONE]
+            : null;
+        const zones = this.state.deliveryZones.filter(
+            (zone) => zone.active !== false || zone.id === selected
+        );
         return [
             {value: null, label: _t("All")},
             {value: NO_ZONE, label: _t("No zone")},
-            ...this.state.deliveryZones.map((zone) => ({
-                value: zone.id,
-                label: zone.name,
-            })),
+            ...zones.map((zone) => ({value: zone.id, label: this.zoneLabel(zone)})),
         ];
+    },
+
+    zoneLabel(zone) {
+        if (zone.active === false) {
+            return _t("%(zone)s (archived)", {zone: zone.name});
+        }
+        return zone.name;
     },
 
     isZoneOptionSelected(value) {
@@ -173,7 +189,7 @@ patch(PickingListScreen.prototype, {
             return _t("No zone");
         }
         const zone = this.state.deliveryZones.find((z) => z.id === value);
-        return zone ? zone.name : _t("Unknown zone");
+        return zone ? this.zoneLabel(zone) : _t("Unknown zone");
     },
 
     // --- search ---------------------------------------------------------------

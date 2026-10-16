@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import "@barcode_stock_partner_delivery_zone/js/picking_info_delivery_zone.esm";
 import {
     NO_ZONE,
@@ -107,6 +105,29 @@ describe("DeliveryZone", () => {
         const other = listScreen();
         other.applyFilterConfig(config);
         expect(ids(other.getMatchingPickings())).toEqual([11]);
+    });
+
+    test("a zone filtered on and archived since still shows as itself", () => {
+        const archived = [...ZONES, {id: 3, name: "East", active: false}];
+        const values = (screen) => screen.zoneFilterOptions.map((o) => o.value);
+        const saved = listScreen();
+        saved.state.deliveryZones = archived;
+        saved.setZoneFilter(3);
+        const screen = listScreen();
+        screen.state.deliveryZones = archived;
+        // An archived zone is not offered...
+        expect(values(screen)).toEqual([null, NO_ZONE, 1, 2]);
+        // ...unless it is the one a saved filter keeps.
+        screen.applyFilterConfig(saved.currentFilterConfig);
+        expect(screen.zoneFilterOptions.at(-1)).toEqual({
+            value: 3,
+            label: "East (archived)",
+        });
+        expect(screen.isZoneOptionSelected(3)).toBe(true);
+        expect(screen.getFilterDisplayValue(ZONE)).toBe("East (archived)");
+        // Back to all the zones, it is offered no more.
+        screen.setZoneFilter(null);
+        expect(values(screen)).toEqual([null, NO_ZONE, 1, 2]);
     });
 
     test("the search also matches the zone name", () => {
