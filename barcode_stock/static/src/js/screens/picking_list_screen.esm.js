@@ -337,6 +337,8 @@ export class PickingListScreen extends Component {
         return date.toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
+            // The same day of another year is another day: say which year.
+            year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
         });
     }
 
@@ -937,18 +939,54 @@ export class PickingListScreen extends Component {
      */
     initialCollapsedGroups(groups) {
         const collapsed = {};
-        this.sortedGroupKeys(groups).forEach((key, index) => {
+        this.sortedGroupKeys(groups, 0).forEach((key, index) => {
             collapsed["root-" + key] = this.state.search ? false : index !== 0;
         });
         return collapsed;
     }
 
-    sortedGroupKeys(groups) {
-        return Object.keys(groups).sort((left, right) =>
+    /**
+     * The order the groups of one level are drawn in. Date groups follow the
+     * calendar -- their labels (Today, Tomorrow, Oct 20...) do not sort by
+     * date -- with the operations without one last; the others go by name.
+     *
+     * @param {Object} groups the operations grouped by that level
+     * @param {Number} level the grouping level, 0 being the outermost
+     * @returns {String[]} the group keys, in the order they are drawn
+     */
+    sortedGroupKeys(groups, level) {
+        const keys = Object.keys(groups);
+        if (this.state.groupByLevels?.[level] === "date") {
+            const starts = Object.fromEntries(
+                keys.map((key) => [key, this.groupStart(groups[key])])
+            );
+            return keys.sort((left, right) => starts[left] - starts[right] || 0);
+        }
+        return keys.sort((left, right) =>
             left.localeCompare(right, undefined, {
                 numeric: true,
                 sensitivity: "base",
             })
+        );
+    }
+
+    /**
+     * When a group starts: the earliest scheduled date of its operations, as a
+     * timestamp, or Infinity when none has a date.
+     *
+     * @param {Object|Object[]} groupNode a group, or its operations
+     * @returns {Number} the timestamp the group sorts by
+     */
+    groupStart(groupNode) {
+        if (Array.isArray(groupNode)) {
+            return groupNode.reduce((earliest, picking) => {
+                const date = this.parseScheduledDate(picking.scheduled_date);
+                return date ? Math.min(earliest, date.getTime()) : earliest;
+            }, Infinity);
+        }
+        return Object.values(groupNode).reduce(
+            (earliest, child) => Math.min(earliest, this.groupStart(child)),
+            Infinity
         );
     }
 
