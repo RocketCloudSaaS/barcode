@@ -337,6 +337,8 @@ export class PickingListScreen extends Component {
         return date.toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
+            // The same day of another year is another day: say which year.
+            year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
         });
     }
 

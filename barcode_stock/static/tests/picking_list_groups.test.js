@@ -101,6 +101,23 @@ describe("BarcodeStock", () => {
         ]);
     });
 
+    test("the same day of another year is a group of its own", () => {
+        const list = listScreen(["date"]);
+        const date = new Date();
+        date.setHours(12, 0, 0, 0);
+        date.setFullYear(date.getFullYear() + 1);
+        const nextYear = {
+            ...picking(0),
+            id: 200,
+            scheduled_date: date.toISOString().slice(0, 19).replace("T", " "),
+        };
+        const groups = list.groupRecursively([nextYear, picking(0)], ["date"]);
+        const keys = list.sortedGroupKeys(groups, 0);
+        expect(keys.length).toBe(2);
+        expect(keys[0]).toBe("Today");
+        expect(keys[1]).toInclude(String(date.getFullYear()));
+    });
+
     test("each level of nested groups keeps its own order", () => {
         const pickings = [
             picking(1, "confirmed"),
