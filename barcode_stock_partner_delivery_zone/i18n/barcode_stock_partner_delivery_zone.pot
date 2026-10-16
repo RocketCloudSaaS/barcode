@@ -50,5 +50,13 @@ msgstr ""
 #. module: barcode_stock_partner_delivery_zone
 #. odoo-javascript
 #: code:addons/barcode_stock_partner_delivery_zone/static/src/js/picking_list_delivery_zone.esm.js:0
+msgid ""
+"The delivery zones could not be read: the operations are listed without "
+"them."
+msgstr ""
+
+#. module: barcode_stock_partner_delivery_zone
+#. odoo-javascript
+#: code:addons/barcode_stock_partner_delivery_zone/static/src/js/picking_list_delivery_zone.esm.js:0
 msgid "Unknown zone"
 msgstr ""

@@ -2,6 +2,7 @@ import "@barcode_stock_partner_delivery_zone/js/picking_info_delivery_zone.esm";
 import {
     NO_ZONE,
     NO_ZONE_GROUP,
+    UNKNOWN_ZONE_GROUP,
     ZONE,
 } from "@barcode_stock_partner_delivery_zone/js/picking_list_delivery_zone.esm";
 import {beforeEach, describe, expect, test} from "@odoo/hoot";
@@ -211,6 +212,44 @@ describe("DeliveryZone", () => {
         await screen.loadMoveStats(pickings);
         expect(pickings[0].delivery_zone_id).toEqual([1, "North"]);
         expect(pickings[1].delivery_zone_id).toBe(false);
+    });
+
+    test("the list opens even if the operations' zones cannot be read", async () => {
+        const notes = [];
+        const pickings = [
+            {id: 10, state: "assigned"},
+            {id: 12, state: "assigned"},
+        ];
+        const screen = listScreen({
+            inventory: {
+                searchRead: () => [],
+                read: (model) =>
+                    model === "stock.picking"
+                        ? Promise.reject(new Error("offline"))
+                        : [],
+                notify: (message, options) =>
+                    notes.push({message: String(message), ...options}),
+            },
+        });
+        await screen.loadMoveStats(pickings);
+        expect(pickings.map((p) => p.delivery_zone_id)).toEqual([undefined, undefined]);
+        expect(notes).toEqual([
+            {
+                message:
+                    "The delivery zones could not be read: the operations are listed without them.",
+                type: "warning",
+            },
+        ]);
+        // Their zone is unknown, not "no zone": grouped apart, and kept in
+        // sight whatever zone is filtered on.
+        screen.state.pickings = pickings;
+        const groups = screen.groupRecursively(pickings, [ZONE]);
+        expect(Object.keys(groups)).toEqual([UNKNOWN_ZONE_GROUP]);
+        expect(screen.getGroupTitle(UNKNOWN_ZONE_GROUP)).toBe("Unknown zone");
+        screen.setZoneFilter(NO_ZONE);
+        expect(ids(screen.getMatchingPickings())).toEqual([10, 12]);
+        screen.setZoneFilter(1);
+        expect(ids(screen.getMatchingPickings())).toEqual([10, 12]);
     });
 
     test("delivery orders open grouped by zone, other operations do not", async () => {
