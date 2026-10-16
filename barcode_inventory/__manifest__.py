@@ -22,6 +22,9 @@
             "barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js",
             "barcode_inventory/static/src/js/tiles/inventory_menu_tiles.esm.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_inventory/static/tests/**/*",
+        ],
     },
     "installable": True,
     "application": False,
