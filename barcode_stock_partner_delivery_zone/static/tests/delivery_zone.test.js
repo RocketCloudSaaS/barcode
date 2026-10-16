@@ -1,6 +1,7 @@
 import "@barcode_stock_partner_delivery_zone/js/picking_info_delivery_zone.esm";
 import {
     NO_ZONE,
+    NO_ZONE_GROUP,
     ZONE,
 } from "@barcode_stock_partner_delivery_zone/js/picking_list_delivery_zone.esm";
 import {beforeEach, describe, expect, test} from "@odoo/hoot";
@@ -67,9 +68,67 @@ describe("DeliveryZone", () => {
     test("operations group by zone, those without one under No zone", () => {
         const screen = listScreen();
         const groups = screen.groupRecursively(screen.state.pickings, [ZONE]);
-        expect(ids(groups.North)).toEqual([10]);
-        expect(ids(groups.South)).toEqual([11]);
-        expect(ids(groups["No zone"])).toEqual([12]);
+        expect(ids(groups["zone:1"])).toEqual([10]);
+        expect(ids(groups["zone:2"])).toEqual([11]);
+        expect(ids(groups[NO_ZONE_GROUP])).toEqual([12]);
+        expect(screen.sortedGroupKeys(groups, 0)).toEqual([
+            NO_ZONE_GROUP,
+            "zone:1",
+            "zone:2",
+        ]);
+        expect(screen.getGroupTitle("zone:1")).toBe("North");
+        expect(screen.getGroupTitle(NO_ZONE_GROUP)).toBe("No zone");
+        // Other levels keep showing their own key.
+        expect(screen.getGroupTitle("Ready")).toBe("Ready");
+    });
+
+    test("zones are grouped by id, whatever their name", () => {
+        const screen = listScreen();
+        const zone = (id, name) => ({
+            id,
+            name: `WH/OUT/000${id}`,
+            state: "assigned",
+            delivery_zone_id: [id, name],
+        });
+        screen.state.pickings = [
+            zone(1, "North"),
+            zone(3, "North"),
+            zone(4, "No zone"),
+            zone(5, "__proto__"),
+            zone(6, "constructor"),
+            {id: 7, name: "WH/OUT/0007", state: "assigned", delivery_zone_id: false},
+        ];
+        const groups = screen.groupRecursively(screen.state.pickings, [ZONE]);
+        const keys = screen.sortedGroupKeys(groups, 0);
+        // Two zones sharing a name stay apart, as does a zone named like the
+        // group of the operations without one.
+        expect(keys.map((key) => screen.getGroupTitle(key))).toEqual([
+            "__proto__",
+            "constructor",
+            "No zone",
+            "No zone",
+            "North",
+            "North",
+        ]);
+        expect(keys.map((key) => ids(groups[key]))).toEqual([
+            [5],
+            [6],
+            [4],
+            [7],
+            [1],
+            [3],
+        ]);
+    });
+
+    test("the list opens even if the zones cannot be read", async () => {
+        const screen = listScreen({
+            inventory: {
+                searchRead: () => Promise.reject(new Error("offline")),
+            },
+        });
+        expect(await screen.loadZoneCatalog()).toEqual([]);
+        screen.state.deliveryZones = [];
+        expect(screen.zoneFilterOptions.map((o) => o.value)).toEqual([null, NO_ZONE]);
     });
 
     test("adding a grouping level keeps the zone outermost", () => {
@@ -181,7 +240,12 @@ describe("DeliveryZone info tab", () => {
     function infoTab(write) {
         const tab = Object.create(PickingInfoTab.prototype);
         tab.props = {picking: {id: 10}};
-        tab.zoneState = {zones: ZONES, zone: [1, "North"], saving: false};
+        tab.zoneState = {
+            zones: ZONES,
+            zone: [1, "North"],
+            saving: false,
+            failed: false,
+        };
         tab.inventory = {write, notify: () => undefined};
         return tab;
     }
@@ -210,6 +274,27 @@ describe("DeliveryZone info tab", () => {
         expect(tab.zoneState.saving).toBe(false);
     });
 
+    test("the zone cannot be changed if it could not be read", async () => {
+        const tab = infoTab(() => undefined);
+        tab.zoneState.zone = false;
+        tab.inventory.searchRead = () => Promise.reject(new Error("offline"));
+        tab.inventory.read = () => Promise.resolve([]);
+        await tab.loadDeliveryZone();
+        expect(tab.zoneState.failed).toBe(true);
+        expect(tab.zoneState.zone).toBe(false);
+    });
+
+    test("the zones and the operation's own are read together", async () => {
+        const tab = infoTab(() => undefined);
+        tab.zoneState.zone = false;
+        tab.inventory.searchRead = () => Promise.resolve(ZONES);
+        tab.inventory.read = () =>
+            Promise.resolve([{id: 10, delivery_zone_id: [2, "South"]}]);
+        await tab.loadDeliveryZone();
+        expect(tab.zoneState).toMatchObject({failed: false, zone: [2, "South"]});
+        expect(tab.zoneState.zones).toEqual(ZONES);
+    });
+
     test("an archived zone still set stays in the list", () => {
         const tab = infoTab(() => undefined);
         tab.zoneState.zone = [9, "Old zone"];
@@ -227,6 +312,9 @@ describe("DeliveryZone templates", () => {
             "zoneFilterOptions"
         );
         expect(html("barcode_scanner.GroupRenderer")).toInclude("p.delivery_zone_id");
+        expect(html("barcode_scanner.GroupRenderer")).toInclude(
+            "component.getGroupTitle(groupKey)"
+        );
         expect(html("barcode_scanner.PickingInfoTab")).toInclude(
             "onDeliveryZoneChange"
         );

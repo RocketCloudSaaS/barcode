@@ -7,6 +7,8 @@ import {patch} from "@web/core/utils/patch";
 export const ZONE = "delivery_zone";
 /** Filter value that keeps the operations without a delivery zone. */
 export const NO_ZONE = "none";
+/** Group key of the operations without a delivery zone. */
+export const NO_ZONE_GROUP = "zone:none";
 
 /**
  * Bring `partner_delivery_zone` into the warehouse app's operation lists: the
@@ -25,14 +27,28 @@ patch(PickingListScreen.prototype, {
         this.initDeliveryZone();
         this.state.deliveryZones = [];
         onWillStart(async () => {
-            // Archived zones too: a filter saved on a zone archived since then
-            // must still read as that zone (see zoneFilterOptions).
-            this.state.deliveryZones = await this.inventory.searchRead(
+            this.state.deliveryZones = await this.loadZoneCatalog();
+        });
+    },
+
+    /**
+     * The zones the filter offers. Archived ones too: a filter saved on a zone
+     * archived since then must still read as that zone (see zoneFilterOptions).
+     * Should they not load, the list opens all the same, without zones to
+     * filter on; the API wrapper has already told the operator.
+     *
+     * @returns {Promise<Object[]>} the zones, archived ones included
+     */
+    async loadZoneCatalog() {
+        try {
+            return await this.inventory.searchRead(
                 "partner.delivery.zone",
                 [["active", "in", [true, false]]],
                 ["id", "name", "active"]
             );
-        });
+        } catch {
+            return [];
+        }
     },
 
     /** Register the zone as a grouping level and as a filter. */
@@ -85,9 +101,59 @@ patch(PickingListScreen.prototype, {
 
     getGroupKey(picking, groupBy) {
         if (groupBy === ZONE) {
-            return this.getDeliveryZoneName(picking) || _t("No zone");
+            // By id, not by name: two zones may share a name, and a zone may
+            // be named like the group of the operations without one.
+            const zoneId = picking.delivery_zone_id?.[0];
+            return zoneId ? `zone:${zoneId}` : NO_ZONE_GROUP;
         }
         return super.getGroupKey(...arguments);
+    },
+
+    isZoneGroup(groupKey) {
+        return groupKey.startsWith("zone:");
+    },
+
+    /**
+     * What a group's header shows. A zone group is keyed by the zone's id, so
+     * its name is taken from its operations; other groups show their key.
+     *
+     * @param {String} groupKey the group's key
+     * @returns {String} the group's title
+     */
+    getGroupTitle(groupKey) {
+        if (groupKey === NO_ZONE_GROUP) {
+            return _t("No zone");
+        }
+        if (!this.isZoneGroup(groupKey)) {
+            return groupKey;
+        }
+        const zoneId = Number(groupKey.slice("zone:".length));
+        const picking = this.state.pickings.find(
+            (p) => p.delivery_zone_id?.[0] === zoneId
+        );
+        return picking ? picking.delivery_zone_id[1] : groupKey;
+    },
+
+    /**
+     * Zone groups are drawn in the order of the names they show, not of their
+     * ids; zones sharing a name keep the order of their ids.
+     *
+     * @returns {String[]} the group keys, in the order they are drawn
+     */
+    sortedGroupKeys() {
+        const keys = super.sortedGroupKeys(...arguments);
+        if (!keys.some((key) => this.isZoneGroup(key))) {
+            return keys;
+        }
+        const titles = Object.fromEntries(
+            keys.map((key) => [key, this.getGroupTitle(key)])
+        );
+        return keys.sort((left, right) =>
+            titles[left].localeCompare(titles[right], undefined, {
+                numeric: true,
+                sensitivity: "base",
+            })
+        );
     },
 
     /**
