@@ -9,6 +9,8 @@ export const ZONE = "delivery_zone";
 export const NO_ZONE = "none";
 /** Group key of the operations without a delivery zone. */
 export const NO_ZONE_GROUP = "zone:none";
+/** Group key of the operations whose delivery zone could not be read. */
+export const UNKNOWN_ZONE_GROUP = "zone:unknown";
 
 /**
  * Bring `partner_delivery_zone` into the warehouse app's operation lists: the
@@ -82,9 +84,23 @@ patch(PickingListScreen.prototype, {
         if (!ids.length) {
             return;
         }
-        const records = await this.inventory.read("stock.picking", ids, [
-            "delivery_zone_id",
-        ]);
+        let records = null;
+        try {
+            records = await this.inventory.read("stock.picking", ids, [
+                "delivery_zone_id",
+            ]);
+        } catch {
+            // The operations are listed all the same. Their zone is left
+            // unknown, not set to "no zone": they are neither grouped nor
+            // filtered out as if they had none (see isZoneUnknown).
+            this.inventory.notify(
+                _t(
+                    "The delivery zones could not be read: the operations are listed without them."
+                ),
+                {type: "warning"}
+            );
+            return;
+        }
         const zoneById = Object.fromEntries(
             records.map((record) => [record.id, record.delivery_zone_id])
         );
@@ -97,10 +113,24 @@ patch(PickingListScreen.prototype, {
         return picking.delivery_zone_id?.[1] || "";
     },
 
+    /**
+     * Whether the operation's zone could not be read: it has none set, not
+     * even `false`, the value of an operation without a zone.
+     *
+     * @param {Object} picking the operation
+     * @returns {Boolean} whether its zone is unknown
+     */
+    isZoneUnknown(picking) {
+        return picking.delivery_zone_id === undefined;
+    },
+
     // --- grouping -------------------------------------------------------------
 
     getGroupKey(picking, groupBy) {
         if (groupBy === ZONE) {
+            if (this.isZoneUnknown(picking)) {
+                return UNKNOWN_ZONE_GROUP;
+            }
             // By id, not by name: two zones may share a name, and a zone may
             // be named like the group of the operations without one.
             const zoneId = picking.delivery_zone_id?.[0];
@@ -123,6 +153,9 @@ patch(PickingListScreen.prototype, {
     getGroupTitle(groupKey) {
         if (groupKey === NO_ZONE_GROUP) {
             return _t("No zone");
+        }
+        if (groupKey === UNKNOWN_ZONE_GROUP) {
+            return _t("Unknown zone");
         }
         if (!this.isZoneGroup(groupKey)) {
             return groupKey;
@@ -189,6 +222,11 @@ patch(PickingListScreen.prototype, {
     },
 
     matchesZoneFilter(picking, zone) {
+        if (this.isZoneUnknown(picking)) {
+            // Its zone could not be read: keep it in sight rather than hide
+            // an operation the filter may well keep.
+            return true;
+        }
         const zoneId = picking.delivery_zone_id?.[0] || false;
         return zone === NO_ZONE ? !zoneId : zoneId === zone;
     },
