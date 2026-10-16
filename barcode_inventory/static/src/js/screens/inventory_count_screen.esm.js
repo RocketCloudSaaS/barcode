@@ -1,11 +1,11 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
-import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {formatFloat} from "@web/core/utils/numbers";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 /**
  * Only storable products have stock to count. A service, a non-storable
@@ -15,13 +15,26 @@ import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 export const COUNTABLE_PRODUCTS = [["is_storable", "=", true]];
 
 /**
- * Count step of an inventory adjustment. Shows the location's current on-hand
- * stock as theoretical lines; the operator counts by scanning (GS1 lot/serial
- * and quantity are used when present), by adding a product from the "+" product
- * selector -- like the back office, so a product not yet in the location can be
- * added -- and by typing the counted quantity. Lot/serial-tracked lines expose
- * a lot field (autocompleting existing lots; the server resolves or creates it
- * by name). Applying builds and closes a stock_inventory adjustment group.
+ * What the operator is told when the product scanned has no stock to count.
+ *
+ * @param {Object} product the product scanned
+ * @returns {String} the message
+ */
+export function notStorableMessage(product) {
+    return _t("%(name)s is not a storable product: it has no stock to count.", {
+        name: product.display_name,
+    });
+}
+
+/**
+ * Count step of an inventory adjustment. Shows the stock the location holds,
+ * one line per product and lot; the operator counts by scanning (a GS1 label
+ * also brings its lot/serial and piece count), by adding a product from the
+ * "+" product selector -- like the back office, so a product not yet in the
+ * location can be added -- and by typing the counted quantity. Lot/serial
+ * tracked lines without a lot get a lot field (suggesting the product's lots;
+ * the server finds or creates the lot by name). Applying builds and closes a
+ * stock_inventory adjustment.
  *
  * The count in progress survives the round-trip to the product selector: it is
  * carried through the navigation params and restored on the way back.
@@ -84,7 +97,7 @@ export class InventoryCountScreen extends Component {
             _id: ++this._seq,
             ...line,
             // Stock already here has its lot resolved; the operator just counts.
-            lot_fixed: line.tracking !== "none" && !!line.lot_name,
+            lot_fixed: line.tracking !== "none" && Boolean(line.lot_name),
             lot_options: [],
             counted: null,
             isNew: false,
@@ -95,10 +108,18 @@ export class InventoryCountScreen extends Component {
     // --- scanning -------------------------------------------------------------
 
     async onBarcodeScanned(barcode, parsed) {
-        // Match the product the same tolerant, all-candidates way the picking and
-        // transfer screens do: a GS1 GTIN has several equivalent variant forms,
-        // and the parser's value can differ from the raw scan, so try every
-        // candidate (variants, gtin, value) AND the raw barcode.
+        if (this.state.applying) {
+            // The count is on its way to the server: a scan now would show up
+            // as counted without being so, then vanish with the screen.
+            this.inventory.notify(
+                _t("Wait until the count is applied to scan again."),
+                {type: "warning"}
+            );
+            return;
+        }
+        // Match the product the same tolerant, all-candidates way the other
+        // screens do: a GS1 GTIN has several equivalent variant forms, and the
+        // parser's value can differ from the raw scan.
         const candidates = [
             ...(parsed?.productCodes || []),
             parsed?.gtin,
@@ -126,17 +147,25 @@ export class InventoryCountScreen extends Component {
         // "no match" for a product the operator can see in the catalogue.
         const product = products.find((p) => p.is_storable);
         if (!product) {
-            this.inventory.notify(
-                _t("%(name)s is not a storable product: it has no stock to count.", {
-                    name: products[0].display_name,
-                }),
-                {type: "warning"}
-            );
+            this.inventory.notify(notStorableMessage(products[0]), {type: "warning"});
             return;
         }
         const lotName = parsed?.lot || parsed?.serial || null;
-        const qty = parseFloat(parsed?.quantity ?? parsed?.qty) || 1;
+        const qty = this.scannedQuantity(parsed, product.uom_id?.[0]);
         await this.addOrIncrement(product, lotName, qty);
+    }
+
+    /**
+     * How much of the product a scan stands for: the piece count the barcode
+     * states (a GS1 count, AI 30/37), or one unit.
+     *
+     * `productUomId` is the unit the product is stocked in. This base reading
+     * ignores it, as barcode_stock's does; it is the seam a module that reads
+     * richer barcodes patches, to turn a GS1 net weight into the product's unit.
+     */
+    // eslint-disable-next-line no-unused-vars
+    scannedQuantity(scan, productUomId) {
+        return parseFloat(scan?.qty ?? scan?.quantity ?? 0) || 1;
     }
 
     // --- add a product from the "+" selector ----------------------------------
@@ -147,7 +176,7 @@ export class InventoryCountScreen extends Component {
             locationName: this.state.locationName,
             lines: this.state.lines.map((l) => ({...l})),
             // Keep out of the "+" picker only the untracked products already
-            // counted (those can have a single line). Lot/serial-tracked
+            // listed (those can have a single line). Lot/serial-tracked
             // products stay pickable: the operator legitimately needs several
             // lines for the same product, one per lot/serial number.
             excludeProductIds: [
@@ -163,20 +192,15 @@ export class InventoryCountScreen extends Component {
     // --- shared add/increment -------------------------------------------------
 
     async addOrIncrement(product, lotName, qty) {
+        const tracking = product.tracking || "none";
         const key = this.lineKey(product.id, lotName);
         const line = this.state.lines.find(
             (l) => this.lineKey(l.product_id, l.lot_name) === key
         );
         if (line) {
-            if (qty) {
-                line.counted = String((parseFloat(line.counted) || 0) + qty);
-            }
-            // The scanned line may be far down a long list: flag it so the
-            // operator sees what the scan just changed, and bring it into view.
-            this.flashLine(line);
+            this.countAgain(line, product, lotName, qty);
             return;
         }
-        const tracking = product.tracking || "none";
         const newLine = {
             _id: ++this._seq,
             product_id: product.id,
@@ -186,24 +210,61 @@ export class InventoryCountScreen extends Component {
             lot_name: lotName || "",
             theoretical_qty: 0,
             uom: product.uom_id?.[1] || "",
-            lot_fixed: tracking !== "none" && !!lotName,
+            lot_fixed: tracking !== "none" && Boolean(lotName),
             lot_options: [],
-            counted: qty ? String(qty) : null,
+            counted: qty ? String(tracking === "serial" ? 1 : qty) : null,
             isNew: true,
         };
         // Put a freshly scanned/added product at the TOP, where the operator is
         // looking, instead of appending it out of sight at the bottom.
         this.state.lines.unshift(newLine);
         this.flashLine(newLine);
-        if (tracking !== "none" && !newLine.lot_fixed) {
+        if (this.needsLotInput(newLine)) {
             await this.loadLotOptions(newLine);
         }
+    }
+
+    /**
+     * A product and lot already listed is scanned or picked again: add what it
+     * stands for to its line -- a serial number only ever counts one unit --
+     * and show the operator which line that is.
+     *
+     * @param {Object} line the line of that product and lot
+     * @param {Object} product the product scanned or picked
+     * @param {String|null} lotName the lot/serial number read, if any
+     * @param {Number} qty the quantity the scan stands for; 0 when picked
+     */
+    countAgain(line, product, lotName, qty) {
+        const serial = product.tracking === "serial";
+        if (qty && serial && this.isCounted(line)) {
+            // A serial number is one unit: reading it again counts nothing.
+            this.inventory.notify(this.serialCountedMessage(product, lotName), {
+                type: "warning",
+            });
+        } else if (qty) {
+            line.counted = serial ? "1" : String((parseFloat(line.counted) || 0) + qty);
+        }
+        // The line may be far down a long list: flag it so the operator sees
+        // what the scan just changed, and bring it into view.
+        this.flashLine(line);
+    }
+
+    serialCountedMessage(product, lotName) {
+        if (lotName) {
+            return _t("Serial number %(lot)s is already counted.", {lot: lotName});
+        }
+        return _t(
+            "%(name)s is already counted: set its serial number before counting another one.",
+            {name: product.display_name}
+        );
     }
 
     /**
      * Draw the operator's eye to the line a scan just added or changed: mark it
      * highlighted for a moment and scroll it into view. Purely visual; it never
      * changes the counted data.
+     *
+     * @param {Object} line the count line to highlight
      */
     flashLine(line) {
         line._flash = true;
@@ -239,15 +300,45 @@ export class InventoryCountScreen extends Component {
         return line.tracking !== "none" && !line.lot_fixed;
     }
 
+    // --- quantities -----------------------------------------------------------
+
     setCounted(line, value) {
         line.counted = value === "" ? null : value;
     }
 
+    isCounted(line) {
+        return line.counted !== null && line.counted !== "";
+    }
+
     diff(line) {
-        if (line.counted === null || line.counted === "") {
+        if (!this.isCounted(line)) {
             return null;
         }
         return (parseFloat(line.counted) || 0) - line.theoretical_qty;
+    }
+
+    /**
+     * How a difference reads on the line: its sign, and nothing after the
+     * decimal point that is not there (`+2`, `-0.5`, `0`).
+     *
+     * @param {Number} value the difference between the count and the stock
+     * @returns {String} the difference to show
+     */
+    formatDiff(value) {
+        const text = this.formatQty(value);
+        return value > 0 ? `+${text}` : text;
+    }
+
+    formatQty(value) {
+        return formatFloat(value, {trailingZeros: false});
+    }
+
+    diffClass(line) {
+        const diff = this.diff(line);
+        if (diff > 0) {
+            return "ilx-inv-diff-up";
+        }
+        return diff < 0 ? "ilx-inv-diff-down" : "ilx-inv-diff-none";
     }
 
     removeLine(line) {
@@ -258,10 +349,10 @@ export class InventoryCountScreen extends Component {
     }
 
     get countedLines() {
-        return this.state.lines.filter(
-            (l) => l.counted !== null && l.counted !== ""
-        );
+        return this.state.lines.filter((l) => this.isCounted(l));
     }
+
+    // --- apply ----------------------------------------------------------------
 
     async apply() {
         const counted = this.countedLines;
