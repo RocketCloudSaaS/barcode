@@ -11,4 +11,6 @@
     When an inspection does not pass, tap *Attach photo evidence* to add a
     photo to it (only images are taken).
 5.  A confirmed inspection shows its answers read-only. If it was confirmed by
-    mistake, tap *Back to draft* to reopen it and answer it again.
+    mistake, tap *Back to draft* to reopen it and answer it again — unless a
+    supervisor has already rejected it (*Failed*): that decision is theirs,
+    and is not reopened from the scanner.

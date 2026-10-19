@@ -199,6 +199,23 @@ class TestBarcodeStockQuality(TransactionCase):
         )
         result = self.Inspection.action_barcode_scanner_reset(self.inspection.id)
         self.assertEqual(result["state"], "ready")
+        # Failed and waiting for a supervisor: still the operator's to redo.
+        self.Inspection.action_barcode_scanner_submit(
+            self.inspection.id, self._answers(self.no, 1)
+        )
+        self.assertEqual(self.inspection.state, "waiting")
+        self.Inspection.action_barcode_scanner_reset(self.inspection.id)
+        self.assertEqual(self.inspection.state, "ready")
+
+    def test_a_supervisor_rejection_is_not_reopened(self):
+        self.Inspection.action_barcode_scanner_submit(
+            self.inspection.id, self._answers(self.no, 1)
+        )
+        self.inspection.action_approve()
+        self.assertEqual(self.inspection.state, "failed")
+        with self.assertRaises(UserError):
+            self.Inspection.action_barcode_scanner_reset(self.inspection.id)
+        self.assertEqual(self.inspection.state, "failed")
 
     # --- photos ---------------------------------------------------------------
 

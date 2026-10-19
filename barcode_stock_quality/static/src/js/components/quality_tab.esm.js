@@ -135,8 +135,13 @@ export class QualityTab extends Component {
         }
     }
 
-    canReset(inspection) {
+    isConfirmed(inspection) {
         return ["success", "waiting", "failed"].includes(inspection.state);
+    }
+
+    // A rejection by a supervisor (failed) is theirs: it is not reopened here.
+    canReset(inspection) {
+        return ["success", "waiting"].includes(inspection.state);
     }
 
     async reset(inspection) {

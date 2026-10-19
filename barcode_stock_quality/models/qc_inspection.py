@@ -123,14 +123,22 @@ class QcInspection(models.Model):
 
     @api.model
     def action_barcode_scanner_reset(self, inspection_id):
-        """Put a confirmed inspection back to draft so it can be answered again.
+        """Put an inspection the operator confirmed back to draft, so it can be
+        answered again: a passed one, or a failed one still waiting for a
+        supervisor. One a supervisor has rejected (``failed``) is their
+        decision, and is not reopened from the scanner.
 
-        Mirrors the back office (draft, then mark todo) in one step: a draft
-        inspection is not runnable from the scanner, so it is left ``ready``.
+        Draft, then mark todo in one step: a draft inspection is not runnable
+        from the scanner, so it is left ``ready``.
         """
         inspection = self._barcode_scanner_inspection(inspection_id)
-        if inspection.state not in ("success", "waiting", "failed"):
-            raise UserError(self.env._("Only a confirmed inspection can be reset."))
+        if inspection.state not in ("success", "waiting"):
+            raise UserError(
+                self.env._(
+                    "Only an inspection confirmed from here and not yet decided by "
+                    "a supervisor can be put back to draft."
+                )
+            )
         inspection.action_draft()
         inspection.action_todo()
         return inspection._barcode_scanner_read()

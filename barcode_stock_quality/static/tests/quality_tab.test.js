@@ -199,6 +199,10 @@ describe("BarcodeStockQuality", () => {
         tab.setQualitative(current, QUALITATIVE, 11);
         expect(tab.canReset(current)).toBe(true);
         expect(tab.isEditable(current)).toBe(false);
+        // A rejection by a supervisor is shown, not reopened.
+        const rejected = inspection({state: "failed"});
+        expect(tab.isConfirmed(rejected)).toBe(true);
+        expect(tab.canReset(rejected)).toBe(false);
         await tab.reset(current);
         expect(calls[0].method).toBe("action_barcode_scanner_reset");
         expect(tab.state.answers[7]).toBe(undefined);

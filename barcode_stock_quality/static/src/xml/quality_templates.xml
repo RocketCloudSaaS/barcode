@@ -134,7 +134,7 @@
                 </t>
 
                 <!-- Answers of a confirmed inspection, read-only -->
-                <t t-elif="canReset(inspection)">
+                <t t-elif="isConfirmed(inspection)">
                     <div
                         t-foreach="inspection.lines"
                         t-as="line"
