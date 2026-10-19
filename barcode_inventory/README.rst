@@ -26,9 +26,10 @@ Perform inventory adjustments and stock counts directly from the Barcode
 scanner app.
 
 The operator picks an internal location, scans the products found there
-(reading the lot/serial and quantity from a GS1 label when present),
-types the counted quantity, and applies. Each adjustment is recorded as
-a `stock_inventory <https://github.com/OCA/stock-logistics-warehouse>`__
+(with ``barcode_gs1`` installed, a GS1 label also brings its lot/serial
+and quantity), types the counted quantity, and applies. Each adjustment
+is recorded as a
+`stock_inventory <https://github.com/OCA/stock-logistics-warehouse>`__
 adjustment group — draft → in progress → done — so every barcode count
 leaves a traceable, auditable record with its own move lines, using
 Odoo's native on-hand adjustment mechanism (``stock.quant``).
@@ -55,9 +56,11 @@ Count a location
    searchable list of internal locations.
 2. The count screen shows the stock the location holds, one line per
    product and lot. **Count by scanning** each product: a plain barcode
-   adds one unit, and a GS1 label also reads its **lot/serial** and its
-   **quantity**. You can also type the counted quantity in each line,
-   which then shows how far it is from the stock.
+   adds one unit. With ``barcode_gs1`` installed, a GS1 label also
+   brings its **lot/serial** and its **quantity**; without it, the
+   scanner reads plain EAN-13 barcodes only. You can also type the
+   counted quantity in each line, decimals included, which then shows
+   how far it is from the stock.
 3. To count something not shown, tap **"+"** and scan or search the
    product. A freshly scanned or added product jumps to the top of the
    list and is highlighted, so you always see what the scan just
@@ -70,13 +73,13 @@ Lots and serial numbers
 -----------------------
 
 A lot/serial-tracked product needs its lot/serial before it can be
-applied — read from the GS1 label, or typed into the line (the product's
-lots are suggested; a new name is created on the server). The name is
-matched exactly first, as lots differing only in case are different
-lots; in another case it is only taken when it names a single lot. The
-same product can appear on **several lines**, one per lot or serial
-number, so it stays available in the **"+"** picker even after it
-already has a line.
+applied — read from a GS1 label, or typed into the line (the lots a
+count at that location can use are suggested; a new name is created on
+the server). The name is matched exactly first, as lots differing only
+in case are different lots; in another case it is only taken when it
+names a single lot. The same product can appear on **several lines**,
+one per lot or serial number, so it stays available in the **"+"**
+picker even after it already has a line.
 
 A serial number counts one unit: reading it again warns instead of
 counting it twice.

@@ -373,9 +373,10 @@ ul.auto-toc {
 <p>Perform inventory adjustments and stock counts directly from the Barcode
 scanner app.</p>
 <p>The operator picks an internal location, scans the products found there
-(reading the lot/serial and quantity from a GS1 label when present),
-types the counted quantity, and applies. Each adjustment is recorded as
-a <a class="reference external" href="https://github.com/OCA/stock-logistics-warehouse">stock_inventory</a>
+(with <tt class="docutils literal">barcode_gs1</tt> installed, a GS1 label also brings its lot/serial
+and quantity), types the counted quantity, and applies. Each adjustment
+is recorded as a
+<a class="reference external" href="https://github.com/OCA/stock-logistics-warehouse">stock_inventory</a>
 adjustment group — draft → in progress → done — so every barcode count
 leaves a traceable, auditable record with its own move lines, using
 Odoo’s native on-hand adjustment mechanism (<tt class="docutils literal">stock.quant</tt>).</p>
@@ -411,9 +412,11 @@ jumps straight into the count; otherwise choose one from the
 searchable list of internal locations.</li>
 <li>The count screen shows the stock the location holds, one line per
 product and lot. <strong>Count by scanning</strong> each product: a plain barcode
-adds one unit, and a GS1 label also reads its <strong>lot/serial</strong> and its
-<strong>quantity</strong>. You can also type the counted quantity in each line,
-which then shows how far it is from the stock.</li>
+adds one unit. With <tt class="docutils literal">barcode_gs1</tt> installed, a GS1 label also
+brings its <strong>lot/serial</strong> and its <strong>quantity</strong>; without it, the
+scanner reads plain EAN-13 barcodes only. You can also type the
+counted quantity in each line, decimals included, which then shows
+how far it is from the stock.</li>
 <li>To count something not shown, tap <strong>“+”</strong> and scan or search the
 product. A freshly scanned or added product jumps to the top of the
 list and is highlighted, so you always see what the scan just
@@ -426,13 +429,13 @@ it is refused.</li>
 <div class="section" id="lots-and-serial-numbers">
 <h2><a class="toc-backref" href="#toc-entry-3">Lots and serial numbers</a></h2>
 <p>A lot/serial-tracked product needs its lot/serial before it can be
-applied — read from the GS1 label, or typed into the line (the product’s
-lots are suggested; a new name is created on the server). The name is
-matched exactly first, as lots differing only in case are different
-lots; in another case it is only taken when it names a single lot. The
-same product can appear on <strong>several lines</strong>, one per lot or serial
-number, so it stays available in the <strong>“+”</strong> picker even after it
-already has a line.</p>
+applied — read from a GS1 label, or typed into the line (the lots a
+count at that location can use are suggested; a new name is created on
+the server). The name is matched exactly first, as lots differing only
+in case are different lots; in another case it is only taken when it
+names a single lot. The same product can appear on <strong>several lines</strong>,
+one per lot or serial number, so it stays available in the <strong>“+”</strong>
+picker even after it already has a line.</p>
 <p>A serial number counts one unit: reading it again warns instead of
 counting it twice.</p>
 </div>
