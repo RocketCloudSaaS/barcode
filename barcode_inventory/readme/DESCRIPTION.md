@@ -2,8 +2,8 @@ Perform inventory adjustments and stock counts directly from the Barcode
 scanner app.
 
 The operator picks an internal location, scans the products found there
-(reading the lot/serial and quantity from a GS1 label when present), types the
-counted quantity, and applies. Each adjustment is recorded as a
+(with `barcode_gs1` installed, a GS1 label also brings its lot/serial and
+quantity), types the counted quantity, and applies. Each adjustment is recorded as a
 [stock_inventory](https://github.com/OCA/stock-logistics-warehouse) adjustment
 group — draft → in progress → done — so every barcode count leaves a traceable,
 auditable record with its own move lines, using Odoo's native on-hand

@@ -1,12 +1,14 @@
-import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
-
+import {
+    COUNTABLE_PRODUCTS,
+    notStorableMessage,
+} from "@barcode_inventory/js/screens/inventory_count_screen.esm";
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
-import {useService} from "@web/core/utils/hooks";
-import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
-import {COUNTABLE_PRODUCTS} from "@barcode_inventory/js/screens/inventory_count_screen.esm";
+import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
+import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {useService} from "@web/core/utils/hooks";
 
 /**
  * Product selector for the inventory count, opened from the count screen's "+"
@@ -36,6 +38,10 @@ export class InventoryProductSelectorScreen extends Component {
     }
 
     async search() {
+        // Searches run as the operator types: only the latest one may fill the
+        // list, whatever order the answers come back in.
+        this._searchSeq = (this._searchSeq || 0) + 1;
+        const query = this._searchSeq;
         const term = this.state.search;
         const exclude = this.props.params?.excludeProductIds || [];
         const domain = [...COUNTABLE_PRODUCTS];
@@ -43,15 +49,19 @@ export class InventoryProductSelectorScreen extends Component {
             domain.push("|", ["name", "ilike", term], ["barcode", "ilike", term]);
         }
         if (exclude.length) {
-            // Hide products already in the location (already shown as count lines).
+            // Hide the untracked products the count already lists.
             domain.push(["id", "not in", exclude]);
         }
-        this.state.results = await this.inventory.searchRead(
+        const results = await this.inventory.searchRead(
             "product.product",
             domain,
             ["id", "display_name", "tracking", "uom_id"],
             {limit: 50}
         );
+        if (query !== this._searchSeq) {
+            return;
+        }
+        this.state.results = results;
         this.state.loading = false;
     }
 
@@ -80,22 +90,24 @@ export class InventoryProductSelectorScreen extends Component {
         }
         const product = products.find((p) => p.is_storable);
         if (!product) {
-            this.inventory.notify(
-                _t("%(name)s is not a storable product: it has no stock to count.", {
-                    name: products[0].display_name,
-                }),
-                {type: "warning"}
-            );
+            this.inventory.notify(notStorableMessage(products[0]), {type: "warning"});
             return;
         }
         this.pickProduct(product);
     }
 
+    backParams() {
+        const params = this.props.params || {};
+        return {
+            locationId: params.locationId,
+            locationName: params.locationName,
+            lines: params.lines || [],
+        };
+    }
+
     pickProduct(product) {
         this.store.goBack({
-            locationId: this.props.params?.locationId,
-            locationName: this.props.params?.locationName,
-            lines: this.props.params?.lines || [],
+            ...this.backParams(),
             addProduct: {
                 id: product.id,
                 display_name: product.display_name,
@@ -107,11 +119,7 @@ export class InventoryProductSelectorScreen extends Component {
 
     goBack() {
         // Return without adding, keeping the count in progress intact.
-        this.store.goBack({
-            locationId: this.props.params?.locationId,
-            locationName: this.props.params?.locationName,
-            lines: this.props.params?.lines || [],
-        });
+        this.store.goBack(this.backParams());
     }
 
     static template = "barcode_inventory.InventoryProductSelectorScreen";
