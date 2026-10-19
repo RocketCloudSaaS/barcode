@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock Quality",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "category": "Inventory/Inventory",
     "summary": "Run a reception's quality control inspections from the Barcode "
     "app, with photo evidence",
@@ -11,9 +11,6 @@
     "depends": [
         "barcode_stock",
         "quality_control_stock_oca",
-    ],
-    "data": [
-        "security/security.xml",
     ],
     "assets": {
         "web.assets_backend": [
