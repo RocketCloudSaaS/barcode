@@ -473,6 +473,44 @@ describe("BarcodeInventory", () => {
         expect(calls[2].kwargs).toEqual({force: false});
     });
 
+    test("cancelling the stock warning and applying again asks again", async () => {
+        await makeMockEnv();
+        const line = stockLine({
+            product_id: 7,
+            product_name: "Bolts",
+            tracking: "none",
+            theoretical_qty: 10,
+            checked_qty: 10,
+            counted: "8",
+        });
+        const changed = {
+            done: false,
+            changed: [
+                {
+                    product_id: 7,
+                    product_name: "Bolts",
+                    lot_name: "",
+                    shown: 10,
+                    now: 15,
+                    uom: "Units",
+                },
+            ],
+        };
+        const {screen, calls, dialogs} = countScreen({
+            lines: [line],
+            answers: [changed, changed],
+        });
+        await screen.apply();
+        // The operator cancels: the line shows the stock as it is now...
+        expect(line.theoretical_qty).toBe(15);
+        // ...but applying again is still checked against the stock shown as
+        // counting began, so the server warns again.
+        await screen.apply();
+        expect(calls.map((c) => c.args[1][0].theoretical_qty)).toEqual([10, 10]);
+        expect(calls.map((c) => c.kwargs)).toEqual([{force: false}, {force: false}]);
+        expect(dialogs.length).toBe(2);
+    });
+
     test("a scan stating zero counts zero, an unreadable one nothing", async () => {
         const {screen, notes} = countScreen({found: [[UNTRACKED], [BY_LOT]]});
         await screen.onBarcodeScanned("0123", {value: "0123", qty: 0});
@@ -542,6 +580,7 @@ describe("BarcodeInventory", () => {
             [1, true, null],
             [2, false, null],
         ]);
+        expect(screen.state.lines.map((l) => l.checked_qty)).toEqual([5, 1]);
         expect(screen.needsLotInput(screen.state.lines[1])).toBe(true);
         screen.setLotName(screen.state.lines[1], "LOT-2");
         expect(screen.state.lines[1].lot_name).toBe("LOT-2");
