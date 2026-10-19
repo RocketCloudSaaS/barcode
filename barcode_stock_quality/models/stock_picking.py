@@ -1,7 +1,7 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, models
+from odoo import api, models
 from odoo.exceptions import UserError
 
 
@@ -13,13 +13,13 @@ class StockPicking(models.Model):
         """Return the quality inspections generated for a reception, so the
         scanner can run them from a Quality tab during the reception.
 
-        Only executable/finished inspections are returned (a ``plan`` inspection
-        is not runnable until the picking is done); each carries its questions
-        and current pass/fail state.
+        Every inspection but the canceled ones is returned, each with its
+        questions and pass/fail state; the scanner shows the planned and draft
+        ones as pending, since they cannot be answered yet.
         """
         picking = self.browse(picking_id).exists()
         if not picking:
-            raise UserError(_("The picking is no longer valid."))
+            raise UserError(self.env._("The picking is no longer valid."))
         inspections = picking.qc_inspections_ids.filtered(
             lambda i: i.state != "canceled"
         )
