@@ -14,11 +14,29 @@ patch(PickingInfoTab.prototype, {
     setup() {
         super.setup(...arguments);
         this.inventory = useBarcodeScanner();
-        this.zoneState = useState({zones: [], zone: false, saving: false});
+        this.zoneState = useState({
+            zones: [],
+            zone: false,
+            saving: false,
+            failed: false,
+        });
         onWillStart(() => this.loadDeliveryZone());
     },
 
+    /**
+     * Read the zones and the operation's own. Should that fail, the selector
+     * stays disabled: without the operation's real zone, a change could
+     * overwrite it unseen. The API wrapper has already told the operator.
+     */
     async loadDeliveryZone() {
+        try {
+            await this.readDeliveryZone();
+        } catch {
+            this.zoneState.failed = true;
+        }
+    },
+
+    async readDeliveryZone() {
         const pickingId = this.props.picking?.id;
         const [zones, records] = await Promise.all([
             this.inventory.searchRead("partner.delivery.zone", [], ["id", "name"]),

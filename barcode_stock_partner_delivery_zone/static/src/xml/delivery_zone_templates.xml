@@ -41,6 +41,13 @@
         t-inherit="barcode_scanner.GroupRenderer"
         t-inherit-mode="extension"
     >
+        <!-- Zone groups are keyed by id: their header shows the zone's name. -->
+        <xpath
+            expr="//h2[hasclass('ilx-kw-group-title')]/t[@t-esc='groupKey']"
+            position="attributes"
+        >
+            <attribute name="t-esc">component.getGroupTitle(groupKey)</attribute>
+        </xpath>
         <xpath expr="//div[hasclass('ilx-kw-picking-meta-left')]" position="inside">
             <t t-if="p.delivery_zone_id">
                 <i class="fa fa-map-signs ilx-kw-meta-icon ms-2" />
@@ -68,7 +75,7 @@
                     <div class="ilx-kw-select-wrapper mt-1">
                         <select
                             class="ilx-kw-select"
-                            t-att-disabled="zoneState.saving"
+                            t-att-disabled="zoneState.saving or zoneState.failed"
                             t-on-change="onDeliveryZoneChange"
                         >
                             <option
