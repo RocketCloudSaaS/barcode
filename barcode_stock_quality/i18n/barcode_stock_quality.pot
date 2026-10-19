@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-29 10:34+0000\n"
-"PO-Revision-Date: 2026-09-29 10:34+0000\n"
+"POT-Creation-Date: 2026-10-19 11:18+0000\n"
+"PO-Revision-Date: 2026-10-19 11:18+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -28,8 +28,9 @@ msgid "Back to draft"
 msgstr ""
 
 #. module: barcode_stock_quality
-#: model:res.groups,name:barcode_stock_quality.group_barcode_stock_quality_user
-msgid "Barcode Stock Quality User"
+#. odoo-python
+#: code:addons/barcode_stock_quality/models/qc_inspection.py:0
+msgid "Choose one of the answers offered for %(question)s."
 msgstr ""
 
 #. module: barcode_stock_quality
@@ -39,27 +40,21 @@ msgid "Confirm inspection"
 msgstr ""
 
 #. module: barcode_stock_quality
-#. odoo-javascript
-#: code:addons/barcode_stock_quality/static/src/js/components/quality_tab.esm.js:0
-msgid "Could not attach the photo."
+#: model:ir.model.fields,help:barcode_stock_quality.field_qc_inspection__barcode_scanner_confirmed
+msgid ""
+"Confirmed from the Barcode app: the operator may put it back to draft from "
+"there while no supervisor has decided it and the reception is still open."
 msgstr ""
 
 #. module: barcode_stock_quality
-#. odoo-javascript
-#: code:addons/barcode_stock_quality/static/src/js/components/quality_tab.esm.js:0
-msgid "Could not load the inspections."
+#: model:ir.model.fields,field_description:barcode_stock_quality.field_qc_inspection__barcode_scanner_confirmed
+msgid "Confirmed from the scanner"
 msgstr ""
 
 #. module: barcode_stock_quality
-#. odoo-javascript
-#: code:addons/barcode_stock_quality/static/src/js/components/quality_tab.esm.js:0
-msgid "Could not reset the inspection."
-msgstr ""
-
-#. module: barcode_stock_quality
-#. odoo-javascript
-#: code:addons/barcode_stock_quality/static/src/js/components/quality_tab.esm.js:0
-msgid "Could not submit the inspection."
+#. odoo-python
+#: code:addons/barcode_stock_quality/models/qc_inspection.py:0
+msgid "Enter the value measured for %(question)s."
 msgstr ""
 
 #. module: barcode_stock_quality
@@ -99,9 +94,23 @@ msgid "No quality inspection for this reception."
 msgstr ""
 
 #. module: barcode_stock_quality
+#. odoo-javascript
+#: code:addons/barcode_stock_quality/static/src/xml/quality_templates.xml:0
+msgid "Only Quality Control users can run the inspections."
+msgstr ""
+
+#. module: barcode_stock_quality
 #. odoo-python
 #: code:addons/barcode_stock_quality/models/qc_inspection.py:0
-msgid "Only a confirmed inspection can be reset."
+msgid "Only a photo can be attached as evidence."
+msgstr ""
+
+#. module: barcode_stock_quality
+#. odoo-python
+#: code:addons/barcode_stock_quality/models/qc_inspection.py:0
+msgid ""
+"Only an inspection confirmed from the scanner, not yet decided by a "
+"supervisor, on a reception still open, can be put back to draft here."
 msgstr ""
 
 #. module: barcode_stock_quality
@@ -146,8 +155,10 @@ msgid "The inspection no longer exists."
 msgstr ""
 
 #. module: barcode_stock_quality
+#. odoo-javascript
 #. odoo-python
 #: code:addons/barcode_stock_quality/models/qc_inspection.py:0
+#: code:addons/barcode_stock_quality/static/src/js/components/quality_tab.esm.js:0
 msgid "The photo could not be read."
 msgstr ""
 

@@ -26,14 +26,19 @@
         </xpath>
         <xpath expr="//div[hasclass('ilx-kw-main-spacer')]" position="before">
             <t t-if="state.activeTab === 'quality'">
-                <QualityTab pickingId="state.picking.id" />
+                <QualityTab pickingId="state.picking.id" answers="qualityAnswers" />
             </t>
         </xpath>
     </t>
 
     <t t-name="barcode_stock_quality.QualityTab">
         <div class="ilx-quality-tab">
-            <t t-if="state.loading">
+            <t t-if="!state.canInspect">
+                <div class="ilx-quality-empty">
+                    Only Quality Control users can run the inspections.
+                </div>
+            </t>
+            <t t-elif="state.loading">
                 <div class="ilx-quality-empty">Loading inspections…</div>
             </t>
             <t t-elif="!state.inspections.length">
@@ -107,6 +112,7 @@
                                     type="number"
                                     step="any"
                                     class="ilx-quality-measure-input"
+                                    t-att-value="measureOf(inspection, line)"
                                     t-on-input="(ev) => this.onQuantitative(inspection, line, ev)"
                                 />
                                 <span
@@ -129,7 +135,7 @@
                 </t>
 
                 <!-- Answers of a confirmed inspection, read-only -->
-                <t t-elif="canReset(inspection)">
+                <t t-elif="isConfirmed(inspection)">
                     <div
                         t-foreach="inspection.lines"
                         t-as="line"
