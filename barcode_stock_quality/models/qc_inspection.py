@@ -3,9 +3,11 @@
 
 import base64
 import binascii
+import math
 
-from odoo import _, api, models
+from odoo import api, models
 from odoo.exceptions import UserError
+from odoo.tools.mimetypes import guess_mimetype
 
 
 class QcInspection(models.Model):
@@ -46,11 +48,58 @@ class QcInspection(models.Model):
             "test_name": self.test.display_name or "",
             "state": self.state,
             "success": self.success,
-            "photo_count": self.env["ir.attachment"].search_count(
-                [("res_model", "=", self._name), ("res_id", "=", self.id)]
-            ),
+            "photo_count": self._barcode_scanner_photo_count(),
             "lines": self._barcode_scanner_read_lines(),
         }
+
+    def _barcode_scanner_photo_count(self):
+        self.ensure_one()
+        return self.env["ir.attachment"].search_count(
+            [
+                ("res_model", "=", self._name),
+                ("res_id", "=", self.id),
+                ("mimetype", "=like", "image/%"),
+            ]
+        )
+
+    @api.model
+    def _barcode_scanner_inspection(self, inspection_id):
+        inspection = self.browse(inspection_id).exists()
+        if not inspection:
+            raise UserError(self.env._("The inspection no longer exists."))
+        return inspection
+
+    def _barcode_scanner_answer(self, line, answer):
+        """Write the operator's answer to one question.
+
+        Every question needs its answer: a measure left blank would otherwise
+        be judged as 0, and a choice must be one the question offers.
+        """
+        if line.question_type == "qualitative":
+            value = self.env["qc.test.question.value"].browse(
+                (answer or {}).get("qualitative_value_id") or []
+            )
+            if not value or value not in line.possible_ql_values:
+                raise UserError(
+                    self.env._(
+                        "Choose one of the answers offered for %(question)s.",
+                        question=line.name,
+                    )
+                )
+            line.qualitative_value = value
+            return
+        try:
+            measure = float((answer or {}).get("quantitative_value"))
+        except (TypeError, ValueError):
+            measure = math.nan
+        if not math.isfinite(measure):
+            raise UserError(
+                self.env._(
+                    "Enter the value measured for %(question)s.", question=line.name
+                )
+            )
+        line.uom_id = line.test_uom_id
+        line.quantitative_value = measure
 
     @api.model
     def action_barcode_scanner_submit(self, inspection_id, answers):
@@ -58,25 +107,17 @@ class QcInspection(models.Model):
 
         ``answers`` is a list of ``{line_id, qualitative_value_id}`` for
         qualitative questions and ``{line_id, quantitative_value}`` for
-        quantitative ones. Returns the resulting inspection state.
+        quantitative ones, one per question. Returns the resulting inspection.
         """
-        inspection = self.browse(inspection_id).exists()
-        if not inspection:
-            raise UserError(_("The inspection no longer exists."))
+        inspection = self._barcode_scanner_inspection(inspection_id)
         if inspection.state != "ready":
-            raise UserError(_("This inspection cannot be edited in its current state."))
+            raise UserError(
+                self.env._("This inspection cannot be edited in its current state.")
+            )
 
-        answers_by_line = {answer["line_id"]: answer for answer in answers}
+        answers_by_line = {answer.get("line_id"): answer for answer in answers or []}
         for line in inspection.inspection_lines:
-            answer = answers_by_line.get(line.id)
-            if answer is None:
-                continue
-            if line.question_type == "qualitative":
-                line.qualitative_value = answer.get("qualitative_value_id") or False
-            else:
-                line.uom_id = line.test_uom_id.id
-                line.quantitative_value = answer.get("quantitative_value") or 0.0
-
+            inspection._barcode_scanner_answer(line, answers_by_line.get(line.id))
         inspection.action_confirm()
         return inspection._barcode_scanner_read()
 
@@ -87,11 +128,9 @@ class QcInspection(models.Model):
         Mirrors the back office (draft, then mark todo) in one step: a draft
         inspection is not runnable from the scanner, so it is left ``ready``.
         """
-        inspection = self.browse(inspection_id).exists()
-        if not inspection:
-            raise UserError(_("The inspection no longer exists."))
+        inspection = self._barcode_scanner_inspection(inspection_id)
         if inspection.state not in ("success", "waiting", "failed"):
-            raise UserError(_("Only a confirmed inspection can be reset."))
+            raise UserError(self.env._("Only a confirmed inspection can be reset."))
         inspection.action_draft()
         inspection.action_todo()
         return inspection._barcode_scanner_read()
@@ -102,18 +141,19 @@ class QcInspection(models.Model):
 
         ``datas`` is the base64-encoded image content coming from the scanner.
         The attachment is linked to the inspection so it shows in its chatter.
+        Only an image is taken: this is evidence for a check, not any file.
         """
-        inspection = self.browse(inspection_id).exists()
-        if not inspection:
-            raise UserError(_("The inspection no longer exists."))
+        inspection = self._barcode_scanner_inspection(inspection_id)
         try:
-            base64.b64decode(datas or "", validate=True)
+            content = base64.b64decode(datas or "", validate=True)
         except (binascii.Error, ValueError) as err:
-            raise UserError(_("The photo could not be read.")) from err
+            raise UserError(self.env._("The photo could not be read.")) from err
+        if not guess_mimetype(content).startswith("image/"):
+            raise UserError(self.env._("Only a photo can be attached as evidence."))
         try:
             self.env["ir.attachment"].create(
                 {
-                    "name": filename or _("Quality evidence"),
+                    "name": filename or self.env._("Quality evidence"),
                     "datas": datas,
                     "res_model": inspection._name,
                     "res_id": inspection.id,
@@ -121,10 +161,8 @@ class QcInspection(models.Model):
             )
         except OSError as err:
             # A truncated or corrupt image trips Odoo's image post-processing.
-            raise UserError(_("The photo could not be saved.")) from err
+            raise UserError(self.env._("The photo could not be saved.")) from err
         return {
             "inspection_id": inspection.id,
-            "photo_count": self.env["ir.attachment"].search_count(
-                [("res_model", "=", inspection._name), ("res_id", "=", inspection.id)]
-            ),
+            "photo_count": inspection._barcode_scanner_photo_count(),
         }
