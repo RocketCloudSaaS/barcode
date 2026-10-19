@@ -216,6 +216,8 @@ class TestBarcodeInventoryCount(TransactionCase):
             [{"product_id": self.product.id, "counted_qty": "twelve"}],
             [{"product_id": self.product.id, "counted_qty": "nan"}],
             [{"product_id": self.product.id, "counted_qty": "inf"}],
+            # An infinite number reaches the server as JSON null.
+            [{"product_id": self.product.id, "counted_qty": None}],
             [{"product_id": self.lot_product.id, "lot_name": " ", "counted_qty": 1}],
             [
                 {"product_id": self.serial_product.id, "lot_name": "SN-COUNT-1"},
@@ -377,6 +379,80 @@ class TestBarcodeInventoryCount(TransactionCase):
             )
         )
 
+    def test_stock_changed_while_counting(self):
+        data = self.Inventory.action_barcode_location_lines(self.location.id)
+        shown = {(line["product_id"], line["lot_name"]): line for line in data["lines"]}
+        # Goods come in after the screen showed the stock.
+        self.Quant._update_available_quantity(self.product, self.location, 5)
+        lines = [
+            {
+                "product_id": self.product.id,
+                "counted_qty": 8,
+                "theoretical_qty": shown[self.product.id, False]["theoretical_qty"],
+            },
+            {
+                "product_id": self.lot_product.id,
+                "lot_name": "LOT-COUNT-1",
+                "counted_qty": 5,
+                "theoretical_qty": 5,
+            },
+            # A lot not created yet held nothing, as shown.
+            {
+                "product_id": self.lot_product.id,
+                "lot_name": "LOT-BRAND-NEW",
+                "counted_qty": 2,
+                "theoretical_qty": 0,
+            },
+        ]
+        result = self.Inventory.action_barcode_apply_count(self.location.id, lines)
+        self.assertFalse(result["done"])
+        self.assertEqual(
+            result["changed"],
+            [
+                {
+                    "product_id": self.product.id,
+                    "product_name": self.product.display_name,
+                    "lot_name": "",
+                    "shown": 10.0,
+                    "now": 15.0,
+                    "uom": self.product.uom_id.name,
+                }
+            ],
+        )
+        # Nothing applied, nothing created.
+        self.assertEqual(self._qty(self.product), 15)
+        self.assertFalse(
+            self.Inventory.search([("location_ids", "=", self.location.id)])
+        )
+        self.assertFalse(self.env["stock.lot"].search([("name", "=", "LOT-BRAND-NEW")]))
+        # The operator applies it all the same.
+        result = self.Inventory.action_barcode_apply_count(
+            self.location.id, lines, force=True
+        )
+        self.assertTrue(result["done"])
+        self.assertEqual(self._qty(self.product), 8)
+
+    def test_stock_as_shown_is_applied(self):
+        self.Quant._update_available_quantity(self.new_product, self.location, -3)
+        result = self.Inventory.action_barcode_apply_count(
+            self.location.id,
+            [
+                {
+                    "product_id": self.new_product.id,
+                    "counted_qty": 0,
+                    "theoretical_qty": -3,
+                }
+            ],
+        )
+        self.assertTrue(result["done"])
+        self.assertEqual(self._qty(self.new_product), 0)
+        # A product gone since is left to the checks, which refuse it.
+        with self.assertRaises(UserError):
+            self.Inventory.action_barcode_apply_count(
+                self.location.id,
+                [{"product_id": 0, "counted_qty": 1, "theoretical_qty": 0}],
+            )
+
     def test_lot_names_suggested(self):
         other = self.env["res.company"].create({"name": "Barcode Lots Co"})
         self.env["stock.lot"].create(
@@ -402,6 +478,14 @@ class TestBarcodeInventoryCount(TransactionCase):
         self.assertNotIn("LOT-ELSEWHERE", names)
         self.assertEqual(
             self.Inventory.action_barcode_lot_names(self.location.id, 0), []
+        )
+        # Looked up as the operator types, a few at a time.
+        lot_names = self.Inventory.action_barcode_lot_names
+        self.assertEqual(
+            lot_names(self.location.id, self.lot_product.id, "shared"), ["LOT-SHARED"]
+        )
+        self.assertEqual(
+            len(lot_names(self.location.id, self.lot_product.id, "", limit=1)), 1
         )
 
     def test_apply_count_matching_the_stock(self):

@@ -99,31 +99,33 @@ class StockInventory(models.Model):
         ]
 
     @api.model
-    def action_barcode_lot_names(self, location_id, product_id):
+    def action_barcode_lot_names(self, location_id, product_id, search="", limit=50):
         """The names the lot field of a count line suggests: the lots
         ``_barcode_resolve_lot`` would find for a count at that location, so
-        that no suggestion turns into a new lot once applied."""
+        that no suggestion turns into a new lot once applied. They are looked
+        up as the operator types (``search``), a few at a time: a product may
+        have thousands of lots.
+        """
         location = self._barcode_count_location(location_id)
         product = self.env["product.product"].browse(product_id).exists()
         if not product:
             return []
         company = location.company_id or self.env.company
-        lots = self.env["stock.lot"].search(self._barcode_lot_domain(product, company))
+        domain = self._barcode_lot_domain(product, company)
+        search = (search or "").strip()
+        if search:
+            domain += [("name", "ilike", _exact_ilike(search))]
+        lots = self.env["stock.lot"].search(domain, order="name", limit=limit)
         return lots.mapped("name")
 
     @api.model
-    def _barcode_resolve_lot(self, product, lot_name, company):
-        """Find the lot/serial a name stands for, or create it.
+    def _barcode_find_lot(self, product, lot_name, company):
+        """The lot/serial a name stands for, if there is one.
 
         The scan carries a lot *name* (from a GS1 label or typed in), never a
         database id. Lots that differ only in case are distinct lots, so the
         name is matched exactly first; in another case it is only taken when it
         names a single lot.
-
-        A new lot is created in ``company`` -- the company of the location being
-        counted -- unless the product belongs to a company. A shared product
-        counted in another company's location would otherwise get a lot in the
-        wrong company, and Odoo would refuse the adjustment.
         """
         Lot = self.env["stock.lot"]
         domain = self._barcode_lot_domain(product, company)
@@ -141,7 +143,21 @@ class StockInventory(models.Model):
                     name=product.display_name,
                 )
             )
-        return lot or Lot.create(
+        return lot
+
+    @api.model
+    def _barcode_resolve_lot(self, product, lot_name, company):
+        """Find the lot/serial a name stands for (see ``_barcode_find_lot``),
+        or create it.
+
+        A new lot is created in ``company`` -- the company of the location being
+        counted -- unless the product belongs to a company. A shared product
+        counted in another company's location would otherwise get a lot in the
+        wrong company, and Odoo would refuse the adjustment.
+        """
+        return self._barcode_find_lot(product, lot_name, company) or self.env[
+            "stock.lot"
+        ].create(
             {
                 "name": lot_name,
                 "product_id": product.id,
@@ -219,8 +235,10 @@ class StockInventory(models.Model):
 
     @api.model
     def _barcode_counted_qty(self, line, product):
+        # A line with no quantity counts nothing; an empty one (JSON null, as
+        # an infinite number is sent) is not a number.
         try:
-            counted = float(line.get("counted_qty") or 0)
+            counted = float(line.get("counted_qty", 0))
         except (TypeError, ValueError):
             counted = math.nan
         if not math.isfinite(counted):
@@ -233,7 +251,58 @@ class StockInventory(models.Model):
         return counted
 
     @api.model
-    def action_barcode_apply_count(self, location_id, lines):
+    def _barcode_stock_changes(self, location, lines):
+        """The counted products and lots whose stock at the location is no
+        longer what the screen showed (each line's ``theoretical_qty``): stock
+        came in or went out since the count began.
+
+        A count states how much there is, so applying it over such a change
+        would undo the change unseen. Lines that do not say what they showed
+        are not checked.
+        """
+        company = location.company_id or self.env.company
+        seen = {}
+        for line in lines or []:
+            if line.get("theoretical_qty") is None:
+                continue
+            product = (
+                self.env["product.product"].browse(line.get("product_id")).exists()
+            )
+            if not product:
+                continue
+            lot_name = (line.get("lot_name") or "").strip()
+            lot = self.env["stock.lot"]
+            if product.tracking != "none" and lot_name:
+                lot = self._barcode_find_lot(product, lot_name, company)
+            # A lot not created yet holds nothing; its name keeps it apart.
+            key = (product, lot, "" if lot else lot_name)
+            shown = float(line["theoretical_qty"])
+            seen[key] = max(seen.get(key, shown), shown)
+        changed = []
+        for (product, lot, lot_name), shown in seen.items():
+            now = 0.0
+            if lot or not lot_name:
+                quants = self.env["stock.quant"].search(
+                    self._barcode_count_domain(location)
+                    + [("product_id", "=", product.id), ("lot_id", "=", lot.id)]
+                )
+                now = sum(quants.mapped("quantity"))
+            rounding = product.uom_id.rounding
+            if float_compare(now, shown, precision_rounding=rounding):
+                changed.append(
+                    {
+                        "product_id": product.id,
+                        "product_name": product.display_name,
+                        "lot_name": lot.name or lot_name,
+                        "shown": shown,
+                        "now": float_round(now, precision_rounding=rounding),
+                        "uom": product.uom_id.name,
+                    }
+                )
+        return changed
+
+    @api.model
+    def action_barcode_apply_count(self, location_id, lines, force=False):
         """Apply the operator's count as an inventory adjustment of one location.
 
         Builds a ``stock.inventory`` adjustment (OCA ``stock_inventory``) of
@@ -243,6 +312,11 @@ class StockInventory(models.Model):
         adjustment is then closed, so every count from the scanner leaves one
         adjustment record with its own moves.
 
+        Should the stock of a counted product have changed since the screen
+        showed it, nothing is applied: the changes come back for the operator to
+        decide, and ``force`` applies the count all the same -- the choice the
+        back office offers for outdated counts.
+
         Applying inventory quantities is restricted by Odoo to inventory
         administrators (``stock.group_stock_manager``).
         """
@@ -251,6 +325,10 @@ class StockInventory(models.Model):
                 self.env._("Only inventory administrators can apply a count.")
             )
         location = self._barcode_count_location(location_id)
+        if not force:
+            changed = self._barcode_stock_changes(location, lines)
+            if changed:
+                return {"done": False, "changed": changed}
         counts = self._barcode_prepare_count_lines(lines, location)
         products = self.env["product.product"].union(*(p for p, _lot in counts))
         group = self.create(
@@ -307,6 +385,7 @@ class StockInventory(models.Model):
             )
         group.action_state_to_done()
         return {
+            "done": True,
             "group_id": group.id,
             "group_name": group.name,
             "adjusted": len(counts),
