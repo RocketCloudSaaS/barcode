@@ -17,7 +17,10 @@ From the Barcode app home screen, tap **Inventory Adjustment**.
    list and is highlighted, so you always see what the scan just changed.
    Only storable products can be counted: services and non-storable
    consumables are not offered, and scanning one says why it is refused.
-4. Tap **Apply Adjustment** to record the count.
+4. Tap **Apply Adjustment** to record the count. If the stock of a
+   counted product changed while you counted — goods came in or went out —
+   nothing is applied yet: the lines show the stock as it is now, and you
+   choose whether to apply your count anyway or to count again.
 
 ## Lots and serial numbers
 
