@@ -47,18 +47,19 @@ const SERVICE = {
 /**
  * The fake services a screen talks to. What it tells the operator lands in
  * `notes`, where it navigates in `moves`, what it searches for in `searches`
- * (answered in turn with `found`, the last answer repeated) and what it asks
- * the server in `calls` (answered with `answer`, or failing when it is an
- * Error).
+ * (answered in turn with `found`, the last answer repeated), what it asks
+ * the server in `calls` (answered with `answer`, or in turn with `answers`;
+ * failing when the answer is an Error) and the dialogs it opens in `dialogs`.
  *
  * @param {Object} [options] the answers to give
  * @returns {Object} the fakes and what they recorded
  */
-function fakes({found = [[]], answer = {}} = {}) {
+function fakes({found = [[]], answer = {}, answers = null} = {}) {
     const notes = [];
     const moves = [];
     const searches = [];
     const calls = [];
+    const dialogs = [];
     const inventory = {
         notify: (message, options) =>
             notes.push({message: String(message), ...options}),
@@ -66,19 +67,21 @@ function fakes({found = [[]], answer = {}} = {}) {
             searches.push({model, domain});
             return found[Math.min(searches.length, found.length) - 1];
         },
-        call: async (model, method, args) => {
-            calls.push({model, method, args});
-            if (answer instanceof Error) {
-                throw answer;
+        call: async (model, method, args, kwargs) => {
+            calls.push(kwargs ? {model, method, args, kwargs} : {model, method, args});
+            const reply = answers ? answers[calls.length - 1] : answer;
+            if (reply instanceof Error) {
+                throw reply;
             }
-            return answer;
+            return reply;
         },
+        openDialog: (component, props) => dialogs.push(props),
     };
     const store = {
         navigate: (route, params, options) => moves.push({route, params, options}),
         goBack: (params) => moves.push({route: "back", params}),
     };
-    return {inventory, store, notes, moves, searches, calls};
+    return {inventory, store, notes, moves, searches, calls, dialogs};
 }
 
 /**
@@ -141,7 +144,7 @@ describe("BarcodeInventory", () => {
 
     test("a product added from the selector is listed, not counted", async () => {
         const {screen, calls} = countScreen({answer: ["LOT-1"]});
-        await screen.addOrIncrement(BY_LOT, null, 0);
+        await screen.addOrIncrement(BY_LOT, null, null);
         expect(screen.state.lines[0]).toMatchObject({counted: null, lot_fixed: false});
         // Its lot is still to be set: the lots a count here can use are
         // suggested, as the server finds them.
@@ -149,12 +152,12 @@ describe("BarcodeInventory", () => {
             {
                 model: "stock.inventory",
                 method: "action_barcode_lot_names",
-                args: [3, 8],
+                args: [3, 8, ""],
             },
         ]);
         expect(screen.state.lines[0].lot_options).toEqual(["LOT-1"]);
         // Picking it again leaves its line as it is.
-        await screen.addOrIncrement(BY_LOT, null, 0);
+        await screen.addOrIncrement(BY_LOT, null, null);
         expect(screen.state.lines.length).toBe(1);
         expect(screen.state.lines[0].counted).toBe(null);
     });
@@ -295,7 +298,7 @@ describe("BarcodeInventory", () => {
             ["2", ""],
             [null, "L"],
         ]);
-        resolve({adjusted: 1});
+        resolve({done: true, adjusted: 1});
         await sending;
         expect(moves.map((m) => m.route)).toEqual(["main"]);
     });
@@ -306,6 +309,11 @@ describe("BarcodeInventory", () => {
         expect(screen.scannedQuantity({quantity: "2.5"})).toBe(2.5);
         expect(screen.scannedQuantity({qty: null, quantity: null})).toBe(1);
         expect(screen.scannedQuantity(undefined)).toBe(1);
+        // A label stating zero counts zero; one stating no quantity, nothing.
+        expect(screen.scannedQuantity({qty: 0})).toBe(0);
+        expect(screen.scannedQuantity({qty: "abc"})).toBe(null);
+        expect(screen.scannedQuantity({qty: Infinity})).toBe(null);
+        expect(screen.scannedQuantity({qty: -2})).toBe(null);
     });
 
     test("scans wait while the count is being applied", async () => {
@@ -351,7 +359,7 @@ describe("BarcodeInventory", () => {
         const untouched = stockLine({_id: 2, product_id: 7, tracking: "none"});
         const {screen, calls, notes, moves} = countScreen({
             lines: [counted, untouched],
-            answer: {adjusted: 1},
+            answer: {done: true, adjusted: 1},
         });
         expect(screen.countedLines).toEqual([counted]);
         await screen.apply();
@@ -359,7 +367,18 @@ describe("BarcodeInventory", () => {
             {
                 model: "stock.inventory",
                 method: "action_barcode_apply_count",
-                args: [3, [{product_id: 8, lot_name: "LOT-1", counted_qty: 4}]],
+                args: [
+                    3,
+                    [
+                        {
+                            product_id: 8,
+                            lot_name: "LOT-1",
+                            counted_qty: 4,
+                            theoretical_qty: 0,
+                        },
+                    ],
+                ],
+                kwargs: {force: false},
             },
         ]);
         expect(notes).toEqual([
@@ -389,6 +408,103 @@ describe("BarcodeInventory", () => {
             "Count at least one product before applying.",
             "Set the lot/serial for Cheese before applying.",
         ]);
+    });
+
+    test("a quantity that is not a number is not sent", async () => {
+        const {screen, calls, notes} = countScreen({
+            lines: [
+                stockLine({
+                    product_id: 7,
+                    product_name: "Bolts",
+                    tracking: "none",
+                    counted: "1e309",
+                }),
+            ],
+        });
+        await screen.apply();
+        expect(calls).toEqual([]);
+        expect(notes.map((n) => n.message)).toEqual([
+            "The counted quantity for Bolts is not a number.",
+        ]);
+    });
+
+    test("stock changed while counting: shown, asked, forced only as confirmed", async () => {
+        await makeMockEnv();
+        const line = stockLine({
+            product_id: 7,
+            product_name: "Bolts",
+            tracking: "none",
+            theoretical_qty: 10,
+            counted: "8",
+        });
+        const changed = {
+            done: false,
+            changed: [
+                {
+                    product_id: 7,
+                    product_name: "Bolts",
+                    lot_name: "",
+                    shown: 10,
+                    now: 15,
+                    uom: "Units",
+                },
+            ],
+        };
+        const {screen, calls, dialogs, moves} = countScreen({
+            lines: [line],
+            answers: [changed, {done: true, adjusted: 1}, changed],
+        });
+        await screen.apply();
+        // Nothing applied: the line shows the stock as it is now, and the
+        // operator is asked.
+        expect(calls[0].kwargs).toEqual({force: false});
+        expect(calls[0].args[1][0].theoretical_qty).toBe(10);
+        expect(line.theoretical_qty).toBe(15);
+        expect(screen.state.applying).toBe(false);
+        expect(dialogs.length).toBe(1);
+        expect(dialogs[0].body).toInclude("Bolts: 10 Units when counting, 15 now");
+        // Confirmed as it stands, the count is forced.
+        await dialogs[0].confirm();
+        expect(calls[1].kwargs).toEqual({force: true});
+        expect(moves.map((m) => m.route)).toEqual(["main"]);
+        // Had the count changed since the question, it is checked again.
+        screen.state.applying = false;
+        await screen.apply(true, "another count");
+        expect(calls[2].kwargs).toEqual({force: false});
+    });
+
+    test("a scan stating zero counts zero, an unreadable one nothing", async () => {
+        const {screen, notes} = countScreen({found: [[UNTRACKED], [BY_LOT]]});
+        await screen.onBarcodeScanned("0123", {value: "0123", qty: 0});
+        expect(screen.state.lines[0]).toMatchObject({product_id: 7, counted: "0"});
+        await screen.onBarcodeScanned("0456", {value: "0456", qty: "x"});
+        expect(screen.state.lines.length).toBe(1);
+        expect(notes.map((n) => n.message)).toEqual([
+            "The quantity on the label of Cheese cannot be read.",
+        ]);
+    });
+
+    test("the lot field looks lots up as the operator types", async () => {
+        const line = stockLine({product_id: 8, tracking: "lot"});
+        const {screen, calls} = countScreen({lines: [line]});
+        const pending = [];
+        screen.inventory.call = (model, method, args) => {
+            calls.push(args);
+            return new Promise((done) => pending.push(done));
+        };
+        screen.setLotName(line, "L");
+        screen.setLotName(line, "LO");
+        expect(line.lot_name).toBe("LO");
+        expect(calls).toEqual([
+            [3, 8, "L"],
+            [3, 8, "LO"],
+        ]);
+        // Only the latest answer fills the list.
+        pending[1](["LOT-1", "LOT-2"]);
+        pending[0](["L-OLD"]);
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(line.lot_options).toEqual(["LOT-1", "LOT-2"]);
     });
 
     test("a refused count can be applied again", async () => {
