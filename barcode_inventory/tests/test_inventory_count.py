@@ -1,6 +1,9 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from unittest.mock import patch
+
+from odoo import Command
 from odoo.exceptions import AccessError, UserError
 from odoo.tests.common import TransactionCase, new_test_user
 
@@ -210,6 +213,9 @@ class TestBarcodeInventoryCount(TransactionCase):
             [{"product_id": 0, "counted_qty": 1}],
             [{"product_id": self.consumable.id, "counted_qty": 1}],
             [{"product_id": self.product.id, "counted_qty": -1}],
+            [{"product_id": self.product.id, "counted_qty": "twelve"}],
+            [{"product_id": self.product.id, "counted_qty": "nan"}],
+            [{"product_id": self.product.id, "counted_qty": "inf"}],
             [{"product_id": self.lot_product.id, "lot_name": " ", "counted_qty": 1}],
             [
                 {"product_id": self.serial_product.id, "lot_name": "SN-COUNT-1"},
@@ -314,6 +320,14 @@ class TestBarcodeInventoryCount(TransactionCase):
             self.product | self.lot_product | self.serial_product | self.new_product,
         )
         self.assertEqual(set(group.stock_move_ids.mapped("state")), {"done"})
+        # The adjustment holds the quants counted: none in a package, owned by
+        # a partner or in the sublocation.
+        self.assertTrue(group.stock_quant_ids)
+        self.assertFalse(
+            group.stock_quant_ids.filtered(
+                lambda q: q.package_id or q.owner_id or q.location_id != self.location
+            )
+        )
         self.assertFalse(
             self.Quant.search(
                 ["|", ("current_inventory_id", "=", group.id), ("to_do", "=", True)]
@@ -326,6 +340,68 @@ class TestBarcodeInventoryCount(TransactionCase):
                     ("inventory_quantity_set", "=", True),
                 ]
             )
+        )
+
+    def test_other_adjustments_take_their_usual_quants(self):
+        group = self.Inventory.create(
+            {
+                "name": "Back office count",
+                "location_ids": [Command.set(self.location.ids)],
+                "exclude_sublocation": True,
+                "product_selection": "manual",
+                "product_ids": [Command.set(self.product.ids)],
+            }
+        )
+        quants = group._get_quants(self.location)
+        self.assertTrue(quants.filtered("package_id"))
+        self.assertTrue(quants.filtered("owner_id"))
+
+    def test_count_not_applied_is_not_done(self):
+        # Should Odoo hand back a wizard instead of applying the count, the
+        # count fails: no adjustment is recorded as done.
+        wizard = {
+            "type": "ir.actions.act_window",
+            "res_model": "stock.inventory.conflict",
+        }
+        Quant = type(self.env["stock.quant"])
+        with (
+            patch.object(Quant, "action_apply_inventory", return_value=wizard),
+            self.assertRaises(UserError),
+        ):
+            self.Inventory.action_barcode_apply_count(
+                self.location.id, [{"product_id": self.product.id, "counted_qty": 3}]
+            )
+        self.assertFalse(
+            self.Inventory.search(
+                [("location_ids", "=", self.location.id), ("state", "=", "done")]
+            )
+        )
+
+    def test_lot_names_suggested(self):
+        other = self.env["res.company"].create({"name": "Barcode Lots Co"})
+        self.env["stock.lot"].create(
+            [
+                {
+                    "name": "LOT-ELSEWHERE",
+                    "product_id": self.lot_product.id,
+                    "company_id": other.id,
+                },
+                {
+                    "name": "LOT-SHARED",
+                    "product_id": self.lot_product.id,
+                    "company_id": False,
+                },
+            ]
+        )
+        names = self.Inventory.action_barcode_lot_names(
+            self.location.id, self.lot_product.id
+        )
+        # The lots a count here can use, as _barcode_resolve_lot finds them.
+        self.assertIn("LOT-COUNT-1", names)
+        self.assertIn("LOT-SHARED", names)
+        self.assertNotIn("LOT-ELSEWHERE", names)
+        self.assertEqual(
+            self.Inventory.action_barcode_lot_names(self.location.id, 0), []
         )
 
     def test_apply_count_matching_the_stock(self):

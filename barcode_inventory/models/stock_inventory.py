@@ -1,6 +1,8 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import math
+
 from odoo import Command, api, models
 from odoo.exceptions import AccessError, UserError
 from odoo.tools.float_utils import float_compare, float_is_zero, float_round
@@ -76,6 +78,39 @@ class StockInventory(models.Model):
             "lines": lines,
         }
 
+    def _get_quants(self, locations):
+        # A count from the scanner hands over exactly the quants it counts
+        # (see action_barcode_apply_count): the adjustment must not take in,
+        # nor mark as to do, the ones in a package or owned by a partner.
+        quant_ids = self.env.context.get("barcode_count_quant_ids")
+        if quant_ids is not None:
+            return self.env["stock.quant"].browse(quant_ids)
+        return super()._get_quants(locations)
+
+    @api.model
+    def _barcode_lot_domain(self, product, company):
+        """The lots a count of ``product`` in ``company`` may name: the
+        product's own, in its company -- or in ``company`` for a shared
+        product -- or shared ones."""
+        lot_company = product.company_id or company
+        return [
+            ("product_id", "=", product.id),
+            ("company_id", "in", [lot_company.id, False]),
+        ]
+
+    @api.model
+    def action_barcode_lot_names(self, location_id, product_id):
+        """The names the lot field of a count line suggests: the lots
+        ``_barcode_resolve_lot`` would find for a count at that location, so
+        that no suggestion turns into a new lot once applied."""
+        location = self._barcode_count_location(location_id)
+        product = self.env["product.product"].browse(product_id).exists()
+        if not product:
+            return []
+        company = location.company_id or self.env.company
+        lots = self.env["stock.lot"].search(self._barcode_lot_domain(product, company))
+        return lots.mapped("name")
+
     @api.model
     def _barcode_resolve_lot(self, product, lot_name, company):
         """Find the lot/serial a name stands for, or create it.
@@ -90,12 +125,8 @@ class StockInventory(models.Model):
         counted in another company's location would otherwise get a lot in the
         wrong company, and Odoo would refuse the adjustment.
         """
-        lot_company = product.company_id or company
         Lot = self.env["stock.lot"]
-        domain = [
-            ("product_id", "=", product.id),
-            ("company_id", "in", [lot_company.id, False]),
-        ]
+        domain = self._barcode_lot_domain(product, company)
         lot = Lot.search(domain + [("name", "=", lot_name)], limit=1)
         if not lot:
             lot = Lot.search(
@@ -114,7 +145,7 @@ class StockInventory(models.Model):
             {
                 "name": lot_name,
                 "product_id": product.id,
-                "company_id": lot_company.id,
+                "company_id": (product.company_id or company).id,
             }
         )
 
@@ -148,7 +179,7 @@ class StockInventory(models.Model):
                         name=product.display_name,
                     )
                 )
-            counted = float(line.get("counted_qty") or 0)
+            counted = self._barcode_counted_qty(line, product)
             rounding = product.uom_id.rounding
             if float_compare(counted, 0, precision_rounding=rounding) < 0:
                 raise UserError(
@@ -185,6 +216,21 @@ class StockInventory(models.Model):
                     )
                 )
         return counts
+
+    @api.model
+    def _barcode_counted_qty(self, line, product):
+        try:
+            counted = float(line.get("counted_qty") or 0)
+        except (TypeError, ValueError):
+            counted = math.nan
+        if not math.isfinite(counted):
+            raise UserError(
+                self.env._(
+                    "The counted quantity for %(name)s is not a number.",
+                    name=product.display_name,
+                )
+            )
+        return counted
 
     @api.model
     def action_barcode_apply_count(self, location_id, lines):
@@ -237,15 +283,28 @@ class StockInventory(models.Model):
                     "lot_id": lot.id,
                 }
             )
-        group.action_state_to_in_progress()
-        counted_quants = Quant
+        counted_quants = Quant.union(*quants_by_key.values())
+        group.with_context(
+            barcode_count_quant_ids=counted_quants.ids
+        ).action_state_to_in_progress()
         for key, quants in quants_by_key.items():
             # Should the stock of a product and lot be split over several quants,
             # the count goes on the first one and the others are emptied.
             quants[:1].inventory_quantity = counts[key]
             quants[1:].inventory_quantity = 0
-            counted_quants |= quants
-        counted_quants.action_apply_inventory()
+        action = counted_quants.action_apply_inventory()
+        if isinstance(action, dict):
+            # Odoo hands back a wizard instead of applying when the quantities
+            # changed since they were counted, or a tracked product lacks its
+            # lot. Neither can happen here -- the counts were just written and
+            # tracked lines carry their lot -- but should one, nothing is
+            # recorded as done: the whole count is rolled back.
+            raise UserError(
+                self.env._(
+                    "The count could not be applied: Odoo asks for a check of "
+                    "the adjustment. Count the location again."
+                )
+            )
         group.action_state_to_done()
         return {
             "group_id": group.id,
