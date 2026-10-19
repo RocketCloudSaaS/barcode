@@ -108,22 +108,34 @@ export class InventoryCountScreen extends Component {
     // --- scanning -------------------------------------------------------------
 
     async onBarcodeScanned(barcode, parsed) {
-        if (this.state.applying) {
-            // The count is on its way to the server: a scan now would show up
-            // as counted without being so, then vanish with the screen.
-            this.inventory.notify(
-                _t("Wait until the count is applied to scan again."),
-                {type: "warning"}
-            );
+        if (this.waitForApply()) {
             return;
         }
         const product = await this.findScannedProduct(barcode, parsed);
-        if (!product) {
+        // The count may have been applied while the product was looked up.
+        if (!product || this.waitForApply()) {
             return;
         }
         const lotName = parsed?.lot || parsed?.serial || null;
         const qty = this.scannedQuantity(parsed, product.uom_id?.[0]);
         await this.addOrIncrement(product, lotName, qty);
+    }
+
+    /**
+     * Whether the count is on its way to the server, telling the operator so:
+     * a scan now would show up as counted without being so, then vanish with
+     * the screen.
+     *
+     * @returns {Boolean} whether the scan must wait
+     */
+    waitForApply() {
+        if (!this.state.applying) {
+            return false;
+        }
+        this.inventory.notify(_t("Wait until the count is applied to scan again."), {
+            type: "warning",
+        });
+        return true;
     }
 
     /**
@@ -186,6 +198,9 @@ export class InventoryCountScreen extends Component {
     // --- add a product from the "+" selector ----------------------------------
 
     addProduct() {
+        if (this.state.applying) {
+            return;
+        }
         this.store.navigate("inventory_product_selector", {
             locationId: this.state.locationId,
             locationName: this.state.locationName,
@@ -298,17 +313,26 @@ export class InventoryCountScreen extends Component {
 
     // --- lot handling ---------------------------------------------------------
 
+    /**
+     * Suggest the lots the server would take for this line: its company's and
+     * the shared ones, so that no suggestion becomes a new lot once applied.
+     *
+     * @param {Object} line the count line that needs its lot
+     */
     async loadLotOptions(line) {
-        const lots = await this.inventory.searchRead(
-            "stock.lot",
-            [["product_id", "=", line.product_id]],
-            ["name"]
+        line.lot_options = await this.inventory.call(
+            "stock.inventory",
+            "action_barcode_lot_names",
+            [this.state.locationId, line.product_id]
         );
-        line.lot_options = lots.map((l) => l.name);
     }
 
+    // While the count is applied, the lines stay as they were sent.
+
     setLotName(line, value) {
-        line.lot_name = value;
+        if (!this.state.applying) {
+            line.lot_name = value;
+        }
     }
 
     needsLotInput(line) {
@@ -318,7 +342,9 @@ export class InventoryCountScreen extends Component {
     // --- quantities -----------------------------------------------------------
 
     setCounted(line, value) {
-        line.counted = value === "" ? null : value;
+        if (!this.state.applying) {
+            line.counted = value === "" ? null : value;
+        }
     }
 
     isCounted(line) {
@@ -357,6 +383,9 @@ export class InventoryCountScreen extends Component {
     }
 
     removeLine(line) {
+        if (this.state.applying) {
+            return;
+        }
         const index = this.state.lines.indexOf(line);
         if (index !== -1) {
             this.state.lines.splice(index, 1);
@@ -370,6 +399,9 @@ export class InventoryCountScreen extends Component {
     // --- apply ----------------------------------------------------------------
 
     async apply() {
+        if (this.state.applying) {
+            return;
+        }
         const counted = this.countedLines;
         if (!counted.length) {
             this.inventory.notify(_t("Count at least one product before applying."), {

@@ -10,6 +10,8 @@ import {
 } from "@web/../tests/web_test_helpers";
 import {InventoryLocationScreen} from "@barcode_inventory/js/screens/inventory_location_screen.esm";
 import {InventoryProductSelectorScreen} from "@barcode_inventory/js/screens/inventory_product_selector_screen.esm";
+import {getTemplate} from "@web/core/templates";
+import {parseBarcode} from "@barcode_scanner/js/barcode_parser.esm";
 import {user} from "@web/core/user";
 
 const UNTRACKED = {
@@ -138,12 +140,17 @@ describe("BarcodeInventory", () => {
     });
 
     test("a product added from the selector is listed, not counted", async () => {
-        const {screen, searches} = countScreen({found: [[{name: "LOT-1"}]]});
+        const {screen, calls} = countScreen({answer: ["LOT-1"]});
         await screen.addOrIncrement(BY_LOT, null, 0);
         expect(screen.state.lines[0]).toMatchObject({counted: null, lot_fixed: false});
-        // Its lot is still to be set: the product's lots are suggested.
-        expect(searches).toEqual([
-            {model: "stock.lot", domain: [["product_id", "=", 8]]},
+        // Its lot is still to be set: the lots a count here can use are
+        // suggested, as the server finds them.
+        expect(calls).toEqual([
+            {
+                model: "stock.inventory",
+                method: "action_barcode_lot_names",
+                args: [3, 8],
+            },
         ]);
         expect(screen.state.lines[0].lot_options).toEqual(["LOT-1"]);
         // Picking it again leaves its line as it is.
@@ -230,6 +237,67 @@ describe("BarcodeInventory", () => {
         expect(notes).toEqual([
             {message: "No product matches “999”.", type: "warning"},
         ]);
+    });
+
+    test("a plain EAN-13, as the core parser reads it, counts one unit", async () => {
+        const {screen, searches} = countScreen({found: [[UNTRACKED]]});
+        const parsed = parseBarcode("4006381333931");
+        await screen.onBarcodeScanned("4006381333931", parsed);
+        expect(JSON.stringify(searches[0].domain)).toInclude("4006381333931");
+        expect(screen.state.lines[0]).toMatchObject({
+            product_id: 7,
+            lot_name: "",
+            counted: "1",
+        });
+    });
+
+    test("a scan that resolves while the count is applied changes nothing", async () => {
+        const {screen, notes} = countScreen();
+        let resolve = null;
+        screen.inventory.searchRead = () =>
+            new Promise((done) => {
+                resolve = done;
+            });
+        const scan = screen.onBarcodeScanned("0123", {value: "0123"});
+        // Apply is pressed while the product is looked up.
+        screen.state.applying = true;
+        resolve([UNTRACKED]);
+        await scan;
+        expect(screen.state.lines).toEqual([]);
+        expect(notes).toEqual([
+            {
+                message: "Wait until the count is applied to scan again.",
+                type: "warning",
+            },
+        ]);
+    });
+
+    test("the count is sent once, and stays as sent meanwhile", async () => {
+        const line = stockLine({product_id: 7, tracking: "none", counted: "2"});
+        const lot = stockLine({_id: 2, product_id: 8, tracking: "lot", lot_name: "L"});
+        const {screen, calls, moves} = countScreen({lines: [line, lot]});
+        let resolve = null;
+        screen.inventory.call = (model, method, args) => {
+            calls.push({model, method, args});
+            return new Promise((done) => {
+                resolve = done;
+            });
+        };
+        const sending = screen.apply();
+        await screen.apply();
+        expect(calls.length).toBe(1);
+        // While it is on its way, nothing changes the lines it sent.
+        screen.setCounted(line, "5");
+        screen.setLotName(lot, "OTHER");
+        screen.removeLine(line);
+        screen.addProduct();
+        expect(screen.state.lines.map((l) => [l.counted, l.lot_name])).toEqual([
+            ["2", ""],
+            [null, "L"],
+        ]);
+        resolve({adjusted: 1});
+        await sending;
+        expect(moves.map((m) => m.route)).toEqual(["main"]);
     });
 
     test("a scan stands for its piece count, or one unit", () => {
@@ -450,6 +518,12 @@ describe("BarcodeInventory", () => {
         expect(screen.state).toMatchObject({canApply: false, loading: false});
         await screen.onBarcodeScanned("SHELF", {value: "SHELF"});
         expect(searches).toEqual([]);
+    });
+
+    test("the count screen locks while applying and takes decimal counts", () => {
+        const html = getTemplate("barcode_inventory.InventoryCountScreen").outerHTML;
+        expect(html).toInclude('step="any"');
+        expect(html.split('t-att-disabled="state.applying"').length - 1).toBe(4);
     });
 
     test("an inventory administrator picks or scans the location", async () => {
