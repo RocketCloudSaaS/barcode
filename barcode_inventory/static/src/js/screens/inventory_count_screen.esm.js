@@ -102,6 +102,9 @@ export class InventoryCountScreen extends Component {
             lot_options: [],
             counted: null,
             isNew: false,
+            // The stock the count is checked against when applied: what the
+            // screen showed as counting began (see showStockChanges).
+            checked_qty: line.theoretical_qty,
         }));
         this.state.loading = false;
     }
@@ -263,6 +266,7 @@ export class InventoryCountScreen extends Component {
             lot_id: false,
             lot_name: lotName || "",
             theoretical_qty: 0,
+            checked_qty: 0,
             uom: product.uom_id?.[1] || "",
             lot_fixed: tracking !== "none" && Boolean(lotName),
             lot_options: [],
@@ -495,7 +499,7 @@ export class InventoryCountScreen extends Component {
             product_id: l.product_id,
             lot_name: l.lot_name || "",
             counted_qty: Number(l.counted),
-            theoretical_qty: l.theoretical_qty,
+            theoretical_qty: l.checked_qty ?? l.theoretical_qty,
         }));
         // What the operator counted, without the stock shown next to it: the
         // stock changes the warning is about update that.
@@ -534,6 +538,10 @@ export class InventoryCountScreen extends Component {
      * The stock of some counted products changed since the screen showed it:
      * show the stock as it is now on their lines, and ask whether to apply the
      * count all the same, as the back office does with outdated counts.
+     *
+     * The count is still checked against the stock shown as counting began
+     * (`checked_qty`): only "Apply anyway" applies it over the change, and
+     * applying again after cancelling asks again.
      *
      * @param {Object[]} changed the products and lots whose stock changed
      * @param {String} signature the count the question is about
