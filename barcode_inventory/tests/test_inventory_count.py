@@ -1,6 +1,9 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from unittest.mock import patch
+
+from odoo import Command
 from odoo.exceptions import AccessError, UserError
 from odoo.tests.common import TransactionCase, new_test_user
 
@@ -210,6 +213,11 @@ class TestBarcodeInventoryCount(TransactionCase):
             [{"product_id": 0, "counted_qty": 1}],
             [{"product_id": self.consumable.id, "counted_qty": 1}],
             [{"product_id": self.product.id, "counted_qty": -1}],
+            [{"product_id": self.product.id, "counted_qty": "twelve"}],
+            [{"product_id": self.product.id, "counted_qty": "nan"}],
+            [{"product_id": self.product.id, "counted_qty": "inf"}],
+            # An infinite number reaches the server as JSON null.
+            [{"product_id": self.product.id, "counted_qty": None}],
             [{"product_id": self.lot_product.id, "lot_name": " ", "counted_qty": 1}],
             [
                 {"product_id": self.serial_product.id, "lot_name": "SN-COUNT-1"},
@@ -314,6 +322,14 @@ class TestBarcodeInventoryCount(TransactionCase):
             self.product | self.lot_product | self.serial_product | self.new_product,
         )
         self.assertEqual(set(group.stock_move_ids.mapped("state")), {"done"})
+        # The adjustment holds the quants counted: none in a package, owned by
+        # a partner or in the sublocation.
+        self.assertTrue(group.stock_quant_ids)
+        self.assertFalse(
+            group.stock_quant_ids.filtered(
+                lambda q: q.package_id or q.owner_id or q.location_id != self.location
+            )
+        )
         self.assertFalse(
             self.Quant.search(
                 ["|", ("current_inventory_id", "=", group.id), ("to_do", "=", True)]
@@ -326,6 +342,150 @@ class TestBarcodeInventoryCount(TransactionCase):
                     ("inventory_quantity_set", "=", True),
                 ]
             )
+        )
+
+    def test_other_adjustments_take_their_usual_quants(self):
+        group = self.Inventory.create(
+            {
+                "name": "Back office count",
+                "location_ids": [Command.set(self.location.ids)],
+                "exclude_sublocation": True,
+                "product_selection": "manual",
+                "product_ids": [Command.set(self.product.ids)],
+            }
+        )
+        quants = group._get_quants(self.location)
+        self.assertTrue(quants.filtered("package_id"))
+        self.assertTrue(quants.filtered("owner_id"))
+
+    def test_count_not_applied_is_not_done(self):
+        # Should Odoo hand back a wizard instead of applying the count, the
+        # count fails: no adjustment is recorded as done.
+        wizard = {
+            "type": "ir.actions.act_window",
+            "res_model": "stock.inventory.conflict",
+        }
+        Quant = type(self.env["stock.quant"])
+        with (
+            patch.object(Quant, "action_apply_inventory", return_value=wizard),
+            self.assertRaises(UserError),
+        ):
+            self.Inventory.action_barcode_apply_count(
+                self.location.id, [{"product_id": self.product.id, "counted_qty": 3}]
+            )
+        self.assertFalse(
+            self.Inventory.search(
+                [("location_ids", "=", self.location.id), ("state", "=", "done")]
+            )
+        )
+
+    def test_stock_changed_while_counting(self):
+        data = self.Inventory.action_barcode_location_lines(self.location.id)
+        shown = {(line["product_id"], line["lot_name"]): line for line in data["lines"]}
+        # Goods come in after the screen showed the stock.
+        self.Quant._update_available_quantity(self.product, self.location, 5)
+        lines = [
+            {
+                "product_id": self.product.id,
+                "counted_qty": 8,
+                "theoretical_qty": shown[self.product.id, False]["theoretical_qty"],
+            },
+            {
+                "product_id": self.lot_product.id,
+                "lot_name": "LOT-COUNT-1",
+                "counted_qty": 5,
+                "theoretical_qty": 5,
+            },
+            # A lot not created yet held nothing, as shown.
+            {
+                "product_id": self.lot_product.id,
+                "lot_name": "LOT-BRAND-NEW",
+                "counted_qty": 2,
+                "theoretical_qty": 0,
+            },
+        ]
+        result = self.Inventory.action_barcode_apply_count(self.location.id, lines)
+        self.assertFalse(result["done"])
+        self.assertEqual(
+            result["changed"],
+            [
+                {
+                    "product_id": self.product.id,
+                    "product_name": self.product.display_name,
+                    "lot_name": "",
+                    "shown": 10.0,
+                    "now": 15.0,
+                    "uom": self.product.uom_id.name,
+                }
+            ],
+        )
+        # Nothing applied, nothing created.
+        self.assertEqual(self._qty(self.product), 15)
+        self.assertFalse(
+            self.Inventory.search([("location_ids", "=", self.location.id)])
+        )
+        self.assertFalse(self.env["stock.lot"].search([("name", "=", "LOT-BRAND-NEW")]))
+        # The operator applies it all the same.
+        result = self.Inventory.action_barcode_apply_count(
+            self.location.id, lines, force=True
+        )
+        self.assertTrue(result["done"])
+        self.assertEqual(self._qty(self.product), 8)
+
+    def test_stock_as_shown_is_applied(self):
+        self.Quant._update_available_quantity(self.new_product, self.location, -3)
+        result = self.Inventory.action_barcode_apply_count(
+            self.location.id,
+            [
+                {
+                    "product_id": self.new_product.id,
+                    "counted_qty": 0,
+                    "theoretical_qty": -3,
+                }
+            ],
+        )
+        self.assertTrue(result["done"])
+        self.assertEqual(self._qty(self.new_product), 0)
+        # A product gone since is left to the checks, which refuse it.
+        with self.assertRaises(UserError):
+            self.Inventory.action_barcode_apply_count(
+                self.location.id,
+                [{"product_id": 0, "counted_qty": 1, "theoretical_qty": 0}],
+            )
+
+    def test_lot_names_suggested(self):
+        other = self.env["res.company"].create({"name": "Barcode Lots Co"})
+        self.env["stock.lot"].create(
+            [
+                {
+                    "name": "LOT-ELSEWHERE",
+                    "product_id": self.lot_product.id,
+                    "company_id": other.id,
+                },
+                {
+                    "name": "LOT-SHARED",
+                    "product_id": self.lot_product.id,
+                    "company_id": False,
+                },
+            ]
+        )
+        names = self.Inventory.action_barcode_lot_names(
+            self.location.id, self.lot_product.id
+        )
+        # The lots a count here can use, as _barcode_resolve_lot finds them.
+        self.assertIn("LOT-COUNT-1", names)
+        self.assertIn("LOT-SHARED", names)
+        self.assertNotIn("LOT-ELSEWHERE", names)
+        self.assertEqual(
+            self.Inventory.action_barcode_lot_names(self.location.id, 0), []
+        )
+        # Looked up as the operator types, a few at a time.
+        lot_names = self.Inventory.action_barcode_lot_names
+        self.assertEqual(
+            lot_names(self.location.id, self.lot_product.id, "shared"), ["LOT-SHARED"]
+        )
+        self.assertEqual(
+            len(lot_names(self.location.id, self.lot_product.id, "", limit=1)), 1
         )
 
     def test_apply_count_matching_the_stock(self):

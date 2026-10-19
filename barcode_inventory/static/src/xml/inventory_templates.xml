@@ -88,6 +88,7 @@
                 <button
                     class="ilx-emp-v2-search-box"
                     style="width:100%; border:none; text-align:left; cursor:pointer;"
+                    t-att-disabled="state.applying"
                     t-on-click="addProduct"
                 >
                     <i class="fa fa-plus ilx-emp-v2-search-icon" />
@@ -129,6 +130,7 @@
                                             class="ilx-emp-v2-search-input"
                                             style="margin-top:6px; padding:6px 8px;"
                                             placeholder="Lot / Serial number"
+                                            t-att-disabled="state.applying"
                                             t-att-list="'lot-opts-' + line._id"
                                             t-att-value="line.lot_name"
                                             t-on-input="(ev) => this.setLotName(line, ev.target.value)"
@@ -155,7 +157,8 @@
                                         type="number"
                                         inputmode="decimal"
                                         min="0"
-                                        step="1"
+                                        step="any"
+                                        t-att-disabled="state.applying"
                                         class="ilx-emp-v2-search-input"
                                         style="width:90px; text-align:center; padding:6px 8px;"
                                         t-att-placeholder="formatQty(line.theoretical_qty)"
@@ -172,6 +175,7 @@
                                     <button
                                         class="btn btn-link p-0"
                                         style="color:#b42318; font-size:1rem;"
+                                        t-att-disabled="state.applying"
                                         t-on-click="() => this.removeLine(line)"
                                     >
                                         <i class="fa fa-trash" />

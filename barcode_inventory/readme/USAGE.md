@@ -7,21 +7,27 @@ From the Barcode app home screen, tap **Inventory Adjustment**.
    list of internal locations.
 2. The count screen shows the stock the location holds, one line per
    product and lot. **Count by scanning** each product: a plain barcode
-   adds one unit, and a GS1 label also reads its **lot/serial** and its
-   **quantity**. You can also type the counted quantity in each line,
-   which then shows how far it is from the stock.
+   adds one unit. With `barcode_gs1` installed, a GS1 label also brings
+   its **lot/serial** and its **quantity**; without it, the scanner reads
+   plain EAN-13 barcodes only. You can also type the counted quantity in
+   each line, decimals included, which then shows how far it is from the
+   stock.
 3. To count something not shown, tap **"+"** and scan or search the
    product. A freshly scanned or added product jumps to the top of the
    list and is highlighted, so you always see what the scan just changed.
    Only storable products can be counted: services and non-storable
    consumables are not offered, and scanning one says why it is refused.
-4. Tap **Apply Adjustment** to record the count.
+4. Tap **Apply Adjustment** to record the count. If the stock of a
+   counted product changed while you counted — goods came in or went out —
+   nothing is applied yet: the lines show the stock as it is now, and you
+   choose whether to apply your count anyway or to count again.
 
 ## Lots and serial numbers
 
 A lot/serial-tracked product needs its lot/serial before it can be
-applied — read from the GS1 label, or typed into the line (the product's
-lots are suggested; a new name is created on the server). The name is
+applied — read from a GS1 label, or typed into the line (the lots a
+count at that location can use are suggested; a new name is created on
+the server). The name is
 matched exactly first, as lots differing only in case are different lots;
 in another case it is only taken when it names a single lot. The same
 product can appear on **several lines**, one per lot or serial number, so

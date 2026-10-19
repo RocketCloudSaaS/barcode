@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-16 09:23+0000\n"
-"PO-Revision-Date: 2026-10-16 09:23+0000\n"
+"POT-Creation-Date: 2026-10-19 08:04+0000\n"
+"PO-Revision-Date: 2026-10-19 08:04+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es\n"
@@ -45,6 +45,12 @@ msgstr "Añadir producto"
 #: code:addons/barcode_inventory/static/src/xml/inventory_templates.xml:0
 msgid "Apply Adjustment ("
 msgstr "Aplicar ajuste ("
+
+#. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "Apply anyway"
+msgstr "Aplicar igualmente"
 
 #. module: barcode_inventory
 #. odoo-javascript
@@ -238,10 +244,40 @@ msgstr ""
 "exactamente como está escrito."
 
 #. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "Stock changed"
+msgstr "El stock ha cambiado"
+
+#. module: barcode_inventory
+#. odoo-python
+#: code:addons/barcode_inventory/models/stock_inventory.py:0
+msgid ""
+"The count could not be applied: Odoo asks for a check of the adjustment. "
+"Count the location again."
+msgstr ""
+"No se ha podido aplicar el conteo: Odoo pide revisar el ajuste. Vuelva a "
+"contar la ubicación."
+
+#. module: barcode_inventory
 #. odoo-python
 #: code:addons/barcode_inventory/models/stock_inventory.py:0
 msgid "The counted quantity for %(name)s cannot be negative."
 msgstr "La cantidad contada de %(name)s no puede ser negativa."
+
+#. module: barcode_inventory
+#. odoo-javascript
+#. odoo-python
+#: code:addons/barcode_inventory/models/stock_inventory.py:0
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "The counted quantity for %(name)s is not a number."
+msgstr "La cantidad contada de %(name)s no es un número."
+
+#. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "The quantity on the label of %(name)s cannot be read."
+msgstr "No se puede leer la cantidad de la etiqueta de %(name)s."
 
 #. module: barcode_inventory
 #. odoo-python
@@ -252,5 +288,23 @@ msgstr "La ubicación seleccionada ya no es válida."
 #. module: barcode_inventory
 #. odoo-javascript
 #: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "The stock changed here while you counted:"
+msgstr "El stock de esta ubicación ha cambiado mientras contaba:"
+
+#. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
 msgid "Wait until the count is applied to scan again."
 msgstr "Espere a que se aplique el conteo para volver a escanear."
+
+#. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "Your counted quantities will be set all the same. Apply the count?"
+msgstr "Se fijarán igualmente las cantidades contadas. ¿Aplicar el conteo?"
+
+#. module: barcode_inventory
+#. odoo-javascript
+#: code:addons/barcode_inventory/static/src/js/screens/inventory_count_screen.esm.js:0
+msgid "• %(what)s: %(shown)s %(uom)s when counting, %(now)s now"
+msgstr "• %(what)s: %(shown)s %(uom)s al contar, %(now)s ahora"

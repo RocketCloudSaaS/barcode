@@ -1,4 +1,5 @@
 import {Component, onWillStart, useState} from "@odoo/owl";
+import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
@@ -71,7 +72,7 @@ export class InventoryCountScreen extends Component {
                 );
                 this.state.loading = false;
                 if (params.addProduct) {
-                    await this.addOrIncrement(params.addProduct, null, 0);
+                    await this.addOrIncrement(params.addProduct, null, null);
                 }
             } else {
                 await this.loadLines();
@@ -108,22 +109,43 @@ export class InventoryCountScreen extends Component {
     // --- scanning -------------------------------------------------------------
 
     async onBarcodeScanned(barcode, parsed) {
-        if (this.state.applying) {
-            // The count is on its way to the server: a scan now would show up
-            // as counted without being so, then vanish with the screen.
-            this.inventory.notify(
-                _t("Wait until the count is applied to scan again."),
-                {type: "warning"}
-            );
+        if (this.waitForApply()) {
             return;
         }
         const product = await this.findScannedProduct(barcode, parsed);
-        if (!product) {
+        // The count may have been applied while the product was looked up.
+        if (!product || this.waitForApply()) {
             return;
         }
         const lotName = parsed?.lot || parsed?.serial || null;
         const qty = this.scannedQuantity(parsed, product.uom_id?.[0]);
+        if (qty === null) {
+            this.inventory.notify(
+                _t("The quantity on the label of %(name)s cannot be read.", {
+                    name: product.display_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
         await this.addOrIncrement(product, lotName, qty);
+    }
+
+    /**
+     * Whether the count is on its way to the server, telling the operator so:
+     * a scan now would show up as counted without being so, then vanish with
+     * the screen.
+     *
+     * @returns {Boolean} whether the scan must wait
+     */
+    waitForApply() {
+        if (!this.state.applying) {
+            return false;
+        }
+        this.inventory.notify(_t("Wait until the count is applied to scan again."), {
+            type: "warning",
+        });
+        return true;
     }
 
     /**
@@ -172,7 +194,8 @@ export class InventoryCountScreen extends Component {
 
     /**
      * How much of the product a scan stands for: the piece count the barcode
-     * states (a GS1 count, AI 30/37), or one unit.
+     * states (a GS1 count, AI 30/37) -- zero included -- or one unit when it
+     * states none; null when what it states is not a quantity.
      *
      * `productUomId` is the unit the product is stocked in. This base reading
      * ignores it, as barcode_stock's does; it is the seam a module that reads
@@ -180,12 +203,20 @@ export class InventoryCountScreen extends Component {
      */
     // eslint-disable-next-line no-unused-vars
     scannedQuantity(scan, productUomId) {
-        return parseFloat(scan?.qty ?? scan?.quantity ?? 0) || 1;
+        const stated = scan?.qty ?? scan?.quantity;
+        if (stated === undefined || stated === null || stated === "") {
+            return 1;
+        }
+        const qty = Number(stated);
+        return Number.isFinite(qty) && qty >= 0 ? qty : null;
     }
 
     // --- add a product from the "+" selector ----------------------------------
 
     addProduct() {
+        if (this.state.applying) {
+            return;
+        }
         this.store.navigate("inventory_product_selector", {
             locationId: this.state.locationId,
             locationName: this.state.locationName,
@@ -206,6 +237,14 @@ export class InventoryCountScreen extends Component {
 
     // --- shared add/increment -------------------------------------------------
 
+    /**
+     * Add a scanned or picked product and lot to the count, or add to its line.
+     *
+     * @param {Object} product the product
+     * @param {String|null} lotName the lot/serial number read, if any
+     * @param {Number|null} qty what a scan counts; null when the product is
+     *   picked from the "+" selector, which counts nothing
+     */
     async addOrIncrement(product, lotName, qty) {
         const tracking = product.tracking || "none";
         const key = this.lineKey(product.id, lotName);
@@ -227,7 +266,7 @@ export class InventoryCountScreen extends Component {
             uom: product.uom_id?.[1] || "",
             lot_fixed: tracking !== "none" && Boolean(lotName),
             lot_options: [],
-            counted: qty ? String(tracking === "serial" ? 1 : qty) : null,
+            counted: qty === null ? null : this.serialAware(tracking, qty),
             isNew: true,
         };
         // Put a freshly scanned/added product at the TOP, where the operator is
@@ -247,21 +286,38 @@ export class InventoryCountScreen extends Component {
      * @param {Object} line the line of that product and lot
      * @param {Object} product the product scanned or picked
      * @param {String|null} lotName the lot/serial number read, if any
-     * @param {Number} qty the quantity the scan stands for; 0 when picked
+     * @param {Number|null} qty the quantity the scan stands for; null when
+     *   picked from the selector
      */
     countAgain(line, product, lotName, qty) {
         const serial = product.tracking === "serial";
-        if (qty && serial && this.isCounted(line)) {
+        if (qty !== null && serial && this.isCounted(line)) {
             // A serial number is one unit: reading it again counts nothing.
             this.inventory.notify(this.serialCountedMessage(product, lotName), {
                 type: "warning",
             });
-        } else if (qty) {
-            line.counted = serial ? "1" : String((parseFloat(line.counted) || 0) + qty);
+        } else if (qty !== null) {
+            line.counted = serial
+                ? this.serialAware("serial", qty)
+                : String((parseFloat(line.counted) || 0) + qty);
         }
         // The line may be far down a long list: flag it so the operator sees
         // what the scan just changed, and bring it into view.
         this.flashLine(line);
+    }
+
+    /**
+     * The count a scan gives a line: a serial number is one unit, or none.
+     *
+     * @param {String} tracking the product's tracking
+     * @param {Number} qty the quantity scanned
+     * @returns {String} the counted quantity
+     */
+    serialAware(tracking, qty) {
+        if (tracking === "serial") {
+            return qty > 0 ? "1" : "0";
+        }
+        return String(qty);
     }
 
     serialCountedMessage(product, lotName) {
@@ -298,17 +354,35 @@ export class InventoryCountScreen extends Component {
 
     // --- lot handling ---------------------------------------------------------
 
-    async loadLotOptions(line) {
-        const lots = await this.inventory.searchRead(
-            "stock.lot",
-            [["product_id", "=", line.product_id]],
-            ["name"]
+    /**
+     * Suggest the lots the server would take for this line: its company's and
+     * the shared ones, so that no suggestion becomes a new lot once applied.
+     *
+     * @param {Object} line the count line that needs its lot
+     * @param {String} [search] what the operator has typed so far
+     */
+    async loadLotOptions(line, search = "") {
+        // They are looked up again as the operator types: only the latest
+        // answer may fill the list, whatever order the answers come back in.
+        line._lotSearch = (line._lotSearch || 0) + 1;
+        const query = line._lotSearch;
+        const names = await this.inventory.call(
+            "stock.inventory",
+            "action_barcode_lot_names",
+            [this.state.locationId, line.product_id, search]
         );
-        line.lot_options = lots.map((l) => l.name);
+        if (query === line._lotSearch) {
+            line.lot_options = names;
+        }
     }
 
+    // While the count is applied, the lines stay as they were sent.
+
     setLotName(line, value) {
-        line.lot_name = value;
+        if (!this.state.applying) {
+            line.lot_name = value;
+            this.loadLotOptions(line, value);
+        }
     }
 
     needsLotInput(line) {
@@ -318,7 +392,9 @@ export class InventoryCountScreen extends Component {
     // --- quantities -----------------------------------------------------------
 
     setCounted(line, value) {
-        line.counted = value === "" ? null : value;
+        if (!this.state.applying) {
+            line.counted = value === "" ? null : value;
+        }
     }
 
     isCounted(line) {
@@ -357,6 +433,9 @@ export class InventoryCountScreen extends Component {
     }
 
     removeLine(line) {
+        if (this.state.applying) {
+            return;
+        }
         const index = this.state.lines.indexOf(line);
         if (index !== -1) {
             this.state.lines.splice(index, 1);
@@ -369,7 +448,20 @@ export class InventoryCountScreen extends Component {
 
     // --- apply ----------------------------------------------------------------
 
-    async apply() {
+    /**
+     * Apply the counted lines. Should the stock of a counted product have
+     * changed since the screen showed it, the server applies nothing and says
+     * so: the operator is asked whether to apply anyway, and `confirmed` is
+     * the count that answer was about -- it is only forced while the counted
+     * lines are still exactly those.
+     *
+     * @param {Boolean} force apply over the stock changes
+     * @param {String} [confirmed] the count the operator confirmed
+     */
+    async apply(force = false, confirmed = null) {
+        if (this.state.applying) {
+            return;
+        }
         const counted = this.countedLines;
         if (!counted.length) {
             this.inventory.notify(_t("Count at least one product before applying."), {
@@ -389,20 +481,44 @@ export class InventoryCountScreen extends Component {
             );
             return;
         }
+        const notNumber = counted.find((l) => !Number.isFinite(Number(l.counted)));
+        if (notNumber) {
+            this.inventory.notify(
+                _t("The counted quantity for %(name)s is not a number.", {
+                    name: notNumber.product_name,
+                }),
+                {type: "warning"}
+            );
+            return;
+        }
+        const payload = counted.map((l) => ({
+            product_id: l.product_id,
+            lot_name: l.lot_name || "",
+            counted_qty: Number(l.counted),
+            theoretical_qty: l.theoretical_qty,
+        }));
+        // What the operator counted, without the stock shown next to it: the
+        // stock changes the warning is about update that.
+        const signature = JSON.stringify(
+            payload.map(({product_id, lot_name, counted_qty}) => [
+                product_id,
+                lot_name,
+                counted_qty,
+            ])
+        );
         this.state.applying = true;
         try {
             const result = await this.inventory.call(
                 "stock.inventory",
                 "action_barcode_apply_count",
-                [
-                    this.state.locationId,
-                    counted.map((l) => ({
-                        product_id: l.product_id,
-                        lot_name: l.lot_name || "",
-                        counted_qty: parseFloat(l.counted) || 0,
-                    })),
-                ]
+                [this.state.locationId, payload],
+                {force: force && confirmed === signature}
             );
+            if (!result.done) {
+                this.state.applying = false;
+                this.showStockChanges(result.changed || [], signature);
+                return;
+            }
             this.inventory.notify(
                 _t("Inventory adjusted: %(n)s product(s).", {n: result.adjusted}),
                 {type: "success"}
@@ -412,6 +528,54 @@ export class InventoryCountScreen extends Component {
             // The API wrapper already surfaced the server error to the operator.
             this.state.applying = false;
         }
+    }
+
+    /**
+     * The stock of some counted products changed since the screen showed it:
+     * show the stock as it is now on their lines, and ask whether to apply the
+     * count all the same, as the back office does with outdated counts.
+     *
+     * @param {Object[]} changed the products and lots whose stock changed
+     * @param {String} signature the count the question is about
+     */
+    showStockChanges(changed, signature) {
+        for (const change of changed) {
+            for (const line of this.state.lines) {
+                if (
+                    line.product_id === change.product_id &&
+                    (line.lot_name || "") === (change.lot_name || "")
+                ) {
+                    line.theoretical_qty = change.now;
+                }
+            }
+        }
+        const rows = changed.map((c) => {
+            // Built apart from the _t() call: a template literal among its
+            // arguments hides the message from Odoo's translation extractor.
+            const what = c.lot_name
+                ? c.product_name + " (" + c.lot_name + ")"
+                : c.product_name;
+            return _t("• %(what)s: %(shown)s %(uom)s when counting, %(now)s now", {
+                what,
+                shown: this.formatQty(c.shown),
+                now: this.formatQty(c.now),
+                uom: c.uom,
+            });
+        });
+        this.inventory.openDialog(ConfirmationDialog, {
+            title: _t("Stock changed"),
+            body: [
+                _t("The stock changed here while you counted:"),
+                ...rows,
+                "",
+                _t(
+                    "Your counted quantities will be set all the same. Apply the count?"
+                ),
+            ].join("\n"),
+            confirmLabel: _t("Apply anyway"),
+            confirm: () => this.apply(true, signature),
+            cancel: () => undefined,
+        });
     }
 
     goBack() {
