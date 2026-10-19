@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillUpdateProps, useState} from "@odoo/owl";
 
 export class ImageViewer extends Component {

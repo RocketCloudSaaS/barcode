@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
@@ -68,7 +70,7 @@ export class ProductSelectorScreen extends Component {
     }
 
     async loadProducts() {
-        const domain = [["type", "=", "consu"]];
+        const domain = [["type", "in", ["product", "consu"]]];
         // `bin_size` keeps the images themselves off the wire -- see
         // recordImageUrl.
         let products = await this.inventory.searchRead(

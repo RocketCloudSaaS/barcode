@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
 import {barcodeScanHandlers} from "@barcode_scanner/js/registries.esm";
 

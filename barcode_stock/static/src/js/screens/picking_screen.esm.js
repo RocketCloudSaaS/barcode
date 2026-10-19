@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";

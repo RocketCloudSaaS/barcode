@@ -13,7 +13,7 @@ class TestBarcodeScannerInventory(TransactionCase):
         cls.product_lot = cls.env["product.product"].create(
             {
                 "name": "Lot Product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "lot",
             }
         )
@@ -34,7 +34,7 @@ class TestBarcodeScannerInventory(TransactionCase):
         product = self.env["product.product"].create(
             {
                 "name": "Non-Tracked Product",
-                "is_storable": True,
+                "type": "product",
             }
         )
         self.env["stock.quant"]._update_available_quantity(
@@ -62,7 +62,7 @@ class TestBarcodeScannerInventory(TransactionCase):
 
     def test_apply_inventory_from_scanner_applies(self):
         product = self.env["product.product"].create(
-            {"name": "Scanner Inv Product", "is_storable": True}
+            {"name": "Scanner Inv Product", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(
             product, self.stock_location, 3

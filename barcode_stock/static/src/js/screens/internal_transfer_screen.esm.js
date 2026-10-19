@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
 import {
     barcodeMatchAnyDomain,

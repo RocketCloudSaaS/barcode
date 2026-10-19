@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 /**
  * A move belongs to the "To Do" list while the picked quantity has not caught
  * up with what the picking reserved; from then on only the "Done" tab renders

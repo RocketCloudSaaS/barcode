@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component} from "@odoo/owl";
 import {PickingDoneCard} from "./picking_done_card.esm";
 

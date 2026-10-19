@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Logistics",
     "summary": "Warehouse operations (receipts, deliveries, internal transfers) "
     "for the Barcode suite",
@@ -43,7 +43,7 @@
             "barcode_stock/static/src/js/handlers/stock_scan_handlers.esm.js",
             "barcode_stock/static/src/js/tiles/stock_menu_tiles.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_stock/static/tests/**/*",
         ],
     },

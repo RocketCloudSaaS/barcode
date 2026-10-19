@@ -1668,7 +1668,7 @@
                                             />
                                             <t
                                                 t-set="typeLabel"
-                                                t-value="state.resultDetails.is_storable ? 'Storable Product' : (state.resultDetails.type === 'service' ? 'Service' : state.resultDetails.type === 'combo' ? 'Combo' : 'Consumable')"
+                                                t-value="state.resultDetails.type === 'product' ? 'Storable Product' : (state.resultDetails.type === 'service' ? 'Service' : 'Consumable')"
                                             />
                                             <t
                                                 t-esc="trackingLabels[state.resultDetails.tracking] || state.resultDetails.tracking"

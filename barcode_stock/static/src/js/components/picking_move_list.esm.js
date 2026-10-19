@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component} from "@odoo/owl";
 import {PickingMoveCard} from "./picking_move_card.esm";
 import {isMovePending} from "@barcode_stock/js/utils/move_progress.esm";

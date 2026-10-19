@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMenuTiles} from "@barcode_scanner/js/registries.esm";
 

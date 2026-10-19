@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {
     barcodeMatchAnyDomain,
@@ -66,7 +68,6 @@ export class QuickInfoScreen extends Component {
                     "list_price",
                     "tracking",
                     "type",
-                    "is_storable",
                     "qty_available",
                     "uom_id",
                 ]

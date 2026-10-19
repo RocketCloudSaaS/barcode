@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     Component,
     onWillStart,
@@ -8,11 +10,10 @@ import {
 import {_t} from "@web/core/l10n/translation";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {deserializeDateTime} from "@web/core/l10n/dates";
-import {scanBarcode} from "@web/core/barcode/barcode_dialog";
+import {scanBarcode} from "@web/webclient/barcode/barcode_scanner";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
 
 const GROUP_ORDER = ["date", "state"];
 const FILTER_ORDER = ["state", "date"];
@@ -44,6 +45,7 @@ export class PickingListScreen extends Component {
         this.inventory = useBarcodeScanner();
         this.store = useService("barcodeStore");
         this.feedback = useService("barcodeScannerFeedback");
+        this.userService = useService("user");
         this.state = useState({
             pickings: [],
             moveStatsByPickingId: {},
@@ -794,7 +796,7 @@ export class PickingListScreen extends Component {
         try {
             const [record] = await this.inventory.read(
                 "res.users",
-                [user.userId],
+                [this.userService.userId],
                 ["barcode_default_filters"]
             );
             stored = record?.barcode_default_filters || {};
@@ -903,7 +905,7 @@ export class PickingListScreen extends Component {
     }
 
     async persistDefaultFilters() {
-        await this.inventory.write("res.users", [user.userId], {
+        await this.inventory.write("res.users", [this.userService.userId], {
             barcode_default_filters: this.allDefaults,
         });
     }

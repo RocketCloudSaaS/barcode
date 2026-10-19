@@ -1,10 +1,11 @@
+/** @odoo-module **/
+
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
 
 export class MoveWizardScreen extends Component {
     setup() {
@@ -13,6 +14,7 @@ export class MoveWizardScreen extends Component {
         this.barcodeScannerState = useService("barcodeScannerState");
         this.barcodeScannerSync = useService("barcodeScannerSync");
         this.feedback = useService("barcodeScannerFeedback");
+        this.userService = useService("user");
         this.onLotChange = this.onLotChange.bind(this);
         this.setMode = this.setMode.bind(this);
         this.confirmPick = this.confirmPick.bind(this);
@@ -54,6 +56,9 @@ export class MoveWizardScreen extends Component {
         });
 
         onWillStart(async () => {
+            this.hasLotGroup = await this.userService.hasGroup(
+                "stock.group_production_lot"
+            );
             await this.loadData();
         });
 
@@ -192,10 +197,6 @@ export class MoveWizardScreen extends Component {
 
     get isTracked() {
         return this.state.tracking !== "none";
-    }
-
-    get hasLotGroup() {
-        return user.hasGroup("stock.group_production_lot");
     }
 
     get isSerial() {

@@ -1,4 +1,5 @@
-import {describe, expect, test} from "@odoo/hoot";
+/** @odoo-module **/
+
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 
 /**
@@ -36,26 +37,32 @@ function ormSpy(lotFields) {
     };
 }
 
-describe("BarcodeStock", () => {
-    test("preloading a picking stays within a stock operator's rights", async () => {
-        const {orm, touched} = ormSpy({
-            expiration_date: {type: "date"},
-            removal_date: {type: "date"},
-        });
-        const state = new BarcodeScannerState(orm);
-        await state.preloadPicking(1);
+QUnit.module("BarcodeStock", () => {
+    QUnit.test(
+        "preloading a picking stays within a stock operator's rights",
+        async (assert) => {
+            const {orm, touched} = ormSpy({
+                expiration_date: {type: "date"},
+                removal_date: {type: "date"},
+            });
+            const state = new BarcodeScannerState(orm);
+            await state.preloadPicking(1);
 
-        // Reading ir.module.module takes Administration rights, which the
-        // operator scanning a receipt has no reason to hold.
-        expect(touched.includes("ir.module.module")).toBe(false);
-        expect(touched.includes("stock.lot.fields_get")).toBe(true);
-        expect(state.hasProductExpiry).toBe(true);
-    });
+            // Reading ir.module.module takes Administration rights, which the
+            // operator scanning a receipt has no reason to hold.
+            assert.notOk(touched.includes("ir.module.module"));
+            assert.ok(touched.includes("stock.lot.fields_get"));
+            assert.ok(state.hasProductExpiry);
+        }
+    );
 
-    test("expiry handling stays off when the lot has no expiry fields", async () => {
-        const {orm} = ormSpy({});
-        const state = new BarcodeScannerState(orm);
-        await state.preloadPicking(1);
-        expect(state.hasProductExpiry).toBe(false);
-    });
+    QUnit.test(
+        "expiry handling stays off when the lot has no expiry fields",
+        async (assert) => {
+            const {orm} = ormSpy({});
+            const state = new BarcodeScannerState(orm);
+            await state.preloadPicking(1);
+            assert.notOk(state.hasProductExpiry);
+        }
+    );
 });

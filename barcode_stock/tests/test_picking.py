@@ -32,14 +32,14 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         cls.tracked_product = cls.env["product.product"].create(
             {
                 "name": "Tracked Internal Product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "lot",
             }
         )
         cls.untracked_product = cls.env["product.product"].create(
             {
                 "name": "Untracked Internal Product",
-                "is_storable": True,
+                "type": "product",
             }
         )
         cls.lot = cls.env["stock.lot"].create(
@@ -226,7 +226,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
 
     def test_internal_transfer_raises_when_no_stock(self):
         empty_product = self.env["product.product"].create(
-            {"name": "No Stock Product", "is_storable": True}
+            {"name": "No Stock Product", "type": "product"}
         )
         with self.assertRaises(UserError):
             self.env["stock.picking"].action_barcode_scanner_internal_transfer(
@@ -279,7 +279,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             }
         )
         product = self.env["product.product"].create(
-            {"name": "Child Loc Product", "is_storable": True}
+            {"name": "Child Loc Product", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(product, child_a, 10)
         self.env["stock.quant"]._update_available_quantity(product, child_b, 15)
@@ -406,7 +406,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
         serial_product = self.env["product.product"].create(
             {
                 "name": "Serial Internal Product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "serial",
             }
         )
@@ -500,7 +500,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             }
         )
         product = self.env["product.product"].create(
-            {"name": "Stop Product", "is_storable": True}
+            {"name": "Stop Product", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(product, child_a, 10)
         self.env["stock.quant"]._update_available_quantity(product, child_b, 10)
@@ -540,7 +540,7 @@ class TestBarcodeScannerInternalTransfer(TransactionCase):
             }
         )
         product = self.env["product.product"].create(
-            {"name": "Reserved Product", "is_storable": True}
+            {"name": "Reserved Product", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(product, child_a, 5)
         self.env["stock.quant"]._update_available_quantity(product, child_b, 5)
@@ -587,7 +587,7 @@ class TestStockMoveQtyProgress(TransactionCase):
         cls.product = cls.env["product.product"].create(
             {
                 "name": "Test Product",
-                "is_storable": True,
+                "type": "product",
             }
         )
         cls.env["stock.quant"]._update_available_quantity(
@@ -695,7 +695,7 @@ class TestStockMoveLine(TransactionCase):
         cls.product_serial = cls.env["product.product"].create(
             {
                 "name": "Serial Product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "serial",
             }
         )

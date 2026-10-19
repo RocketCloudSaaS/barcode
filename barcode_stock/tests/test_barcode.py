@@ -26,7 +26,7 @@ class TestBarcodeScannerEAN13(TransactionCase):
         cls.product = cls.env["product.product"].create(
             {
                 "name": "Test EAN13 Product",
-                "is_storable": True,
+                "type": "product",
                 "barcode": "5901234123457",
             }
         )
