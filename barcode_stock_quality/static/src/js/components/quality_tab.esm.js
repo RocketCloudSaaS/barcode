@@ -1,11 +1,15 @@
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
+import {user} from "@web/core/user";
 
 /**
  * Quality tab of a reception: lists the quality inspections that the reception
  * generated (via quality_control_stock_oca), lets the operator answer each one
  * and, when a check does not pass, attach a photo as evidence.
+ *
+ * Inspections are Quality Control users' business, as in the back office: any
+ * other operator is told so in the tab.
  */
 export class QualityTab extends Component {
     setup() {
@@ -15,11 +19,21 @@ export class QualityTab extends Component {
             answers: {},
             loading: true,
             busyId: null,
+            canInspect: true,
         });
 
-        onWillStart(async () => {
+        onWillStart(() => this.loadTab());
+    }
+
+    async loadTab() {
+        this.state.canInspect = await user.hasGroup(
+            "quality_control_oca.group_quality_control_user"
+        );
+        if (this.state.canInspect) {
             await this.loadInspections();
-        });
+        } else {
+            this.state.loading = false;
+        }
     }
 
     async loadInspections() {
@@ -31,8 +45,8 @@ export class QualityTab extends Component {
                 [this.props.pickingId]
             );
             this.state.inspections = result.inspections;
-        } catch (error) {
-            this.notifyError(error, _t("Could not load the inspections."));
+        } catch {
+            // The API wrapper already told the operator what went wrong.
         } finally {
             this.state.loading = false;
         }
@@ -53,11 +67,15 @@ export class QualityTab extends Component {
     }
 
     onQuantitative(inspection, line, ev) {
-        const value = parseFloat(ev.target.value);
-        this.answersFor(inspection)[line.id] = {
-            line_id: line.id,
-            quantitative_value: isNaN(value) ? 0 : value,
-        };
+        // A measure left blank is no answer, not a 0 to be judged.
+        const text = ev.target.value.trim();
+        const value = Number(text);
+        const answers = this.answersFor(inspection);
+        if (text === "" || !Number.isFinite(value)) {
+            delete answers[line.id];
+            return;
+        }
+        answers[line.id] = {line_id: line.id, quantitative_value: value};
     }
 
     isChosen(inspection, line, valueId) {
@@ -85,7 +103,7 @@ export class QualityTab extends Component {
             if (line.question_type === "qualitative") {
                 return Boolean(answer?.qualitative_value_id);
             }
-            return answer && answer.quantitative_value !== undefined;
+            return Number.isFinite(answer?.quantitative_value);
         });
     }
 
@@ -110,8 +128,8 @@ export class QualityTab extends Component {
                       }),
                 {type: updated.success ? "success" : "warning"}
             );
-        } catch (error) {
-            this.notifyError(error, _t("Could not submit the inspection."));
+        } catch {
+            // The API wrapper already told the operator what went wrong.
         } finally {
             this.state.busyId = null;
         }
@@ -140,8 +158,8 @@ export class QualityTab extends Component {
                 }),
                 {type: "info"}
             );
-        } catch (error) {
-            this.notifyError(error, _t("Could not reset the inspection."));
+        } catch {
+            // The API wrapper already told the operator what went wrong.
         } finally {
             this.state.busyId = null;
         }
@@ -150,12 +168,20 @@ export class QualityTab extends Component {
     async onPhotoSelected(inspection, ev) {
         const file = ev.target.files && ev.target.files[0];
         ev.target.value = "";
-        if (!file) {
+        if (!file || this.state.busyId) {
             return;
         }
         this.state.busyId = inspection.inspection_id;
         try {
-            const photo = await this.readPhoto(file);
+            let photo = null;
+            try {
+                photo = await this.readPhoto(file);
+            } catch {
+                this.inventory.notify(_t("The photo could not be read."), {
+                    type: "danger",
+                });
+                return;
+            }
             const result = await this.inventory.call(
                 "qc.inspection",
                 "action_barcode_scanner_attach_photo",
@@ -163,8 +189,8 @@ export class QualityTab extends Component {
             );
             inspection.photo_count = result.photo_count;
             this.inventory.notify(_t("Photo attached."), {type: "success"});
-        } catch (error) {
-            this.notifyError(error, _t("Could not attach the photo."));
+        } catch {
+            // The API wrapper already told the operator what went wrong.
         } finally {
             this.state.busyId = null;
         }
@@ -226,11 +252,6 @@ export class QualityTab extends Component {
                 photo_count: this.state.inspections[index].photo_count,
             };
         }
-    }
-
-    notifyError(error, fallback) {
-        const message = error?.data?.message || error?.message || fallback;
-        this.inventory.notify(message, {type: "danger"});
     }
 }
 

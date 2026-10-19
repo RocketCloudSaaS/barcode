@@ -19,6 +19,9 @@
             "barcode_stock_quality/static/src/js/components/quality_tab.esm.js",
             "barcode_stock_quality/static/src/js/patches/picking_screen_patch.esm.js",
         ],
+        "web.assets_unit_tests": [
+            "barcode_stock_quality/static/tests/**/*",
+        ],
     },
     "installable": True,
     "application": False,

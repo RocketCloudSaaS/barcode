@@ -33,7 +33,12 @@
 
     <t t-name="barcode_stock_quality.QualityTab">
         <div class="ilx-quality-tab">
-            <t t-if="state.loading">
+            <t t-if="!state.canInspect">
+                <div class="ilx-quality-empty">
+                    Only Quality Control users can run the inspections.
+                </div>
+            </t>
+            <t t-elif="state.loading">
                 <div class="ilx-quality-empty">Loading inspections…</div>
             </t>
             <t t-elif="!state.inspections.length">
