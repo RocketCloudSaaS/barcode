@@ -5,13 +5,22 @@ import base64
 import binascii
 import math
 
-from odoo import api, models
+from odoo import api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 
 
 class QcInspection(models.Model):
     _inherit = "qc.inspection"
+
+    barcode_scanner_confirmed = fields.Boolean(
+        string="Confirmed from the scanner",
+        copy=False,
+        readonly=True,
+        help="Confirmed from the Barcode app: the operator may put it back to "
+        "draft from there while no supervisor has decided it and the reception "
+        "is still open.",
+    )
 
     def _barcode_scanner_read_lines(self):
         """Serialise an inspection's questions for the scanner UI."""
@@ -27,6 +36,7 @@ class QcInspection(models.Model):
                     "min_value": line.min_value,
                     "max_value": line.max_value,
                     "uom_name": line.test_uom_id.display_name or "",
+                    "qualitative_value_id": line.qualitative_value.id,
                     "qualitative_value_name": line.qualitative_value.name or "",
                     "quantitative_value": line.quantitative_value,
                     "success": line.success,
@@ -48,9 +58,23 @@ class QcInspection(models.Model):
             "test_name": self.test.display_name or "",
             "state": self.state,
             "success": self.success,
+            "can_reset": self._barcode_scanner_can_reset(),
             "photo_count": self._barcode_scanner_photo_count(),
             "lines": self._barcode_scanner_read_lines(),
         }
+
+    def _barcode_scanner_can_reset(self):
+        """Whether the scanner may put the inspection back to draft: only one
+        it confirmed itself, that no supervisor has decided yet (a ``failed``
+        inspection is a supervisor's rejection), on a reception still open.
+        The back office does not reopen confirmed inspections; the scanner only
+        lets the operator correct their own confirmation."""
+        self.ensure_one()
+        return (
+            self.barcode_scanner_confirmed
+            and self.state in ("success", "waiting")
+            and self.picking_id.state not in ("done", "cancel")
+        )
 
     def _barcode_scanner_photo_count(self):
         self.ensure_one()
@@ -119,28 +143,31 @@ class QcInspection(models.Model):
         for line in inspection.inspection_lines:
             inspection._barcode_scanner_answer(line, answers_by_line.get(line.id))
         inspection.action_confirm()
+        inspection.barcode_scanner_confirmed = True
         return inspection._barcode_scanner_read()
 
     @api.model
     def action_barcode_scanner_reset(self, inspection_id):
-        """Put an inspection the operator confirmed back to draft, so it can be
-        answered again: a passed one, or a failed one still waiting for a
-        supervisor. One a supervisor has rejected (``failed``) is their
-        decision, and is not reopened from the scanner.
+        """Put back to draft an inspection the operator confirmed from the
+        scanner, to correct it (see ``_barcode_scanner_can_reset``).
 
-        Draft, then mark todo in one step: a draft inspection is not runnable
-        from the scanner, so it is left ``ready``.
+        Its answers are kept, and the scanner shows them filled in: the
+        operator changes what was wrong and confirms again. Draft, then mark
+        todo in one step: a draft inspection is not runnable from the scanner,
+        so it is left ``ready``.
         """
         inspection = self._barcode_scanner_inspection(inspection_id)
-        if inspection.state not in ("success", "waiting"):
+        if not inspection._barcode_scanner_can_reset():
             raise UserError(
                 self.env._(
-                    "Only an inspection confirmed from here and not yet decided by "
-                    "a supervisor can be put back to draft."
+                    "Only an inspection confirmed from the scanner, not yet "
+                    "decided by a supervisor, on a reception still open, can be "
+                    "put back to draft here."
                 )
             )
         inspection.action_draft()
         inspection.action_todo()
+        inspection.barcode_scanner_confirmed = False
         return inspection._barcode_scanner_read()
 
     @api.model

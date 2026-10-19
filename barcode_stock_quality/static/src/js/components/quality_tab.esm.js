@@ -10,13 +10,17 @@ import {user} from "@web/core/user";
  *
  * Inspections are Quality Control users' business, as in the back office: any
  * other operator is told so in the tab.
+ *
+ * The answers not confirmed yet are kept by the reception screen (`answers`),
+ * which lives on while the operator looks at another tab: leaving the Quality
+ * tab, which unmounts it, loses none of them.
  */
 export class QualityTab extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
+        this.answers = useState(this.props.answers || {});
         this.state = useState({
             inspections: [],
-            answers: {},
             loading: true,
             busyId: null,
             canInspect: true,
@@ -53,10 +57,10 @@ export class QualityTab extends Component {
     }
 
     answersFor(inspection) {
-        if (!this.state.answers[inspection.inspection_id]) {
-            this.state.answers[inspection.inspection_id] = {};
+        if (!this.answers[inspection.inspection_id]) {
+            this.answers[inspection.inspection_id] = {};
         }
-        return this.state.answers[inspection.inspection_id];
+        return this.answers[inspection.inspection_id];
     }
 
     setQualitative(inspection, line, valueId) {
@@ -76,6 +80,17 @@ export class QualityTab extends Component {
             return;
         }
         answers[line.id] = {line_id: line.id, quantitative_value: value};
+    }
+
+    /**
+     * The measure an input shows: the one typed, or none.
+     *
+     * @param {Object} inspection the inspection
+     * @param {Object} line its quantitative question
+     * @returns {Number|String} the measure, or an empty string
+     */
+    measureOf(inspection, line) {
+        return this.answersFor(inspection)[line.id]?.quantitative_value ?? "";
     }
 
     isChosen(inspection, line, valueId) {
@@ -119,6 +134,7 @@ export class QualityTab extends Component {
                 "action_barcode_scanner_submit",
                 [inspection.inspection_id, answers]
             );
+            delete this.answers[inspection.inspection_id];
             this.replaceInspection(updated);
             this.inventory.notify(
                 updated.success
@@ -139,9 +155,36 @@ export class QualityTab extends Component {
         return ["success", "waiting", "failed"].includes(inspection.state);
     }
 
-    // A rejection by a supervisor (failed) is theirs: it is not reopened here.
+    // The server says which ones the scanner may reopen: those it confirmed,
+    // no supervisor has decided and whose reception is still open.
     canReset(inspection) {
-        return ["success", "waiting"].includes(inspection.state);
+        return Boolean(inspection.can_reset);
+    }
+
+    /**
+     * Fill the answers in from an inspection's questions: back to draft keeps
+     * them, for the operator to correct what was wrong.
+     *
+     * @param {Object} inspection the inspection as the server returned it
+     */
+    seedAnswers(inspection) {
+        const answers = {};
+        for (const line of inspection.lines) {
+            if (line.question_type === "qualitative") {
+                if (line.qualitative_value_id) {
+                    answers[line.id] = {
+                        line_id: line.id,
+                        qualitative_value_id: line.qualitative_value_id,
+                    };
+                }
+            } else {
+                answers[line.id] = {
+                    line_id: line.id,
+                    quantitative_value: line.quantitative_value,
+                };
+            }
+        }
+        this.answers[inspection.inspection_id] = answers;
     }
 
     async reset(inspection) {
@@ -155,7 +198,7 @@ export class QualityTab extends Component {
                 "action_barcode_scanner_reset",
                 [inspection.inspection_id]
             );
-            delete this.state.answers[inspection.inspection_id];
+            this.seedAnswers(updated);
             this.replaceInspection(updated);
             this.inventory.notify(
                 _t("Inspection %(name)s is back to draft.", {
@@ -263,4 +306,5 @@ export class QualityTab extends Component {
 QualityTab.template = "barcode_stock_quality.QualityTab";
 QualityTab.props = {
     pickingId: {type: [Number, {value: false}]},
+    answers: {type: Object, optional: true},
 };

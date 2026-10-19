@@ -10,3 +10,12 @@ import {patch} from "@web/core/utils/patch";
 patch(PickingScreen, {
     components: {...PickingScreen.components, QualityTab},
 });
+
+patch(PickingScreen.prototype, {
+    setup() {
+        super.setup(...arguments);
+        // The Quality tab's answers not confirmed yet: kept here, where they
+        // outlive the tab when the operator switches to another one.
+        this.qualityAnswers = {};
+    },
+});

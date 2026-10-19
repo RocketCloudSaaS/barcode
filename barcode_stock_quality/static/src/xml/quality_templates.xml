@@ -26,7 +26,7 @@
         </xpath>
         <xpath expr="//div[hasclass('ilx-kw-main-spacer')]" position="before">
             <t t-if="state.activeTab === 'quality'">
-                <QualityTab pickingId="state.picking.id" />
+                <QualityTab pickingId="state.picking.id" answers="qualityAnswers" />
             </t>
         </xpath>
     </t>
@@ -112,6 +112,7 @@
                                     type="number"
                                     step="any"
                                     class="ilx-quality-measure-input"
+                                    t-att-value="measureOf(inspection, line)"
                                     t-on-input="(ev) => this.onQuantitative(inspection, line, ev)"
                                 />
                                 <span

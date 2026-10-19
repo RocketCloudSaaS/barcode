@@ -118,10 +118,12 @@ class TestBarcodeStockQuality(TransactionCase):
         )
         data = result["inspections"][0]
         self.assertEqual(data["state"], "ready")
+        self.assertFalse(data["can_reset"])
         self.assertEqual(data["test_name"], "Reception check")
         self.assertEqual(data["photo_count"], 0)
         qualitative, quantitative = data["lines"]
         self.assertEqual(qualitative["question_type"], "qualitative")
+        self.assertFalse(qualitative["qualitative_value_id"])
         self.assertEqual(
             [value["name"] for value in qualitative["possible_values"]], ["Yes", "No"]
         )
@@ -194,11 +196,19 @@ class TestBarcodeStockQuality(TransactionCase):
     def test_reset_a_confirmed_inspection(self):
         with self.assertRaises(UserError):
             self.Inspection.action_barcode_scanner_reset(self.inspection.id)
-        self.Inspection.action_barcode_scanner_submit(
+        result = self.Inspection.action_barcode_scanner_submit(
             self.inspection.id, self._answers(self.yes, 1)
         )
+        self.assertTrue(result["can_reset"])
+        self.assertTrue(self.inspection.barcode_scanner_confirmed)
         result = self.Inspection.action_barcode_scanner_reset(self.inspection.id)
         self.assertEqual(result["state"], "ready")
+        self.assertFalse(result["can_reset"])
+        self.assertFalse(self.inspection.barcode_scanner_confirmed)
+        # The answers are kept, for the operator to correct them.
+        qualitative, quantitative = result["lines"]
+        self.assertEqual(qualitative["qualitative_value_id"], self.yes.id)
+        self.assertEqual(quantitative["quantitative_value"], 1)
         # Failed and waiting for a supervisor: still the operator's to redo.
         self.Inspection.action_barcode_scanner_submit(
             self.inspection.id, self._answers(self.no, 1)
@@ -216,6 +226,26 @@ class TestBarcodeStockQuality(TransactionCase):
         with self.assertRaises(UserError):
             self.Inspection.action_barcode_scanner_reset(self.inspection.id)
         self.assertEqual(self.inspection.state, "failed")
+
+    def test_back_office_confirmations_are_not_reopened(self):
+        qualitative, quantitative = self.inspection.inspection_lines
+        qualitative.qualitative_value = self.yes
+        quantitative.quantitative_value = 1
+        self.inspection.action_confirm()
+        self.assertEqual(self.inspection.state, "success")
+        data = self.inspection._barcode_scanner_read()
+        self.assertFalse(data["can_reset"])
+        with self.assertRaises(UserError):
+            self.Inspection.action_barcode_scanner_reset(self.inspection.id)
+
+    def test_closed_receptions_are_not_reopened(self):
+        self.Inspection.action_barcode_scanner_submit(
+            self.inspection.id, self._answers(self.yes, 1)
+        )
+        self.picking.action_cancel()
+        self.assertFalse(self.inspection._barcode_scanner_read()["can_reset"])
+        with self.assertRaises(UserError):
+            self.Inspection.action_barcode_scanner_reset(self.inspection.id)
 
     # --- photos ---------------------------------------------------------------
 

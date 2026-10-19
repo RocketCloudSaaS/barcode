@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-19 10:48+0000\n"
-"PO-Revision-Date: 2026-10-19 10:48+0000\n"
+"POT-Creation-Date: 2026-10-19 11:18+0000\n"
+"PO-Revision-Date: 2026-10-19 11:18+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -37,6 +37,18 @@ msgstr ""
 #. odoo-javascript
 #: code:addons/barcode_stock_quality/static/src/xml/quality_templates.xml:0
 msgid "Confirm inspection"
+msgstr ""
+
+#. module: barcode_stock_quality
+#: model:ir.model.fields,help:barcode_stock_quality.field_qc_inspection__barcode_scanner_confirmed
+msgid ""
+"Confirmed from the Barcode app: the operator may put it back to draft from "
+"there while no supervisor has decided it and the reception is still open."
+msgstr ""
+
+#. module: barcode_stock_quality
+#: model:ir.model.fields,field_description:barcode_stock_quality.field_qc_inspection__barcode_scanner_confirmed
+msgid "Confirmed from the scanner"
 msgstr ""
 
 #. module: barcode_stock_quality
@@ -97,8 +109,8 @@ msgstr ""
 #. odoo-python
 #: code:addons/barcode_stock_quality/models/qc_inspection.py:0
 msgid ""
-"Only an inspection confirmed from here and not yet decided by a supervisor "
-"can be put back to draft."
+"Only an inspection confirmed from the scanner, not yet decided by a "
+"supervisor, on a reception still open, can be put back to draft here."
 msgstr ""
 
 #. module: barcode_stock_quality

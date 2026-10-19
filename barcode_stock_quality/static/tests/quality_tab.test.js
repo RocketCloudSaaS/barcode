@@ -38,19 +38,21 @@ function inspection(values = {}) {
 /**
  * A Quality tab without mounting it. What it tells the operator lands in
  * `notes` and what it asks the server in `calls`, answered with `answer` (or
- * failing when it is an Error).
+ * failing when it is an Error). Its answers live in `answers`, as the
+ * reception screen keeps them.
  *
- * @param {Object} [options] the inspections shown and the server's answer
+ * @param {Object} [options] the inspections shown, the server's answer and
+ *   the answers kept so far
  * @returns {Object} the tab and what its fakes recorded
  */
-function qualityTab({inspections = [inspection()], answer = {}} = {}) {
+function qualityTab({inspections = [inspection()], answer = {}, answers = {}} = {}) {
     const tab = Object.create(QualityTab.prototype);
     const notes = [];
     const calls = [];
-    tab.props = {pickingId: 5};
+    tab.props = {pickingId: 5, answers};
+    tab.answers = answers;
     tab.state = {
         inspections,
-        answers: {},
         loading: false,
         busyId: null,
         canInspect: true,
@@ -154,6 +156,8 @@ describe("BarcodeStockQuality", () => {
             {message: "Inspection QC/0007 passed.", type: "success"},
         ]);
         expect(tab.state.busyId).toBe(null);
+        // Confirmed, its answers are kept no more.
+        expect(tab.answers[7]).toBe(undefined);
     });
 
     test("a failed inspection is said so", async () => {
@@ -192,24 +196,48 @@ describe("BarcodeStockQuality", () => {
         expect(notes).toEqual([]);
     });
 
-    test("back to draft forgets the answers given", async () => {
-        const {tab, calls, notes} = qualityTab({answer: inspection()});
+    test("back to draft shows the answers given, to correct them", async () => {
+        const reopened = inspection({
+            lines: [
+                {...QUALITATIVE, qualitative_value_id: 12},
+                {...QUANTITATIVE, quantitative_value: 7.5},
+            ],
+        });
+        const {tab, calls, notes} = qualityTab({answer: reopened});
         const current = tab.state.inspections[0];
         current.state = "success";
-        tab.setQualitative(current, QUALITATIVE, 11);
+        current.can_reset = true;
         expect(tab.canReset(current)).toBe(true);
         expect(tab.isEditable(current)).toBe(false);
-        // A rejection by a supervisor is shown, not reopened.
-        const rejected = inspection({state: "failed"});
+        // Which ones may be reopened is the server's call: a rejection by a
+        // supervisor is shown, not reopened.
+        const rejected = inspection({state: "failed", can_reset: false});
         expect(tab.isConfirmed(rejected)).toBe(true);
         expect(tab.canReset(rejected)).toBe(false);
         await tab.reset(current);
         expect(calls[0].method).toBe("action_barcode_scanner_reset");
-        expect(tab.state.answers[7]).toBe(undefined);
-        expect(tab.state.inspections[0].state).toBe("ready");
+        const shown = tab.state.inspections[0];
+        expect(shown.state).toBe("ready");
+        expect(tab.isChosen(shown, QUALITATIVE, 12)).toBe(true);
+        expect(tab.measureOf(shown, QUANTITATIVE)).toBe(7.5);
+        expect(tab.allAnswered(shown)).toBe(true);
         expect(notes).toEqual([
             {message: "Inspection QC/0007 is back to draft.", type: "info"},
         ]);
+    });
+
+    test("the answers outlive the tab: leaving it loses none", () => {
+        const kept = {};
+        const first = qualityTab({answers: kept}).tab;
+        const current = first.state.inspections[0];
+        first.setQualitative(current, QUALITATIVE, 11);
+        first.onQuantitative(current, QUANTITATIVE, {target: {value: "4"}});
+        // The operator looks at another tab, then comes back to a new one.
+        const second = qualityTab({answers: kept}).tab;
+        const again = second.state.inspections[0];
+        expect(second.isChosen(again, QUALITATIVE, 11)).toBe(true);
+        expect(second.measureOf(again, QUANTITATIVE)).toBe(4);
+        expect(second.measureOf(again, {...QUANTITATIVE, id: 99})).toBe("");
     });
 
     test("a confirmed answer reads with its unit", () => {
@@ -277,8 +305,9 @@ describe("BarcodeStockQuality", () => {
         const html = getTemplate("barcode_scanner.PickingScreen").outerHTML;
         expect(html).toInclude("QualityTab");
         expect(html).toInclude("this.setTab('quality')");
-        expect(getTemplate("barcode_stock_quality.QualityTab").outerHTML).toInclude(
-            "state.canInspect"
-        );
+        expect(html).toInclude('answers="qualityAnswers"');
+        const tabHtml = getTemplate("barcode_stock_quality.QualityTab").outerHTML;
+        expect(tabHtml).toInclude("state.canInspect");
+        expect(tabHtml).toInclude("measureOf(inspection, line)");
     });
 });

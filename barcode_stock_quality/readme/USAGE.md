@@ -10,7 +10,11 @@
 4.  Every question needs its answer; a measure left blank is not taken as 0.
     When an inspection does not pass, tap *Attach photo evidence* to add a
     photo to it (only images are taken).
-5.  A confirmed inspection shows its answers read-only. If it was confirmed by
-    mistake, tap *Back to draft* to reopen it and answer it again — unless a
-    supervisor has already rejected it (*Failed*): that decision is theirs,
-    and is not reopened from the scanner.
+5.  Answers not confirmed yet are kept while you look at another tab of the
+    reception.
+6.  A confirmed inspection shows its answers read-only. If you confirmed it by
+    mistake from the scanner, tap *Back to draft*: it reopens with its
+    answers filled in, to correct what was wrong and confirm again. This is
+    only offered while no supervisor has decided it — a rejection (*Failed*)
+    is theirs — and the reception is still open; an inspection confirmed in
+    the back office is not reopened from the scanner.
