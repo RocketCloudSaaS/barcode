@@ -1,5 +1,7 @@
-import {patch} from "@web/core/utils/patch";
+/** @odoo-module **/
+
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
+import {patch} from "@web/core/utils/patch";
 
 /**
  * Recognize every barcode a product carries in the warehouse app.
@@ -27,7 +29,7 @@ patch(BarcodeScannerState.prototype, {
      * Load the alternate barcodes of the products in the picking and keep them
      * so `buildIndexes` can map each one to its product.
      */
-    async preloadPicking(pickingId) {
+    async preloadPicking() {
         const snapshot = await super.preloadPicking(...arguments);
         const productIds = Object.keys(this.productsById).map(Number);
         this.alternateBarcodes = [];

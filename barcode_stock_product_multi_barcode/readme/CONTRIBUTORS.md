@@ -1,1 +1,2 @@
-* Binhex
+- Binhex
+- [Antonio David Ruban Espinal](https://github.com/antoniodavid)

@@ -3,6 +3,8 @@
 
 from odoo.tests.common import HttpCase, tagged
 
+from odoo.addons.web.tests.test_js import qunit_error_checker
+
 
 @tagged("post_install", "-at_install")
 class TestBarcodeStockProductMultiBarcodeJs(HttpCase):
@@ -14,10 +16,10 @@ class TestBarcodeStockProductMultiBarcodeJs(HttpCase):
 
     def test_js(self):
         self.browser_js(
-            "/web/tests?headless&loglevel=2&preset=desktop&filter=ProductMultiBarcode",
+            "/web/tests?mod=barcode_stock_product_multi_barcode&filter=ProductMultiBarcode",
             "",
             "",
             login="admin",
-            success_signal="[HOOT] Test suite succeeded",
-            error_checker=lambda message: "[HOOT]" not in message,
+            timeout=1800,
+            error_checker=qunit_error_checker,
         )

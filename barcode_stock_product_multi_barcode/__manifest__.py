@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock Product Multi Barcode",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Logistics",
     "summary": "Recognize alternate product barcodes in the warehouse app",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -15,7 +15,7 @@
         "web.assets_backend": [
             "barcode_stock_product_multi_barcode/static/src/js/product_multi_barcode.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_stock_product_multi_barcode/static/tests/**/*",
         ],
     },
