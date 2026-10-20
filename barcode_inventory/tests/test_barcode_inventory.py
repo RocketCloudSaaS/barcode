@@ -18,10 +18,10 @@ class TestBarcodeInventory(TransactionCase):
             }
         )
         cls.storable = cls.env["product.product"].create(
-            {"name": "Count Storable", "is_storable": True}
+            {"name": "Count Storable", "detailed_type": "product"}
         )
         cls.consumable = cls.env["product.product"].create(
-            {"name": "Count Consumable", "type": "consu", "is_storable": False}
+            {"name": "Count Consumable", "detailed_type": "consu"}
         )
         cls.service = cls.env["product.product"].create(
             {"name": "Count Service", "type": "service"}

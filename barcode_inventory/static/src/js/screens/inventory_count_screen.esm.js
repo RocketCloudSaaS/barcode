@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {_t} from "@web/core/l10n/translation";
@@ -13,7 +14,7 @@ import {useService} from "@web/core/utils/hooks";
  * consumable or a combo has no quant, and Odoo refuses to create one when the
  * adjustment is applied, so they are kept out of the count from the start.
  */
-export const COUNTABLE_PRODUCTS = [["is_storable", "=", true]];
+export const COUNTABLE_PRODUCTS = [["type", "=", "product"]];
 
 /**
  * What the operator is told when the product scanned has no stock to count.
@@ -175,7 +176,7 @@ export class InventoryCountScreen extends Component {
                   "display_name",
                   "tracking",
                   "uom_id",
-                  "is_storable",
+                  "type",
               ])
             : [];
         if (!products.length) {
@@ -187,7 +188,7 @@ export class InventoryCountScreen extends Component {
         }
         // Say why a scanned service or consumable is refused, rather than
         // "no match" for a product the operator can see in the catalogue.
-        const product = products.find((p) => p.is_storable);
+        const product = products.find((p) => p.type === "product");
         if (!product) {
             this.inventory.notify(notStorableMessage(products[0]), {type: "warning"});
             return null;

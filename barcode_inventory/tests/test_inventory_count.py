@@ -32,14 +32,18 @@ class TestBarcodeInventoryCount(TransactionCase):
             }
         )
         Product = cls.env["product.product"]
-        cls.product = Product.create({"name": "Count Untracked", "is_storable": True})
+        cls.product = Product.create(
+            {"name": "Count Untracked", "detailed_type": "product"}
+        )
         cls.lot_product = Product.create(
-            {"name": "Count Lot", "is_storable": True, "tracking": "lot"}
+            {"name": "Count Lot", "detailed_type": "product", "tracking": "lot"}
         )
         cls.serial_product = Product.create(
-            {"name": "Count Serial", "is_storable": True, "tracking": "serial"}
+            {"name": "Count Serial", "detailed_type": "product", "tracking": "serial"}
         )
-        cls.new_product = Product.create({"name": "Count New", "is_storable": True})
+        cls.new_product = Product.create(
+            {"name": "Count New", "detailed_type": "product"}
+        )
         cls.consumable = Product.create({"name": "Count Consumable", "type": "consu"})
         cls.lot = cls.env["stock.lot"].create(
             {
@@ -196,7 +200,7 @@ class TestBarcodeInventoryCount(TransactionCase):
         own_product = self.env["product.product"].create(
             {
                 "name": "Count Own Lot",
-                "is_storable": True,
+                "detailed_type": "product",
                 "tracking": "lot",
                 "company_id": self.company.id,
             }
@@ -454,27 +458,20 @@ class TestBarcodeInventoryCount(TransactionCase):
             )
 
     def test_lot_names_suggested(self):
+        # Odoo 17 requires a company on every lot: there are no shared lots.
         other = self.env["res.company"].create({"name": "Barcode Lots Co"})
         self.env["stock.lot"].create(
-            [
-                {
-                    "name": "LOT-ELSEWHERE",
-                    "product_id": self.lot_product.id,
-                    "company_id": other.id,
-                },
-                {
-                    "name": "LOT-SHARED",
-                    "product_id": self.lot_product.id,
-                    "company_id": False,
-                },
-            ]
+            {
+                "name": "LOT-ELSEWHERE",
+                "product_id": self.lot_product.id,
+                "company_id": other.id,
+            }
         )
         names = self.Inventory.action_barcode_lot_names(
             self.location.id, self.lot_product.id
         )
         # The lots a count here can use, as _barcode_resolve_lot finds them.
         self.assertIn("LOT-COUNT-1", names)
-        self.assertIn("LOT-SHARED", names)
         self.assertNotIn("LOT-ELSEWHERE", names)
         self.assertEqual(
             self.Inventory.action_barcode_lot_names(self.location.id, 0), []
@@ -482,7 +479,8 @@ class TestBarcodeInventoryCount(TransactionCase):
         # Looked up as the operator types, a few at a time.
         lot_names = self.Inventory.action_barcode_lot_names
         self.assertEqual(
-            lot_names(self.location.id, self.lot_product.id, "shared"), ["LOT-SHARED"]
+            lot_names(self.location.id, self.lot_product.id, "count"),
+            ["LOT-COUNT-1"],
         )
         self.assertEqual(
             len(lot_names(self.location.id, self.lot_product.id, "", limit=1)), 1

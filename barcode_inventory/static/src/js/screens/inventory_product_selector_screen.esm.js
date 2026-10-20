@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {
     COUNTABLE_PRODUCTS,
     notStorableMessage,
@@ -79,7 +80,7 @@ export class InventoryProductSelectorScreen extends Component {
                   "display_name",
                   "tracking",
                   "uom_id",
-                  "is_storable",
+                  "type",
               ])
             : [];
         if (!products.length) {
@@ -88,7 +89,7 @@ export class InventoryProductSelectorScreen extends Component {
             });
             return;
         }
-        const product = products.find((p) => p.is_storable);
+        const product = products.find((p) => p.type === "product");
         if (!product) {
             this.inventory.notify(notStorableMessage(products[0]), {type: "warning"});
             return;

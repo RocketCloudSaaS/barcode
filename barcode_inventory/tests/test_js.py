@@ -1,7 +1,11 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from werkzeug.urls import url_quote_plus
+
 from odoo.tests.common import HttpCase, tagged
+
+from odoo.addons.web.tests.test_js import qunit_error_checker
 
 
 @tagged("post_install", "-at_install")
@@ -13,11 +17,16 @@ class TestBarcodeInventoryJs(HttpCase):
     """
 
     def test_js(self):
+        # 17.0 core pattern: select the module with ``mod`` and pass the QUnit
+        # filter as ``/<url-encoded regex>/``. Odoo wraps each test file in a
+        # QUnit module named after the addon, hence the ``barcode_inventory > ``
+        # prefix in the full test name.
+        filter_param = url_quote_plus(r"^barcode_inventory > BarcodeInventory: .*$")
         self.browser_js(
-            "/web/tests?headless&loglevel=2&preset=desktop&filter=%22BarcodeInventory%22",
+            f"/web/tests?mod=barcode_inventory&filter=/{filter_param}/",
             "",
             "",
             login="admin",
-            success_signal="[HOOT] Test suite succeeded",
-            error_checker=lambda message: "[HOOT]" not in message,
+            timeout=120,
+            error_checker=qunit_error_checker,
         )

@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
@@ -5,7 +6,6 @@ import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
 
 /**
  * First step of an inventory adjustment: pick or scan the internal location to
@@ -19,6 +19,7 @@ export class InventoryLocationScreen extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
         this.store = useService("barcodeStore");
+        this.user = useService("user");
         this.state = useState({
             locations: [],
             search: "",
@@ -36,7 +37,7 @@ export class InventoryLocationScreen extends Component {
     }
 
     async loadScreen() {
-        this.state.canApply = await user.hasGroup("stock.group_stock_manager");
+        this.state.canApply = await this.user.hasGroup("stock.group_stock_manager");
         if (this.state.canApply) {
             await this.loadLocations();
         } else {

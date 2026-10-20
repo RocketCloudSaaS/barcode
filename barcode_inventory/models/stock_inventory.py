@@ -3,7 +3,7 @@
 
 import math
 
-from odoo import Command, api, models
+from odoo import Command, _, api, models
 from odoo.exceptions import AccessError, UserError
 from odoo.tools.float_utils import float_compare, float_is_zero, float_round
 
@@ -21,7 +21,7 @@ class StockInventory(models.Model):
     def _barcode_count_location(self, location_id):
         location = self.env["stock.location"].browse(location_id).exists()
         if not location or location.usage != "internal":
-            raise UserError(self.env._("The selected location is no longer valid."))
+            raise UserError(_("The selected location is no longer valid."))
         return location
 
     @api.model
@@ -136,7 +136,7 @@ class StockInventory(models.Model):
             )
         if len(lot) > 1:
             raise UserError(
-                self.env._(
+                _(
                     "Several lots/serial numbers of %(name)s match %(lot)s: type "
                     "it exactly as it is written.",
                     lot=lot_name,
@@ -182,14 +182,12 @@ class StockInventory(models.Model):
                 self.env["product.product"].browse(line.get("product_id")).exists()
             )
             if not product:
-                raise UserError(
-                    self.env._("One of the scanned products no longer exists.")
-                )
+                raise UserError(_("One of the scanned products no longer exists."))
             # Checked here so the operator gets this message instead of Odoo's
             # quant error when the adjustment is applied.
-            if not product.is_storable:
+            if product.type != "product":
                 raise UserError(
-                    self.env._(
+                    _(
                         "%(name)s is not a storable product: it has no stock to "
                         "count.",
                         name=product.display_name,
@@ -199,7 +197,7 @@ class StockInventory(models.Model):
             rounding = product.uom_id.rounding
             if float_compare(counted, 0, precision_rounding=rounding) < 0:
                 raise UserError(
-                    self.env._(
+                    _(
                         "The counted quantity for %(name)s cannot be negative.",
                         name=product.display_name,
                     )
@@ -209,7 +207,7 @@ class StockInventory(models.Model):
                 lot_name = (line.get("lot_name") or "").strip()
                 if not lot_name:
                     raise UserError(
-                        self.env._(
+                        _(
                             "Product %(name)s is tracked: scan or type its "
                             "lot/serial number before counting it.",
                             name=product.display_name,
@@ -218,13 +216,11 @@ class StockInventory(models.Model):
                 lot = self._barcode_resolve_lot(product, lot_name, company)
             counts[product, lot] = counts.get((product, lot), 0) + counted
         if not counts:
-            raise UserError(
-                self.env._("Scan at least one product to adjust before applying.")
-            )
+            raise UserError(_("Scan at least one product to adjust before applying."))
         for (product, lot), counted in counts.items():
             if product.tracking == "serial" and counted not in (0, 1):
                 raise UserError(
-                    self.env._(
+                    _(
                         "Serial number %(lot)s of %(name)s can only be counted "
                         "once.",
                         lot=lot.name,
@@ -243,7 +239,7 @@ class StockInventory(models.Model):
             counted = math.nan
         if not math.isfinite(counted):
             raise UserError(
-                self.env._(
+                _(
                     "The counted quantity for %(name)s is not a number.",
                     name=product.display_name,
                 )
@@ -321,9 +317,7 @@ class StockInventory(models.Model):
         administrators (``stock.group_stock_manager``).
         """
         if not self.env.user.has_group("stock.group_stock_manager"):
-            raise AccessError(
-                self.env._("Only inventory administrators can apply a count.")
-            )
+            raise AccessError(_("Only inventory administrators can apply a count."))
         location = self._barcode_count_location(location_id)
         if not force:
             changed = self._barcode_stock_changes(location, lines)
@@ -333,7 +327,7 @@ class StockInventory(models.Model):
         products = self.env["product.product"].union(*(p for p, _lot in counts))
         group = self.create(
             {
-                "name": self.env._(
+                "name": _(
                     "Barcode count: %(location)s", location=location.display_name
                 ),
                 "company_id": (location.company_id or self.env.company).id,
@@ -378,7 +372,7 @@ class StockInventory(models.Model):
             # tracked lines carry their lot -- but should one, nothing is
             # recorded as done: the whole count is rolled back.
             raise UserError(
-                self.env._(
+                _(
                     "The count could not be applied: Odoo asks for a check of "
                     "the adjustment. Count the location again."
                 )
