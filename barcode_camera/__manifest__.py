@@ -1,11 +1,11 @@
 {
     "name": "Barcode Camera",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Hidden",
-    "summary": "Mobile camera barcode scanner (EAN13) for the Barcode suite",
+    "summary": "Scan barcodes with the device camera in the Barcode app",
     "author": "Binhex, Odoo Community Association (OCA)",
     "website": "https://github.com/RocketCloudSaaS/barcode",
-    "maintainers": ["antoniodavid", "szalatyzuzanna"],
+    "maintainers": ["szalatyzuzanna"],
     "license": "AGPL-3",
     "depends": [
         "barcode_scanner",
@@ -15,6 +15,9 @@
             "barcode_camera/static/src/scss/barcode_camera.scss",
             "barcode_camera/static/src/xml/camera_fab.xml",
             "barcode_camera/static/src/js/camera_fab.esm.js",
+        ],
+        "web.qunit_suite_tests": [
+            "barcode_camera/static/tests/**/*",
         ],
     },
     "installable": True,

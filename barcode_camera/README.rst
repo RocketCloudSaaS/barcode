@@ -21,19 +21,19 @@ Barcode Camera
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-RocketCloudSaaS%2Fbarcode-lightgray.png?logo=github
-    :target: https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_camera
+    :target: https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_camera
     :alt: RocketCloudSaaS/barcode
 
 |badge1| |badge2| |badge3|
 
-This module adds a **camera scan source** to the Barcode suite.
+This module adds the **device camera** as a scan source to the Barcode
+app, so operators can scan without a dedicated hardware scanner.
 
-It registers a floating action button into the ``barcode_scanner`` app —
-through the ``barcode_app_widgets`` registry, without patching the base
-— that opens the device camera to scan an EAN13 barcode and feeds the
-result into the same event bus the hardware scanner uses. The active
-screen then handles it identically, so operators can scan without a
-dedicated hardware scanner.
+A floating button opens the camera with Odoo's own barcode scanner
+dialog. The code it reads is fed into the same event bus a hardware
+scanner uses, so the active screen handles it exactly like any other
+scan. The button is plugged in through the ``barcode_app_widgets``
+registry of ``barcode_scanner``, without patching the app.
 
 **Table of contents**
 
@@ -43,16 +43,26 @@ dedicated hardware scanner.
 Usage
 =====
 
-Install ``barcode_camera`` alongside a scanning feature module (for
-example ``barcode_stock``).
+Install ``barcode_camera`` next to a feature module such as
+``barcode_stock``.
 
-On the picking, picking list, internal transfer and quick-info screens a
-floating camera button appears in the bottom-right corner. Tap it to
-open the device camera, point it at an EAN13 barcode, and the scan is
-processed exactly as if it came from a hardware scanner.
+On the picking list, picking, internal transfer and quick info screens a
+camera button appears in the bottom-right corner. Tap it, point the
+camera at a barcode, and the scan is processed as if it came from a
+hardware scanner. The codes read are the ones Odoo's scanner dialog
+reads: EAN, UPC, Code 128, Code 39, ITF, QR, Data Matrix and the like.
 
-Camera access requires a secure context (HTTPS or localhost); otherwise
-the browser blocks it and hardware/manual scanning remain available.
+The browser only gives access to the camera in a secure context (HTTPS
+or localhost). Without it the camera cannot open, and hardware or manual
+scanning remain available.
+
+A feature module offers the button on its own screens by adding their
+route names to the ``barcode_camera_routes`` registry, without depending
+on this module:
+
+::
+
+   registry.category("barcode_camera_routes").add("my_screen", "my_screen");
 
 Bug Tracker
 ===========
@@ -60,7 +70,7 @@ Bug Tracker
 Bugs are tracked on `GitHub Issues <https://github.com/RocketCloudSaaS/barcode/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
-`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_camera%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_camera%0Aversion:%2017.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -82,17 +92,14 @@ Contributors
 Maintainers
 -----------
 
-.. |maintainer-antoniodavid| image:: https://github.com/antoniodavid.png?size=40px
-    :target: https://github.com/antoniodavid
-    :alt: antoniodavid
 .. |maintainer-szalatyzuzanna| image:: https://github.com/szalatyzuzanna.png?size=40px
     :target: https://github.com/szalatyzuzanna
     :alt: szalatyzuzanna
 
-Current maintainers:
+Current maintainer:
 
-|maintainer-antoniodavid| |maintainer-szalatyzuzanna| 
+|maintainer-szalatyzuzanna| 
 
-This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_camera>`_ project on GitHub.
+This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_camera>`_ project on GitHub.
 
 You are welcome to contribute.
