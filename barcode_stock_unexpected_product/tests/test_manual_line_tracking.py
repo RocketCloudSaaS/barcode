@@ -44,7 +44,7 @@ class TestManualLineTracking(TransactionCase):
         product = self.env["product.product"].create(
             {
                 "name": "Tracked manual product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "serial",
             }
         )
@@ -72,10 +72,10 @@ class TestManualLineTracking(TransactionCase):
 
     def test_lot_must_match_product(self):
         product = self.env["product.product"].create(
-            {"name": "Lot manual product", "is_storable": True, "tracking": "lot"}
+            {"name": "Lot manual product", "type": "product", "tracking": "lot"}
         )
         other = self.env["product.product"].create(
-            {"name": "Other lot product", "is_storable": True}
+            {"name": "Other lot product", "type": "product"}
         )
         lot = self.env["stock.lot"].create(
             {"name": "WRONG-PRODUCT", "product_id": other.id}
@@ -91,7 +91,7 @@ class TestManualLineTracking(TransactionCase):
         product = self.env["product.product"].create(
             {
                 "name": "String lot manual product",
-                "is_storable": True,
+                "type": "product",
                 "tracking": "lot",
             }
         )
@@ -116,7 +116,7 @@ class TestManualLineTracking(TransactionCase):
 
     def test_auto_pick_sets_qty_picked_and_delete_unreserves(self):
         product = self.env["product.product"].create(
-            {"name": "Auto-picked manual product", "is_storable": True}
+            {"name": "Auto-picked manual product", "type": "product"}
         )
         quant_model = self.env["stock.quant"]
         quant_model._update_available_quantity(product, self.origin, 5)
@@ -148,7 +148,7 @@ class TestManualLineTracking(TransactionCase):
 
     def test_delete_rejects_non_manual_move(self):
         product = self.env["product.product"].create(
-            {"name": "Regular move product", "is_storable": True}
+            {"name": "Regular move product", "type": "product"}
         )
         picking = self._picking()
         move = self.env["stock.move"].create(
@@ -172,7 +172,7 @@ class TestManualLineTracking(TransactionCase):
 
     def test_delete_rejects_completed_picking(self):
         product = self.env["product.product"].create(
-            {"name": "Completed manual product", "is_storable": True}
+            {"name": "Completed manual product", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(product, self.origin, 1)
         picking = self._picking()

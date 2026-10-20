@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock Unexpected Product",
-    "version": "18.0.1.1.0",
+    "version": "17.0.1.1.0",
     "category": "Inventory/Logistics",
     "summary": "Allow adding unexpected products to transfers via scanner",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -19,8 +19,8 @@
             "barcode_stock_unexpected_product/static/src/js/screens/product_selector_screen_patch.esm.js",
             "barcode_stock_unexpected_product/static/src/xml/barcode_stock_unexpected_product_templates.xml",
         ],
-        "web.assets_unit_tests": [
-            "barcode_stock_unexpected_product/static/tests/manual_line.test.js",
+        "web.qunit_suite_tests": [
+            "barcode_stock_unexpected_product/static/tests/**/*",
         ],
     },
     "installable": True,

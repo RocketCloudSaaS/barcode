@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
 import {_t} from "@web/core/l10n/translation";

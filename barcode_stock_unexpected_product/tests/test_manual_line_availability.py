@@ -33,7 +33,7 @@ class TestManualLineAvailability(TransactionCase):
 
     def test_insufficient_stock_does_not_create_move(self):
         product = self.env["product.product"].create(
-            {"name": "Unavailable manual product", "is_storable": True}
+            {"name": "Unavailable manual product", "type": "product"}
         )
         picking = self.env["stock.picking"].create(
             {
@@ -50,7 +50,7 @@ class TestManualLineAvailability(TransactionCase):
 
     def test_invalid_quantity_does_not_create_move(self):
         product = self.env["product.product"].create(
-            {"name": "Invalid quantity product", "is_storable": True}
+            {"name": "Invalid quantity product", "type": "product"}
         )
         picking = self.env["stock.picking"].create(
             {

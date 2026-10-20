@@ -21,7 +21,7 @@ class TestManualLinePending(TransactionCase):
         cls._picking_type_allow_insert_new_line = cls.picking_type.allow_insert_new_line
         cls.picking_type.allow_insert_new_line = True
         cls.product = cls.env["product.product"].create(
-            {"name": "Manual pending product", "is_storable": True}
+            {"name": "Manual pending product", "type": "product"}
         )
         cls.env["stock.quant"]._update_available_quantity(cls.product, cls.origin, 5000)
 

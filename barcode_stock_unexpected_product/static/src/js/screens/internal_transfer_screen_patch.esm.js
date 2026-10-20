@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {InternalTransferScreen} from "@barcode_stock/js/screens/internal_transfer_screen.esm";
 import {_t} from "@web/core/l10n/translation";
 import {patch} from "@web/core/utils/patch";

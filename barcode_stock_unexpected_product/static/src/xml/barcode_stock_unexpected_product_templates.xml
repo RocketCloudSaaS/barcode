@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    The screens are defined in barcode_stock with a ``barcode_scanner.`` name
+    prefix. 17.0 resolves t-inherit against the addon that owns the file, so
+    the parent is addressed as ``barcode_stock.barcode_scanner.<Template>``.
+-->
 <templates xml:space="preserve">
-    <t t-inherit="barcode_scanner.PickingScreen" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingScreen"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//div[hasclass('ilx-kw-bottom-nav')]" position="inside">
             <button
                 t-if="canAddManualLine"
@@ -13,7 +22,7 @@
         </xpath>
     </t>
     <t
-        t-inherit="barcode_scanner.ProductSelectorScreen"
+        t-inherit="barcode_stock.barcode_scanner.ProductSelectorScreen"
         t-inherit-mode="extension"
         owl="1"
     >
@@ -33,7 +42,11 @@
         </xpath>
     </t>
 
-    <t t-inherit="barcode_scanner.PickingScreen" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingScreen"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//PickingMoveList" position="attributes">
             <attribute
                 name="onDeleteManual"
@@ -45,17 +58,29 @@
             >(moveId) => this.deleteManualMove(moveId)</attribute>
         </xpath>
     </t>
-    <t t-inherit="barcode_scanner.PickingMoveList" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingMoveList"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//PickingMoveCard" position="attributes">
             <attribute name="onDeleteManual">props.onDeleteManual</attribute>
         </xpath>
     </t>
-    <t t-inherit="barcode_scanner.PickingDoneList" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingDoneList"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//PickingDoneCard" position="attributes">
             <attribute name="onDeleteManual">props.onDeleteManual</attribute>
         </xpath>
     </t>
-    <t t-inherit="barcode_scanner.PickingMoveCard" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingMoveCard"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//div[hasclass('ilx-kw-picking-card-status')]" position="inside">
             <span
                 t-if="props.move.is_manually and props.onDeleteManual"
@@ -65,7 +90,11 @@
             ><i class="fa fa-trash" /></span>
         </xpath>
     </t>
-    <t t-inherit="barcode_scanner.PickingDoneCard" t-inherit-mode="extension" owl="1">
+    <t
+        t-inherit="barcode_stock.barcode_scanner.PickingDoneCard"
+        t-inherit-mode="extension"
+        owl="1"
+    >
         <xpath expr="//button[hasclass('ilx-picking-done-card')]" position="attributes">
             <attribute name="t-on-click">
                 () => props.line.is_manually

@@ -1,7 +1,9 @@
-import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list.esm";
-import {PickingMoveCard} from "@barcode_stock/js/components/picking_move_card.esm";
-import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
+/** @odoo-module **/
+
 import {PickingDoneCard} from "@barcode_stock/js/components/picking_done_card.esm";
+import {PickingDoneList} from "@barcode_stock/js/components/picking_done_list.esm";
+import {PickingMoveCard} from "@barcode_stock/js/components/picking_move_card.esm";
+import {PickingMoveList} from "@barcode_stock/js/components/picking_move_list.esm";
 
 PickingMoveList.props = {
     ...PickingMoveList.props,

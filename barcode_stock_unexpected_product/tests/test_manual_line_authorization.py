@@ -21,7 +21,7 @@ class TestManualLineAuthorization(TransactionCase):
             }
         )
         cls.product = cls.env["product.product"].create(
-            {"name": "Manual authorization product", "is_storable": True}
+            {"name": "Manual authorization product", "type": "product"}
         )
         cls.env["stock.quant"]._update_available_quantity(cls.product, cls.origin, 10)
 

@@ -12,7 +12,9 @@ class TestStockPickingTypeBarcodeView(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        view = cls.env.ref("barcode_stock_unexpected_product.view_picking_type_form_inherit_barcode")
+        view = cls.env.ref(
+            "barcode_stock_unexpected_product.view_picking_type_form_inherit_barcode"
+        )
         cls.arch = etree.fromstring(
             cls.env["stock.picking.type"].get_view(view_id=view.id, view_type="form")[
                 "arch"

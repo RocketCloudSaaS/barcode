@@ -1,6 +1,9 @@
+/** @odoo-module **/
+
 import {ProductSelectorScreen} from "@barcode_stock/js/screens/product_selector_screen.esm";
 import {_t} from "@web/core/l10n/translation";
 import {patch} from "@web/core/utils/patch";
+import {recordImageUrl} from "@barcode_stock/js/utils/avatar.esm";
 
 export function matchesProductSearch(product, search) {
     const value = String(search || "").toLowerCase();
@@ -41,25 +44,25 @@ patch(ProductSelectorScreen.prototype, {
         if (this.props.params?.mode !== "manual_line") {
             return super.loadProducts(...arguments);
         }
+        // Odoo 17.0 has no ``is_storable``: a storable product is ``type=product``.
         const products = await this.inventory.searchRead(
             "product.product",
-            [["is_storable", "=", true]],
+            [["type", "=", "product"]],
             [
                 "name",
                 "image_128",
+                "write_date",
                 "standard_price",
                 "tracking",
                 "default_code",
                 "barcode",
                 "type",
-            ]
+            ],
+            {context: {bin_size: true}}
         );
         this.state.products = products.map((product) => ({
             ...product,
-            image_128:
-                product.image_128 && String(product.image_128).length >= 50
-                    ? product.image_128
-                    : false,
+            image_url: recordImageUrl("product.product", product),
         }));
         this.state.loading = false;
         const preselectId = this.props.params?.preselectProduct;
@@ -95,6 +98,15 @@ patch(ProductSelectorScreen.prototype, {
         return this.state.products.filter((product) =>
             matchesProductSearch(product, this.state.search)
         );
+    },
+
+    onQtyInput(ev) {
+        if (this.props.params?.mode !== "manual_line") {
+            return super.onQtyInput(...arguments);
+        }
+        // The scanner can hand over a weight (2.5 kg), not just whole units.
+        const value = Number.parseFloat(ev.target.value);
+        this.state.qty = Number.isFinite(value) && value > 0 ? value : 1;
     },
 
     async selectProduct(product) {

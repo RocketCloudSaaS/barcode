@@ -26,7 +26,7 @@ class TestBarcodeScannerInsertNewLineGate(TransactionCase):
             }
         )
         cls.product = cls.env["product.product"].create(
-            {"name": "Gate Product", "is_storable": True}
+            {"name": "Gate Product", "type": "product"}
         )
         cls.env["stock.quant"]._update_available_quantity(
             cls.product, cls.stock_location, 10
@@ -97,7 +97,7 @@ class TestBarcodeScannerInsertNewLineGate(TransactionCase):
 
     def _seed_stock(self, origin, qty=10):
         product = self.env["product.product"].create(
-            {"name": f"Gate Product {origin.name}", "is_storable": True}
+            {"name": f"Gate Product {origin.name}", "type": "product"}
         )
         self.env["stock.quant"]._update_available_quantity(product, origin, qty)
         return product

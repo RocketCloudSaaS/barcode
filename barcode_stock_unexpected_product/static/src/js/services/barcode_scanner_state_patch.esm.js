@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 import {patch} from "@web/core/utils/patch";
 
