@@ -1,6 +1,6 @@
 {
     "name": "Barcode GS1 Stock",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Logistics",
     "summary": "Use the measure on a GS1 label as the quantity picked",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -15,7 +15,7 @@
         "web.assets_backend": [
             "barcode_gs1_stock/static/src/js/gs1_stock_quantity.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_gs1_stock/static/tests/**/*",
         ],
     },

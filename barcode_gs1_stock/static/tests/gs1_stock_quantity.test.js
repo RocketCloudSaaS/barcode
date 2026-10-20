@@ -1,5 +1,6 @@
+/** @odoo-module **/
+
 import "@barcode_gs1_stock/js/gs1_stock_quantity.esm";
-import {afterEach, describe, expect, test} from "@odoo/hoot";
 import {
     compileGs1Nomenclature,
     setGs1Nomenclature,
@@ -56,67 +57,79 @@ const TWO_PIECES_OF_2497_G = {
     weightUom: {id: 13, name: "kg"},
 };
 
-describe("Gs1StockQuantity", () => {
-    test("a product stocked by weight takes the weight, in its own unit", () => {
-        const state = stateReadingGrams();
-        expect(state.scannedQuantity(TWO_PIECES_OF_2497_G, 13)).toBe(2.497);
-        // The label weighs in kilograms, the product is stocked in grams.
-        expect(state.scannedQuantity(TWO_PIECES_OF_2497_G, 14)).toBe(2497);
-    });
+QUnit.module("Gs1StockQuantity", () => {
+    QUnit.test(
+        "a product stocked by weight takes the weight, in its own unit",
+        (assert) => {
+            const state = stateReadingGrams();
+            assert.strictEqual(state.scannedQuantity(TWO_PIECES_OF_2497_G, 13), 2.497);
+            // The label weighs in kilograms, the product is stocked in grams.
+            assert.strictEqual(state.scannedQuantity(TWO_PIECES_OF_2497_G, 14), 2497);
+        }
+    );
 
-    test("the weight is rounded the way it will be stored", () => {
+    QUnit.test("the weight is rounded the way it will be stored", (assert) => {
         // Odoo's defaults keep two decimals of a kilogram: 2.497 kg is stored as
         // 2.50, so that is the quantity shown.
-        expect(stateWithUoms().scannedQuantity(TWO_PIECES_OF_2497_G, 13)).toBe(2.5);
+        assert.strictEqual(
+            stateWithUoms().scannedQuantity(TWO_PIECES_OF_2497_G, 13),
+            2.5
+        );
         // Both settings count: a finer unit with two decimals still stores 2.50,
         // and so do three decimals with a unit rounded to 0.01.
         const finerUnit = stateWithUoms({rounding: {13: 0.001}});
-        expect(finerUnit.scannedQuantity(TWO_PIECES_OF_2497_G, 13)).toBe(2.5);
+        assert.strictEqual(finerUnit.scannedQuantity(TWO_PIECES_OF_2497_G, 13), 2.5);
         const moreDecimals = stateWithUoms({digits: 3});
-        expect(moreDecimals.scannedQuantity(TWO_PIECES_OF_2497_G, 13)).toBe(2.5);
+        assert.strictEqual(moreDecimals.scannedQuantity(TWO_PIECES_OF_2497_G, 13), 2.5);
         // When the decimals could not be read, the unit's rounding still applies.
         const noDigits = stateWithUoms({rounding: {13: 0.001}, digits: null});
-        expect(noDigits.scannedQuantity(TWO_PIECES_OF_2497_G, 13)).toBe(2.497);
+        assert.strictEqual(noDigits.scannedQuantity(TWO_PIECES_OF_2497_G, 13), 2.497);
     });
 
-    test("a product counted in units takes the piece count", () => {
-        expect(stateWithUoms().scannedQuantity(TWO_PIECES_OF_2497_G, 1)).toBe(2);
+    QUnit.test("a product counted in units takes the piece count", (assert) => {
+        assert.strictEqual(stateWithUoms().scannedQuantity(TWO_PIECES_OF_2497_G, 1), 2);
     });
 
-    test("a weight with no count is a single unit for a product in units", () => {
-        // A cheese wheel label: 4.324 kg net and no count at all. Adding "4.324
-        // units" would be wrong; one box was scanned.
-        const wheel = {qty: null, weight: 4.324, weightUom: {id: 13, name: "kg"}};
-        expect(stateReadingGrams().scannedQuantity(wheel, 13)).toBe(4.324);
-        expect(stateWithUoms().scannedQuantity(wheel, 13)).toBe(4.32);
-        expect(stateWithUoms().scannedQuantity(wheel, 1)).toBe(1);
-    });
+    QUnit.test(
+        "a weight with no count is a single unit for a product in units",
+        (assert) => {
+            // A cheese wheel label: 4.324 kg net and no count at all. Adding
+            // "4.324 units" would be wrong; one box was scanned.
+            const wheel = {qty: null, weight: 4.324, weightUom: {id: 13, name: "kg"}};
+            assert.strictEqual(stateReadingGrams().scannedQuantity(wheel, 13), 4.324);
+            assert.strictEqual(stateWithUoms().scannedQuantity(wheel, 13), 4.32);
+            assert.strictEqual(stateWithUoms().scannedQuantity(wheel, 1), 1);
+        }
+    );
 
-    test("a measure in another unit of the same category is converted", () => {
-        const pounds = {qty: null, weight: 5, weightUom: {id: 16, name: "lb"}};
-        expect(stateReadingGrams().scannedQuantity(pounds, 13)).toBe(2.268);
-        expect(stateWithUoms().scannedQuantity(pounds, 13)).toBe(2.27);
-    });
+    QUnit.test(
+        "a measure in another unit of the same category is converted",
+        (assert) => {
+            const pounds = {qty: null, weight: 5, weightUom: {id: 16, name: "lb"}};
+            assert.strictEqual(stateReadingGrams().scannedQuantity(pounds, 13), 2.268);
+            assert.strictEqual(stateWithUoms().scannedQuantity(pounds, 13), 2.27);
+        }
+    );
 
-    test("a measure of the wrong kind never becomes the quantity", () => {
+    QUnit.test("a measure of the wrong kind never becomes the quantity", (assert) => {
         // A length says nothing about how much of a product to pick.
         const length = {qty: 3, count: 3, weight: 2.5, weightUom: {id: 6, name: "m"}};
         const state = stateWithUoms();
-        expect(state.scannedQuantity(length, 6)).toBe(2.5);
-        expect(state.scannedQuantity(length, 13)).toBe(3);
+        assert.strictEqual(state.scannedQuantity(length, 6), 2.5);
+        assert.strictEqual(state.scannedQuantity(length, 13), 3);
     });
 
-    test("without a measure, the base reading stands", () => {
+    QUnit.test("without a measure, the base reading stands", (assert) => {
         const state = stateWithUoms();
-        expect(state.scannedQuantity({qty: 7, count: 7}, 13)).toBe(7);
-        expect(state.scannedQuantity({}, 13)).toBe(1);
-        expect(state.scannedQuantity(null, 13)).toBe(1);
+        assert.strictEqual(state.scannedQuantity({qty: 7, count: 7}, 13), 7);
+        assert.strictEqual(state.scannedQuantity({}, 13), 1);
+        assert.strictEqual(state.scannedQuantity(null, 13), 1);
         // A unit we could not read leaves the stated quantity alone.
-        expect(state.scannedQuantity(TWO_PIECES_OF_2497_G, 999)).toBe(2);
+        assert.strictEqual(state.scannedQuantity(TWO_PIECES_OF_2497_G, 999), 2);
     });
 });
 
-describe("Gs1StockQuantity loading", () => {
+QUnit.module("Gs1StockQuantity loading", () => {
     function fakeOrm({digits = 3, fail = false} = {}) {
         const calls = [];
         return {
@@ -135,33 +148,36 @@ describe("Gs1StockQuantity loading", () => {
         };
     }
 
-    test("the units and the stored decimals are read once", async () => {
+    QUnit.test("the units and the stored decimals are read once", async (assert) => {
         const orm = fakeOrm();
         const state = new BarcodeScannerState(orm);
         await state.loadUoms();
-        expect(state.uomsById[13].rounding).toBe(0.01);
-        expect(state.quantityDigits).toBe(3);
-        expect(orm.calls).toEqual([
+        assert.strictEqual(state.uomsById[13].rounding, 0.01);
+        assert.strictEqual(state.quantityDigits, 3);
+        assert.deepEqual(orm.calls, [
             ["uom.uom", ["name", "category_id", "factor", "rounding"]],
             ["decimal.precision", "precision_get", ["Product Unit of Measure"]],
         ]);
         await state.loadUoms();
-        expect(orm.calls.length).toBe(2);
+        assert.strictEqual(orm.calls.length, 2);
     });
 
-    test("the units still load when the decimals cannot be read", async () => {
-        const state = new BarcodeScannerState(fakeOrm({fail: true}));
-        await state.loadUoms();
-        expect(state.uomsById[13].name).toBe("kg");
-        expect(state.quantityDigits).toBe(null);
-    });
+    QUnit.test(
+        "the units still load when the decimals cannot be read",
+        async (assert) => {
+            const state = new BarcodeScannerState(fakeOrm({fail: true}));
+            await state.loadUoms();
+            assert.strictEqual(state.uomsById[13].name, "kg");
+            assert.strictEqual(state.quantityDigits, null);
+        }
+    );
 });
 
-describe("Gs1StockQuantity packaging", () => {
+QUnit.module("Gs1StockQuantity packaging", (hooks) => {
     // The carton's own GTIN-14 (packaging indicator 1) holds twelve cheeses.
     const CARTON = "19501101020914";
 
-    afterEach(() => setGs1Nomenclature(null));
+    hooks.afterEach(() => setGs1Nomenclature(null));
 
     // The two rules of Odoo's GS1 nomenclature these labels need, with the unit
     // AI 3103 is expressed in.
@@ -220,24 +236,33 @@ describe("Gs1StockQuantity packaging", () => {
         return state.applyScanResult({barcode: label, ...parseGs1(label)});
     }
 
-    test("a carton label with no count is the pack's quantity", () => {
+    QUnit.test("a carton label with no count is the pack's quantity", (assert) => {
         loadNomenclature();
         // The weight is decoded, but a product counted in units ignores it.
         const result = scan(pickingState(1), `(01)${CARTON}(3103)004324`);
-        expect(result.candidates.length).toBe(1);
-        expect(result.quantity).toBe(12);
-        expect(scan(pickingState(1), `(01)${CARTON}`).quantity).toBe(12);
+        assert.strictEqual(result.candidates.length, 1);
+        assert.strictEqual(result.quantity, 12);
+        assert.strictEqual(scan(pickingState(1), `(01)${CARTON}`).quantity, 12);
     });
 
-    test("a count on the carton label wins over the pack's quantity", () => {
-        loadNomenclature();
-        expect(scan(pickingState(1), `(01)${CARTON}(30)10`).quantity).toBe(10);
-    });
+    QUnit.test(
+        "a count on the carton label wins over the pack's quantity",
+        (assert) => {
+            loadNomenclature();
+            assert.strictEqual(
+                scan(pickingState(1), `(01)${CARTON}(30)10`).quantity,
+                10
+            );
+        }
+    );
 
-    test("a carton weighed for a product stocked by weight is the weight", () => {
-        loadNomenclature();
-        // 4.324 kg, stored with Odoo's two decimals: not the pack's 12.
-        const result = scan(pickingState(13), `(01)${CARTON}(3103)004324`);
-        expect(result.quantity).toBe(4.32);
-    });
+    QUnit.test(
+        "a carton weighed for a product stocked by weight is the weight",
+        (assert) => {
+            loadNomenclature();
+            // 4.324 kg, stored with Odoo's two decimals: not the pack's 12.
+            const result = scan(pickingState(13), `(01)${CARTON}(3103)004324`);
+            assert.strictEqual(result.quantity, 4.32);
+        }
+    );
 });

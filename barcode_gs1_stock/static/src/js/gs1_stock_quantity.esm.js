@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {roundDecimals, roundPrecision} from "@web/core/utils/numbers";
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
@@ -78,7 +80,11 @@ patch(BarcodeScannerState.prototype, {
         if (Number.isInteger(this.quantityDigits)) {
             rounded = roundDecimals(rounded, this.quantityDigits);
         }
-        return rounded;
+        // 17.0's `roundPrecision` scales back by multiplying the rounded
+        // integer by the precision, which leaves float noise in the last bits
+        // (2.268 comes back as 2.2680000000000002). Drop it, keeping the 15
+        // significant digits where a stored quantity stops being meaningful.
+        return Number.parseFloat(rounded.toPrecision(15));
     },
 
     /**
