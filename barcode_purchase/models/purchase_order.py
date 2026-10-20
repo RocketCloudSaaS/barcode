@@ -1,7 +1,7 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import Command, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
 
@@ -16,6 +16,13 @@ class PurchaseOrderLine(models.Model):
         "raised from the Barcode app. It goes onto the receipt when the receipt "
         "is created.",
     )
+    barcode_dest_location_id = fields.Many2one(
+        "stock.location",
+        string="Destination Location",
+        copy=False,
+        help="Shelf the goods must end on; applied to the last move of the "
+        "receipt chain",
+    )
 
 
 class PurchaseOrder(models.Model):
@@ -26,6 +33,9 @@ class PurchaseOrder(models.Model):
         # However the order gets confirmed -- from the scanner, or approved later
         # in the back office -- the lots read go onto its receipt.
         self._barcode_purchase_place_lots()
+        # The receipt steps keep their own destination: the goods still end on
+        # the shelf chosen on the order.
+        self._barcode_purchase_apply_destination()
         return res
 
     @api.model
@@ -42,14 +52,10 @@ class PurchaseOrder(models.Model):
                 self.env["product.product"].browse(line.get("product_id")).exists()
             )
             if not product:
-                raise UserError(
-                    self.env._("One of the scanned products no longer exists.")
-                )
+                raise UserError(_("One of the scanned products no longer exists."))
             if not product.purchase_ok:
                 raise UserError(
-                    self.env._(
-                        "%(name)s cannot be purchased.", name=product.display_name
-                    )
+                    _("%(name)s cannot be purchased.", name=product.display_name)
                 )
             qty = float(line.get("qty") or 0)
             if (
@@ -57,7 +63,7 @@ class PurchaseOrder(models.Model):
                 <= 0
             ):
                 raise UserError(
-                    self.env._(
+                    _(
                         "The quantity to order of %(name)s must be positive.",
                         name=product.display_name,
                     )
@@ -69,7 +75,7 @@ class PurchaseOrder(models.Model):
                 and float_compare(qty, 1, precision_rounding=product.uom_po_id.rounding)
             ):
                 raise UserError(
-                    self.env._(
+                    _(
                         "Serial number %(lot)s of %(name)s stands for a single unit.",
                         lot=lot_name,
                         name=product.display_name,
@@ -88,7 +94,7 @@ class PurchaseOrder(models.Model):
                 )
             )
         if not prepared:
-            raise UserError(self.env._("Add at least one product to the order."))
+            raise UserError(_("Add at least one product to the order."))
         return prepared
 
     @api.model
@@ -110,9 +116,14 @@ class PurchaseOrder(models.Model):
                 prices.append(None)
                 continue
             order_line = OrderLine.new(
-                {"product_id": product.id, "product_qty": float(line.get("qty") or 1)}
+                {
+                    "order_id": order.id,
+                    "product_id": product.id,
+                    "product_qty": float(line.get("qty") or 1),
+                    # 17.0 does not compute the purchase unit from the product.
+                    "product_uom": product.uom_po_id.id,
+                }
             )
-            order_line.order_id = order
             prices.append(order_line.price_unit)
         return prices
 
@@ -131,7 +142,7 @@ class PurchaseOrder(models.Model):
         )
         picking_type = location.warehouse_id.in_type_id
         if not location or not picking_type:
-            raise UserError(self.env._("The selected destination is not valid."))
+            raise UserError(_("The selected destination is not valid."))
         return location, picking_type
 
     def _barcode_purchase_place_lots(self):
@@ -139,10 +150,46 @@ class PurchaseOrder(models.Model):
         move line of its own order line's moves, once."""
         for order_line in self.order_line.filtered("barcode_lot_name"):
             move_lines = order_line.move_ids.move_line_ids
+            if not move_lines:
+                continue
             if order_line.barcode_lot_name in move_lines.mapped("lot_name"):
                 continue
             free = move_lines.filtered(lambda ml: not ml.lot_id and not ml.lot_name)
             free[:1].lot_name = order_line.barcode_lot_name
+
+    def _barcode_purchase_receipt_chain(self, moves):
+        """The moves of the receipt chain that follow ``moves`` in this
+        warehouse. Only the receipt's own operations are followed: an MTO line
+        chains on to the customer delivery, which the shelf is not about."""
+        warehouse = self.picking_type_id.warehouse_id
+        chain = moves
+        # Follow the moves the receipt pushes create, a bounded walk.
+        for _hop in range(10):
+            following = chain.move_dest_ids.filtered(
+                lambda move: move.picking_type_id.warehouse_id == warehouse
+                and move.picking_type_id.code in ("incoming", "internal")
+            )
+            if not following:
+                break
+            chain = following
+        return chain
+
+    def _barcode_purchase_apply_destination(self):
+        """Send the goods to the shelf chosen on each line, on the last move of
+        that line's own receipt chain: the receipt steps keep their own
+        destination."""
+        for order in self:
+            lines = order.order_line.filtered("barcode_dest_location_id")
+            for order_line in lines:
+                destination = order_line.barcode_dest_location_id
+                moves = order._barcode_purchase_receipt_chain(order_line.move_ids)
+                moves = moves.filtered_domain(
+                    [("location_dest_id", "!=", destination.id)]
+                )
+                if moves:
+                    # Only the line's own moves: 17.0 hands a picking-wide
+                    # destination on to every move of the picking.
+                    moves.write({"location_dest_id": destination.id})
 
     def _barcode_purchase_unplaced_lots(self):
         """The lots read that found no free move line on the receipt, for the
@@ -183,7 +230,7 @@ class PurchaseOrder(models.Model):
         """
         partner = self.env["res.partner"].browse(partner_id).exists()
         if not partner:
-            raise UserError(self.env._("The selected vendor no longer exists."))
+            raise UserError(_("The selected vendor no longer exists."))
         prepared = self._barcode_purchase_prepare_lines(lines)
         company = self.env.company
         destination, picking_type = self._barcode_purchase_destination(
@@ -199,7 +246,7 @@ class PurchaseOrder(models.Model):
             if price_unit is not None:
                 vals["price_unit"] = price_unit
             if destination:
-                vals["location_final_id"] = destination.id
+                vals["barcode_dest_location_id"] = destination.id
             order_lines.append(Command.create(vals))
         order_vals = {
             "partner_id": partner.id,

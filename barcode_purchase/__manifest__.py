@@ -1,6 +1,6 @@
 {
     "name": "Barcode Purchase",
-    "version": "18.0.1.1.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Purchase",
     "summary": "Create purchase orders by barcode: scan products against a "
     "vendor and confirm the order from the scanner",
@@ -28,7 +28,7 @@
             "barcode_purchase/static/src/js/screens/purchase_screen.esm.js",
             "barcode_purchase/static/src/js/tiles/purchase_menu_tiles.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_purchase/static/tests/**/*",
         ],
     },

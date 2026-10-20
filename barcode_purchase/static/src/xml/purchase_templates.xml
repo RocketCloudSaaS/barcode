@@ -114,10 +114,7 @@
                                         t-att-readonly="line.tracking === 'serial' and line.lot_name"
                                         t-on-change="() => this.refreshPrices()"
                                     />
-                                    <span
-                                        class="ilx-po-v2-uom"
-                                        t-esc="line.uom_name"
-                                    />
+                                    <span class="ilx-po-v2-uom" t-esc="line.uom_name" />
                                 </div>
                                 <div class="ilx-po-v2-col">
                                     <span class="ilx-po-v2-col-header">PRICE</span>

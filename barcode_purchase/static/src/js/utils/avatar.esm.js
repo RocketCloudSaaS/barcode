@@ -1,4 +1,6 @@
-import {imageUrl} from "@web/core/utils/urls";
+/** @odoo-module **/
+
+import {url} from "@web/core/utils/urls";
 
 /**
  * URL of a record's image, or false when it has none.
@@ -16,7 +18,12 @@ import {imageUrl} from "@web/core/utils/urls";
  * served from cache.
  */
 export function recordImageUrl(model, record, field = "image_128") {
-    return record[field]
-        ? imageUrl(model, record.id, field, {unique: record.write_date})
-        : false;
+    if (!record[field]) {
+        return false;
+    }
+    const params = {model, id: record.id, field};
+    if (record.write_date) {
+        params.unique = record.write_date;
+    }
+    return url("/web/image", params);
 }

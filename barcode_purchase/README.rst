@@ -1,3 +1,7 @@
+.. image:: https://odoo-community.org/readme-banner-image
+   :target: https://odoo-community.org/get-involved?utm_source=readme
+   :alt: Odoo Community Association
+
 ================
 Barcode Purchase
 ================
@@ -17,7 +21,7 @@ Barcode Purchase
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-RocketCloudSaaS%2Fbarcode-lightgray.png?logo=github
-    :target: https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_purchase
+    :target: https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_purchase
     :alt: RocketCloudSaaS/barcode
 
 |badge1| |badge2| |badge3|
@@ -121,7 +125,7 @@ Bug Tracker
 Bugs are tracked on `GitHub Issues <https://github.com/RocketCloudSaaS/barcode/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
-`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_purchase%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/RocketCloudSaaS/barcode/issues/new?body=module:%20barcode_purchase%0Aversion:%2017.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -138,6 +142,7 @@ Contributors
 
 - `Zuzanna Elzbieta Szalaty
   Szalaty <https://github.com/szalatyzuzanna>`__
+- `Antonio Ruban <https://github.com/antoniodavid>`__
 
 Maintainers
 -----------
@@ -150,6 +155,6 @@ Current maintainer:
 
 |maintainer-szalatyzuzanna| 
 
-This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/18.0/barcode_purchase>`_ project on GitHub.
+This module is part of the `RocketCloudSaaS/barcode <https://github.com/RocketCloudSaaS/barcode/tree/17.0/barcode_purchase>`_ project on GitHub.
 
 You are welcome to contribute.

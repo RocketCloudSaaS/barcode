@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     PRODUCT_FIELDS,
     PURCHASABLE_PRODUCTS,
@@ -59,7 +61,7 @@ export class PurchaseProductSelectorScreen extends Component {
     }
 
     async loadProducts() {
-        // Odoo 18: purchasable goods are type "consu".
+        // Odoo 17: storable goods are type "product", consumables "consu".
         // `bin_size` keeps the images themselves off the wire -- see
         // recordImageUrl.
         this.state.products = await this.inventory.searchRead(

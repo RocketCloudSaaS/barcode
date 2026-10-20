@@ -1,6 +1,7 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from odoo import Command
 from odoo.exceptions import AccessError, UserError
 from odoo.tests.common import TransactionCase, new_test_user
 
@@ -13,13 +14,13 @@ class TestBarcodePurchase(TransactionCase):
         cls.vendor = cls.env["res.partner"].create({"name": "Barcode Vendor"})
         Product = cls.env["product.product"]
         cls.product = Product.create(
-            {"name": "PO Untracked", "is_storable": True, "standard_price": 3}
+            {"name": "PO Untracked", "detailed_type": "product", "standard_price": 3}
         )
         cls.lot_product = Product.create(
-            {"name": "PO Lot", "is_storable": True, "tracking": "lot"}
+            {"name": "PO Lot", "detailed_type": "product", "tracking": "lot"}
         )
         cls.serial_product = Product.create(
-            {"name": "PO Serial", "is_storable": True, "tracking": "serial"}
+            {"name": "PO Serial", "detailed_type": "product", "tracking": "serial"}
         )
         cls.warehouse = warehouse = cls.env["stock.warehouse"].search(
             [("company_id", "=", cls.env.company.id)], limit=1
@@ -66,7 +67,7 @@ class TestBarcodePurchase(TransactionCase):
         by_dozen = self.env["product.product"].create(
             {
                 "name": "PO By Dozen",
-                "is_storable": True,
+                "detailed_type": "product",
                 "standard_price": 3,
                 "uom_po_id": self.env.ref("uom.product_uom_dozen").id,
             }
@@ -118,7 +119,9 @@ class TestBarcodePurchase(TransactionCase):
         self.assertEqual(result["unplaced_lots"], [])
         # Received by the warehouse's own receipt, straight into the shelf.
         self.assertEqual(order.picking_type_id, self.warehouse.in_type_id)
-        self.assertEqual(order.order_line.location_final_id, self.shelf)
+        self.assertEqual(
+            order.order_line.mapped("barcode_dest_location_id"), self.shelf
+        )
         receipt = order.picking_ids
         self.assertEqual(receipt.move_ids.location_dest_id, self.shelf)
         # Every lot sits on the move of its own order line.
@@ -210,7 +213,87 @@ class TestBarcodePurchase(TransactionCase):
         # The receipt goes to the input as the route says; the goods end on
         # the shelf, through the steps that follow.
         self.assertEqual(receipt.location_dest_id, self.warehouse.wh_input_stock_loc_id)
-        self.assertEqual(receipt.move_ids.location_final_id, self.shelf)
+        self.assertEqual(receipt.move_ids.move_dest_ids.location_dest_id, self.shelf)
+
+    def test_each_line_keeps_its_own_shelf(self):
+        other_shelf = self.env["stock.location"].create(
+            {
+                "name": "Barcode PO Shelf 2",
+                "usage": "internal",
+                "location_id": self.warehouse.lot_stock_id.id,
+            }
+        )
+        order = self.PO.create(
+            {
+                "partner_id": self.vendor.id,
+                "picking_type_id": self.warehouse.in_type_id.id,
+                "order_line": [
+                    Command.create(
+                        {
+                            "product_id": self.product.id,
+                            "product_qty": 1,
+                            "barcode_dest_location_id": self.shelf.id,
+                        }
+                    ),
+                    Command.create(
+                        {
+                            "product_id": self.product.id,
+                            "product_qty": 1,
+                            "barcode_dest_location_id": other_shelf.id,
+                        }
+                    ),
+                    Command.create({"product_id": self.product.id, "product_qty": 1}),
+                ],
+            }
+        )
+        order.button_confirm()
+        first, second, plain = order.order_line
+        # Each line's own move lands on its own shelf; the line without a
+        # destination keeps the receipt's, and the picking is left alone.
+        self.assertEqual(first.move_ids.location_dest_id, self.shelf)
+        self.assertEqual(second.move_ids.location_dest_id, other_shelf)
+        self.assertEqual(plain.move_ids.location_dest_id, self.warehouse.lot_stock_id)
+        self.assertEqual(
+            order.picking_ids.location_dest_id, self.warehouse.lot_stock_id
+        )
+
+    def test_a_delivery_after_the_receipt_keeps_its_own_destination(self):
+        """An MTO line chains its receipt on to the customer delivery: the shelf
+        chosen on the line stops at the warehouse's receipt chain."""
+        result = self.PO.action_barcode_purchase(
+            self.vendor.id,
+            [{"product_id": self.product.id, "qty": 1}],
+            confirm=True,
+            location_dest_id=self.shelf.id,
+        )
+        order = self._order(result)
+        receipt_move = order.picking_ids.move_ids
+        customers = self.env.ref("stock.stock_location_customers")
+        delivery = self.env["stock.picking"].create(
+            {
+                "picking_type_id": self.warehouse.out_type_id.id,
+                "location_id": self.warehouse.lot_stock_id.id,
+                "location_dest_id": customers.id,
+                "move_ids": [
+                    Command.create(
+                        {
+                            "name": self.product.name,
+                            "product_id": self.product.id,
+                            "product_uom_qty": 1,
+                            "product_uom": self.product.uom_id.id,
+                            "location_id": self.warehouse.lot_stock_id.id,
+                            "location_dest_id": customers.id,
+                        }
+                    )
+                ],
+            }
+        )
+        receipt_move.move_dest_ids = [Command.link(delivery.move_ids.id)]
+        order._barcode_purchase_apply_destination()
+        # The goods end on the shelf; the customer delivery is not the shelf's.
+        self.assertEqual(receipt_move.location_dest_id, self.shelf)
+        self.assertEqual(delivery.move_ids.location_dest_id, customers)
+        self.assertEqual(delivery.location_dest_id, customers)
 
     def test_two_step_approval(self):
         self.env.company.write(

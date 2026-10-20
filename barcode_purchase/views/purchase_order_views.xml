@@ -8,13 +8,13 @@
         <field name="inherit_id" ref="purchase.purchase_order_form" />
         <field name="arch" type="xml">
             <xpath
-                expr="//field[@name='order_line']/list/field[@name='product_qty']"
+                expr="//field[@name='order_line']/tree/field[@name='product_qty']"
                 position="after"
             >
                 <field name="barcode_lot_name" optional="hide" />
                 <field
-                    name="location_final_id"
-                    string="Final Location"
+                    name="barcode_dest_location_id"
+                    string="Destination Location"
                     optional="hide"
                     groups="stock.group_stock_multi_locations"
                 />

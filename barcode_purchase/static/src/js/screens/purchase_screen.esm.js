@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {
     barcodeMatchAnyDomain,
     barcodeMatchDomain,
@@ -11,8 +13,9 @@ import {roundPrecision} from "@web/core/utils/numbers";
 import {useService} from "@web/core/utils/hooks";
 
 // The products the scanner offers for an order: goods that can be purchased.
+// Odoo 17 keeps storable goods as type "product" and consumables as "consu".
 export const PURCHASABLE_PRODUCTS = [
-    ["type", "=", "consu"],
+    ["type", "in", ["product", "consu"]],
     ["purchase_ok", "=", true],
 ];
 

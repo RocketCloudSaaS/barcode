@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";

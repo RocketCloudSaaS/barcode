@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {useService} from "@web/core/utils/hooks";
@@ -103,9 +105,13 @@ export class BuyerSelectorScreen extends Component {
     }
 
     goBack() {
-        this.store.navigate(this._returnRoute, {...this._returnParams}, {
-            replace: true,
-        });
+        this.store.navigate(
+            this._returnRoute,
+            {...this._returnParams},
+            {
+                replace: true,
+            }
+        );
     }
 
     static template = "barcode_purchase.BuyerSelectorScreen";
