@@ -1,4 +1,6 @@
-import {Component, onWillStart, useEffect, useRef, useState} from "@odoo/owl";
+/** @odoo-module **/
+
+import {Component, onWillStart, useState} from "@odoo/owl";
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchAnyDomain} from "@barcode_scanner/js/utils/scan_match.esm";
@@ -8,16 +10,16 @@ import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.e
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
 
-// What the back office's product field offers on a scrap: goods, never a
-// service or a combo, which have no stock to write off.
-export const SCRAPPABLE_PRODUCTS = [["type", "=", "consu"]];
+// What the back office's product field offers on a scrap: storable and
+// consumable goods, never a service, which has no stock to write off.
+export const SCRAPPABLE_PRODUCTS = [["type", "in", ["product", "consu"]]];
 
 /**
  * Scrap lines of one location. The operator scans the goods to write off (a GS1
  * label also brings its lot/serial and piece count), adds others from the "+"
- * product selector, sets each quantity and lot, picks the scrap reasons and
- * scraps. Each line shows how much of it the location holds, and the lot field
- * suggests the lots actually stored there.
+ * product selector, sets each quantity and lot and scraps. Each line shows how
+ * much of it the location holds, and the lot field suggests the lots actually
+ * stored there.
  *
  * When a line asks for more than the location holds, the server returns it
  * instead of scrapping, and the operator is asked whether to scrap anyway -- the
@@ -36,25 +38,11 @@ export class ScrapScreen extends Component {
             locationName: "",
             lines: [],
             stock: [],
-            reasons: [],
-            reasonIds: [],
             scrapLocationId: null,
             scrapLocations: [],
-            // Name being typed for a new scrap reason; null while the field is closed.
-            newReason: null,
             loading: true,
             scrapping: false,
         });
-
-        this.newReasonRef = useRef("newReason");
-        useEffect(
-            (open) => {
-                if (open && this.newReasonRef.el) {
-                    this.newReasonRef.el.focus();
-                }
-            },
-            () => [this.state.newReason !== null]
-        );
 
         useBarcodeHandler({
             onScan: async (barcode, parsedData) => {
@@ -66,7 +54,6 @@ export class ScrapScreen extends Component {
             const params = this.props.params || {};
             this.state.locationId = params.locationId || null;
             this.state.locationName = params.locationName || "";
-            this.state.reasonIds = [...(params.reasonIds || [])];
             this.state.scrapLocationId = params.scrapLocationId || null;
             if (Array.isArray(params.lines)) {
                 // Coming back from the product selector: restore the lines.
@@ -76,7 +63,7 @@ export class ScrapScreen extends Component {
                     0
                 );
             }
-            await Promise.all([this.loadStock(), this.loadReasons()]);
+            await this.loadStock();
             this.state.loading = false;
             if (params.addProduct) {
                 await this.addOrIncrement(params.addProduct, null, 1);
@@ -107,14 +94,6 @@ export class ScrapScreen extends Component {
 
     setScrapLocation(value) {
         this.state.scrapLocationId = parseInt(value, 10) || null;
-    }
-
-    async loadReasons() {
-        this.state.reasons = await this.inventory.searchRead(
-            "stock.scrap.reason.tag",
-            [],
-            ["id", "name"]
-        );
     }
 
     // --- scanning -------------------------------------------------------------
@@ -177,7 +156,6 @@ export class ScrapScreen extends Component {
             locationId: this.state.locationId,
             locationName: this.state.locationName,
             lines: this.state.lines.map((l) => ({...l})),
-            reasonIds: [...this.state.reasonIds],
             scrapLocationId: this.state.scrapLocationId,
             // Offer first what the location holds: that is what gets scrapped.
             stockProductIds: [...new Set(this.state.stock.map((s) => s.product_id))],
@@ -361,71 +339,6 @@ export class ScrapScreen extends Component {
         }
     }
 
-    // --- reasons --------------------------------------------------------------
-
-    isReasonSelected(reason) {
-        return this.state.reasonIds.includes(reason.id);
-    }
-
-    toggleReason(reason) {
-        const index = this.state.reasonIds.indexOf(reason.id);
-        if (index === -1) {
-            this.state.reasonIds.push(reason.id);
-        } else {
-            this.state.reasonIds.splice(index, 1);
-        }
-    }
-
-    startNewReason() {
-        this.state.newReason = "";
-    }
-
-    cancelNewReason() {
-        this.state.newReason = null;
-    }
-
-    setNewReason(value) {
-        this.state.newReason = value;
-    }
-
-    onNewReasonKeydown(ev) {
-        if (ev.key === "Enter") {
-            ev.preventDefault();
-            this.saveNewReason();
-        } else if (ev.key === "Escape") {
-            this.cancelNewReason();
-        }
-    }
-
-    /**
-     * Create a scrap reason from its typed name, like the back office's reason
-     * field quick-creates one, and select it. An existing reason with the same
-     * name comes back instead of a duplicate.
-     */
-    async saveNewReason() {
-        const name = String(this.state.newReason || "").trim();
-        if (!name) {
-            this.cancelNewReason();
-            return;
-        }
-        try {
-            const reason = await this.inventory.call(
-                "stock.scrap",
-                "action_barcode_scrap_create_reason",
-                [name]
-            );
-            if (!this.state.reasons.some((r) => r.id === reason.id)) {
-                this.state.reasons.push(reason);
-            }
-            if (!this.state.reasonIds.includes(reason.id)) {
-                this.state.reasonIds.push(reason.id);
-            }
-            this.state.newReason = null;
-        } catch {
-            // The API wrapper already surfaced the server error to the operator.
-        }
-    }
-
     // --- scrap ----------------------------------------------------------------
 
     /** Whether the Scrap button can be used: lines, a destination, no scrap running. */
@@ -494,7 +407,7 @@ export class ScrapScreen extends Component {
             const result = await this.inventory.call(
                 "stock.scrap",
                 "action_barcode_scrap",
-                [this.state.locationId, payload, this.state.reasonIds],
+                [this.state.locationId, payload],
                 {
                     force: force && confirmed === signature,
                     scrap_location_id: this.state.scrapLocationId,

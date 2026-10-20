@@ -1,6 +1,6 @@
 {
     "name": "Barcode Scrap",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Inventory",
     "summary": "Scrap damaged or lost goods from the Barcode app",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -21,7 +21,7 @@
             "barcode_scrap/static/src/js/screens/scrap_screen.esm.js",
             "barcode_scrap/static/src/js/tiles/scrap_menu_tiles.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_scrap/static/tests/**/*",
         ],
     },

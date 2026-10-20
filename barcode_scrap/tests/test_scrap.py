@@ -22,13 +22,13 @@ class TestBarcodeScrap(TransactionCase):
             }
         )
         cls.product = cls.env["product.product"].create(
-            {"name": "Scrap Untracked", "is_storable": True}
+            {"name": "Scrap Untracked", "type": "product"}
         )
         cls.lot_product = cls.env["product.product"].create(
-            {"name": "Scrap Lot", "is_storable": True, "tracking": "lot"}
+            {"name": "Scrap Lot", "type": "product", "tracking": "lot"}
         )
         cls.serial_product = cls.env["product.product"].create(
-            {"name": "Scrap Serial", "is_storable": True, "tracking": "serial"}
+            {"name": "Scrap Serial", "type": "product", "tracking": "serial"}
         )
         cls.lot = cls.env["stock.lot"].create(
             {
@@ -52,7 +52,6 @@ class TestBarcodeScrap(TransactionCase):
         Quant._update_available_quantity(
             cls.serial_product, cls.location, 1, lot_id=cls.serial
         )
-        cls.reason = cls.env["stock.scrap.reason.tag"].create({"name": "Damaged"})
 
     def _qty(self, product, lot=None):
         return product.with_context(
@@ -118,20 +117,18 @@ class TestBarcodeScrap(TransactionCase):
         with self.assertRaises(UserError):
             self.Scrap.action_barcode_scrap(0, [{"product_id": self.product.id}])
 
-    def test_scrap_done_with_reasons(self):
+    def test_scrap_done(self):
         result = self.Scrap.action_barcode_scrap(
             self.location.id,
             [
                 {"product_id": self.product.id, "qty": 3},
                 {"product_id": self.lot_product.id, "lot_id": self.lot.id, "qty": 2},
             ],
-            [self.reason.id],
         )
         self.assertTrue(result["done"])
         self.assertEqual(result["count"], 2)
         scraps = self.Scrap.search([("name", "in", result["names"])])
         self.assertEqual(set(scraps.mapped("state")), {"done"})
-        self.assertEqual(scraps.scrap_reason_tag_ids, self.reason)
         self.assertEqual(self._qty(self.product), 7)
         self.assertEqual(self._qty(self.lot_product, self.lot), 3)
 
@@ -363,27 +360,6 @@ class TestBarcodeScrap(TransactionCase):
                 [{"product_id": self.product.id, "qty": 1}],
                 scrap_location_id=self.location.id,
             )
-
-    def test_create_reason(self):
-        created = self.Scrap.action_barcode_scrap_create_reason("  Broken   box ")
-        tag = self.env["stock.scrap.reason.tag"].browse(created["id"])
-        self.assertEqual(tag.name, "Broken box")
-        # Same name in another case: the existing reason, no duplicate.
-        again = self.Scrap.action_barcode_scrap_create_reason("broken BOX")
-        self.assertEqual(again["id"], tag.id)
-        self.assertEqual(
-            self.Scrap.action_barcode_scrap_create_reason("damaged")["id"],
-            self.reason.id,
-        )
-
-    def test_create_reason_wildcards_stay_literal(self):
-        wild = self.Scrap.action_barcode_scrap_create_reason("Dam%")
-        self.assertNotEqual(wild["id"], self.reason.id)
-        self.assertEqual(wild["name"], "Dam%")
-
-    def test_create_reason_needs_a_name(self):
-        with self.assertRaises(UserError):
-            self.Scrap.action_barcode_scrap_create_reason("   ")
 
     def test_destination_filter_matches_back_office(self):
         # Offered: the company's scrap locations and the shared ones; never

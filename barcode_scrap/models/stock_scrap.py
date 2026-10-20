@@ -1,7 +1,7 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import Command, api, models
+from odoo import _, api, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare
 
@@ -19,7 +19,7 @@ class StockScrap(models.Model):
     def _barcode_scrap_location(self, location_id):
         location = self.env["stock.location"].browse(location_id).exists()
         if not location or location.usage != "internal":
-            raise UserError(self.env._("The selected location is no longer valid."))
+            raise UserError(_("The selected location is no longer valid."))
         return location
 
     @api.model
@@ -36,17 +36,24 @@ class StockScrap(models.Model):
         )
 
     @api.model
-    def _barcode_scrap_default_destination(self, company, location, destinations):
+    def _barcode_scrap_default_destination(self, company, destinations):
         """Where a scrap of ``company`` goes when the operator picks nothing.
 
         The back office preselects one of the company's own scrap locations.
         When it has none, the first of the allowed ones (a shared scrap location,
         say) is taken, so a destination that can be offered is never left empty.
+
+        The preselection is computed here instead of reading ``scrap_location_id``
+        on a new scrap: Odoo 17's compute assumes the company owns a scrap
+        location and raises a KeyError when it does not, which is precisely the
+        case this method covers.
         """
-        default = self.new(
-            {"company_id": company.id, "location_id": location.id}
-        ).scrap_location_id
-        return (default & destinations) or destinations[:1]
+        own = destinations.filtered(lambda loc: loc.company_id.id == company.id)
+        if own:
+            # The back office takes the company's scrap location with the lowest
+            # id (its compute groups by company and aggregates ``id:min``).
+            return own.sorted("id")[:1]
+        return destinations[:1]
 
     @api.model
     def _barcode_scrap_available_qty(self, product, lot, location):
@@ -64,24 +71,6 @@ class StockScrap(models.Model):
             owner_id=False,
             strict=True,
         ).qty_available
-
-    @api.model
-    def action_barcode_scrap_create_reason(self, name):
-        """Create a scrap reason from the scanner, as the back office's reason
-        field quick-creates one from a typed name.
-
-        A reason that already exists under the same name, whatever its case, is
-        returned instead of creating a near-duplicate operators would then have
-        to tell apart.
-        """
-        name = " ".join((name or "").split())
-        if not name:
-            raise UserError(self.env._("Type a name for the scrap reason."))
-        Tag = self.env["stock.scrap.reason.tag"]
-        tag = Tag.search(
-            [("name", "=ilike", _exact_ilike(name))], limit=1
-        ) or Tag.create({"name": name})
-        return {"id": tag.id, "name": tag.name}
 
     @api.model
     def action_barcode_scrap_location_stock(self, location_id):
@@ -106,9 +95,7 @@ class StockScrap(models.Model):
         )
         company = location.company_id or self.env.company
         scrap_locations = self._barcode_scrap_destinations(company)
-        default = self._barcode_scrap_default_destination(
-            company, location, scrap_locations
-        )
+        default = self._barcode_scrap_default_destination(company, scrap_locations)
         return {
             "location_id": location.id,
             "location_name": location.display_name,
@@ -150,7 +137,7 @@ class StockScrap(models.Model):
             if lot and lot.product_id == product:
                 return lot
             raise UserError(
-                self.env._(
+                _(
                     "The lot/serial number chosen for %(name)s is no longer valid.",
                     name=product.display_name,
                 )
@@ -170,7 +157,7 @@ class StockScrap(models.Model):
             )
         if len(lot) > 1:
             raise UserError(
-                self.env._(
+                _(
                     "Several lots/serial numbers of %(name)s match %(lot)s: type "
                     "it exactly as it is written.",
                     lot=lot_name,
@@ -179,7 +166,7 @@ class StockScrap(models.Model):
             )
         if not lot:
             raise UserError(
-                self.env._(
+                _(
                     "There is no lot/serial number %(lot)s for %(name)s.",
                     lot=lot_name,
                     name=product.display_name,
@@ -203,14 +190,13 @@ class StockScrap(models.Model):
                 self.env["product.product"].browse(line.get("product_id")).exists()
             )
             if not product:
+                raise UserError(_("One of the scanned products no longer exists."))
+            if product.type not in ("product", "consu"):
+                # What the back office's product field offers on a scrap:
+                # storable and consumable goods, never a service, which has no
+                # stock to write off.
                 raise UserError(
-                    self.env._("One of the scanned products no longer exists.")
-                )
-            if product.type != "consu":
-                # What the back office's product field offers on a scrap: a service
-                # or a combo has no stock to write off.
-                raise UserError(
-                    self.env._(
+                    _(
                         "%(name)s is not a goods product and cannot be scrapped.",
                         name=product.display_name,
                     )
@@ -218,7 +204,7 @@ class StockScrap(models.Model):
             qty = float(line.get("qty") or 0)
             if float_compare(qty, 0, precision_rounding=product.uom_id.rounding) <= 0:
                 raise UserError(
-                    self.env._(
+                    _(
                         "The quantity to scrap for %(name)s must be positive.",
                         name=product.display_name,
                     )
@@ -228,7 +214,7 @@ class StockScrap(models.Model):
                 lot = self._barcode_scrap_resolve_lot(product, line, location)
                 if not lot:
                     raise UserError(
-                        self.env._(
+                        _(
                             "Product %(name)s is tracked: scan or choose its "
                             "lot/serial number before scrapping it.",
                             name=product.display_name,
@@ -240,7 +226,7 @@ class StockScrap(models.Model):
             else:
                 merged[key] = [product, lot, qty]
         if not merged:
-            raise UserError(self.env._("Scan at least one product to scrap."))
+            raise UserError(_("Scan at least one product to scrap."))
         for product, lot, qty in merged.values():
             if (
                 product.tracking == "serial"
@@ -248,7 +234,7 @@ class StockScrap(models.Model):
                 != 0
             ):
                 raise UserError(
-                    self.env._(
+                    _(
                         "Serial number %(lot)s of %(name)s can only be scrapped "
                         "once, one unit.",
                         lot=lot.name,
@@ -262,14 +248,12 @@ class StockScrap(models.Model):
         self,
         location_id,
         lines,
-        reason_tag_ids=None,
         force=False,
         scrap_location_id=None,
     ):
         """Scrap the scanned lines from one location and validate them at once.
 
-        One ``stock.scrap`` is created per line, carrying the chosen scrap
-        reasons, and validated on the spot.
+        One ``stock.scrap`` is created per line and validated on the spot.
 
         When a line asks for more than the location holds, nothing is written
         unless ``force`` is set: the lines short of stock are returned so the
@@ -284,22 +268,19 @@ class StockScrap(models.Model):
         """
         location = self._barcode_scrap_location(location_id)
         prepared = self._barcode_scrap_prepare_lines(lines, location)
-        reasons = (
-            self.env["stock.scrap.reason.tag"].browse(reason_tag_ids or []).exists()
-        )
         company = location.company_id or self.env.company
         destinations = self._barcode_scrap_destinations(company)
         if scrap_location_id:
             scrap_location = self.env["stock.location"].browse(scrap_location_id)
             if scrap_location not in destinations:
-                raise UserError(self.env._("The selected scrap location is not valid."))
+                raise UserError(_("The selected scrap location is not valid."))
         else:
             scrap_location = self._barcode_scrap_default_destination(
-                company, location, destinations
+                company, destinations
             )
         if not scrap_location:
             raise UserError(
-                self.env._(
+                _(
                     "There is no scrap location for %(company)s: create one first.",
                     company=company.display_name,
                 )
@@ -312,7 +293,6 @@ class StockScrap(models.Model):
                 "lot_id": lot.id,
                 "location_id": location.id,
                 "company_id": company.id,
-                "scrap_reason_tag_ids": [Command.set(reasons.ids)],
                 "scrap_location_id": scrap_location.id,
             }
             for product, lot, qty in prepared
@@ -349,7 +329,7 @@ class StockScrap(models.Model):
                 # The stock moved after it was checked: never scrap more than
                 # there is without the operator confirming it.
                 raise UserError(
-                    self.env._(
+                    _(
                         "The stock of %(name)s changed while scrapping. "
                         "Please try again.",
                         name=scrap.product_id.display_name,

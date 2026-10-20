@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeMatchDomain} from "@barcode_scanner/js/utils/scan_match.esm";
@@ -89,7 +91,6 @@ export class ScrapProductSelectorScreen extends Component {
             locationId: params.locationId,
             locationName: params.locationName,
             lines: params.lines || [],
-            reasonIds: params.reasonIds || [],
             scrapLocationId: params.scrapLocationId || null,
         };
     }

@@ -13,10 +13,8 @@ From the Barcode app home screen, tap **Scrap Products**.
    goods can be scrapped, as in the back office: services are not offered.
 3. Each line shows how much of it the location holds. Adjust the quantity
    if needed.
-4. Choose the **scrap reasons** and tap **Scrap**. A reason that does not
-   exist yet can be created on the spot with **New reason**, as the back
-   office's reason field allows; typing the name of an existing one (in any
-   case) picks that one instead of creating a duplicate.
+4. Tap **Scrap**. Each line becomes a native scrap, created and validated on
+   the spot.
 
 ## Lots and serial numbers
 
