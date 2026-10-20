@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {barcodeParsers} from "@barcode_scanner/js/registries.esm";
 import {
     compileGs1Rule,

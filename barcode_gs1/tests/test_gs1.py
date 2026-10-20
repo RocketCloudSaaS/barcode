@@ -1,9 +1,17 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from werkzeug.urls import url_quote_plus
+
 from odoo.tests.common import HttpCase, TransactionCase, new_test_user, tagged
 
+from odoo.addons.web.tests.test_js import qunit_error_checker
 
+
+# ``new_test_user`` must see every module that extends ``res.users`` (a partial
+# registry during module load omits required columns such as ``web_responsive``'s),
+# so this class runs once all modules are loaded, like Odoo's own profiler tests.
+@tagged("post_install", "-at_install")
 class TestBarcodeGs1UserAccess(TransactionCase):
     """The app reads the GS1 rules as whoever opens it.
 
@@ -51,7 +59,7 @@ class TestBarcodeGs1UserAccess(TransactionCase):
 
 
 @tagged("post_install", "-at_install")
-class TestBarcodeGs1Hoot(HttpCase):
+class TestBarcodeGs1Js(HttpCase):
     """Run the GS1 parser unit tests (``static/tests``) in the browser.
 
     The parsing itself is JS, so that suite is where it is actually covered. A
@@ -60,11 +68,16 @@ class TestBarcodeGs1Hoot(HttpCase):
     """
 
     def test_js(self):
+        # 17.0 core pattern: select the module with ``mod`` and pass the QUnit
+        # filter as ``/<url-encoded regex>/``. Odoo wraps each test file in a
+        # QUnit module named after the addon, hence the ``barcode_gs1 > ``
+        # prefix in the full test name.
+        filter_param = url_quote_plus(r"^barcode_gs1 > BarcodeGs1: .*$")
         self.browser_js(
-            "/web/tests?headless&loglevel=2&preset=desktop&filter=BarcodeGs1",
+            f"/web/tests?mod=barcode_gs1&filter=/{filter_param}/",
             "",
             "",
             login="admin",
-            success_signal="[HOOT] Test suite succeeded",
-            error_checker=lambda message: "[HOOT]" not in message,
+            timeout=120,
+            error_checker=qunit_error_checker,
         )

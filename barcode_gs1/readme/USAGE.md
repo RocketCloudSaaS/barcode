@@ -59,16 +59,6 @@ of resolving to the wrong product or pallet.
 
 ## In the warehouse app
 
-What the warehouse app does with it (with ``barcode_stock`` installed):
-
-- the quantity picked comes from the barcode: the piece count (AI 30/37), or the
-  measure — a net weight, say — when the product is stocked in that kind of
-  unit. Weighing that choice needs the unit the product is stocked in, so it
-  lives in ``barcode_gs1_stock``, which installs itself as soon as both modules
-  are there. A label stating neither picks a single unit, or the pack's
-  quantity when its GTIN is a packaging barcode;
-- the lot or serial is looked up for the scanned product and preselected in the
-  move wizard; on a receipt an unknown lot opens the create-lot flow with the
-  name and, when ``product_expiry`` is installed, the expiry date prefilled;
-- on a delivery or an internal transfer, a lot that is not available is reported
-  instead of silently picking another one.
+This module only parses. What a feature module does with the parsed fields —
+choosing the quantity, preselecting a lot, refusing an unavailable one — is
+that module's concern, not this one's.

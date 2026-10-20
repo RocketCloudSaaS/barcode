@@ -1,3 +1,4 @@
+/** @odoo-module **/
 import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
 import {loadGs1Nomenclature} from "@barcode_gs1/js/gs1_nomenclature.esm";
 

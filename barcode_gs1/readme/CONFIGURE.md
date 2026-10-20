@@ -16,6 +16,12 @@ date, pack date, location, destination location) lands on the matching field of
 the parsed scan (see Usage); the value of any other rule is still available in
 ``ais``.
 
+*Weighted Product* and *Priced Product* are selectable rule types in Odoo 17 —
+stock adds the first and point_of_sale the second — and the parser handles both:
+a weighted product fills ``weight`` and its unit, a priced product fills
+``price``. A *Quantity* rule with *Decimal* enabled also fills ``weight``; any
+other rule's value remains available in ``ais``.
+
 Identifiers the nomenclature does not define keep working through the ones built
 into the module, and if the nomenclature cannot be read at all the module falls
 back to them entirely.
