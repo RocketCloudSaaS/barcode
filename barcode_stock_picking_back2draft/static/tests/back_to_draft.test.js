@@ -2,7 +2,6 @@
 
 import "@barcode_stock_picking_back2draft/js/picking_screen_patch.esm";
 import "@barcode_stock_picking_back2draft/js/picking_list_screen_patch.esm";
-import {describe, expect, test} from "@odoo/hoot";
 import {barcodeApiService} from "@barcode_scanner/js/api.esm";
 import {PickingListScreen} from "@barcode_stock/js/screens/picking_list_screen.esm";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
@@ -52,8 +51,8 @@ function makePickingListScreen(pickings = []) {
     return screen;
 }
 
-describe("BarcodeStockPickingBack2Draft", () => {
-    test("resets a canceled picking after confirmation", async () => {
+QUnit.module("BarcodeStockPickingBack2Draft", () => {
+    QUnit.test("resets a canceled picking after confirmation", async (assert) => {
         const calls = [];
         const notifications = [];
         const inventory = makeInventory(
@@ -69,90 +68,98 @@ describe("BarcodeStockPickingBack2Draft", () => {
 
         await PickingScreen.prototype.backToDraft.call(screen);
 
-        expect(dialogs.length).toBe(1);
+        assert.strictEqual(dialogs.length, 1);
         await dialogs[0].props.confirm();
-        expect(calls).toEqual([
+        assert.deepEqual(calls, [
             ["stock.picking", "action_back_to_draft", [[42]], {}],
         ]);
-        expect(notifications).toEqual([
+        assert.deepEqual(notifications, [
             {message: "Picking returned to draft.", options: {type: "success"}},
         ]);
-        expect(navigations).toEqual([
+        assert.deepEqual(navigations, [
             ["picking_list", {warehouseId: 7}, {clearHistory: true}],
         ]);
     });
 
-    test("keeps the picking open after a safe RPC error and allows retry", async () => {
-        let shouldFail = true;
-        const calls = [];
-        const notifications = [];
-        const inventory = makeInventory(
-            {
-                call: async (...args) => {
-                    calls.push(args);
-                    if (shouldFail) {
-                        throw {
-                            data: {
-                                name: "odoo.exceptions.AccessDenied",
-                                message: "Unsafe server detail",
-                                debug: "Sensitive traceback",
-                            },
-                        };
-                    }
-                    return true;
+    QUnit.test(
+        "keeps the picking open after a safe RPC error and allows retry",
+        async (assert) => {
+            let shouldFail = true;
+            const calls = [];
+            const notifications = [];
+            const inventory = makeInventory(
+                {
+                    call: async (...args) => {
+                        calls.push(args);
+                        if (shouldFail) {
+                            throw {
+                                data: {
+                                    name: "odoo.exceptions.AccessDenied",
+                                    message: "Unsafe server detail",
+                                    debug: "Sensitive traceback",
+                                },
+                            };
+                        }
+                        return true;
+                    },
                 },
-            },
-            notifications
-        );
-        const {screen, dialogs, navigations} = makePickingScreen(inventory);
+                notifications
+            );
+            const {screen, dialogs, navigations} = makePickingScreen(inventory);
 
-        await PickingScreen.prototype.backToDraft.call(screen);
-        await dialogs[0].props.confirm();
+            await PickingScreen.prototype.backToDraft.call(screen);
+            await dialogs[0].props.confirm();
 
-        expect(notifications).toEqual([
-            {
-                message: "An error occurred while calling the server.",
-                options: {type: "danger"},
-            },
-        ]);
-        expect(navigations).toEqual([]);
-        expect(screen.state.picking.state).toBe("cancel");
+            assert.deepEqual(notifications, [
+                {
+                    message: "An error occurred while calling the server.",
+                    options: {type: "danger"},
+                },
+            ]);
+            assert.deepEqual(navigations, []);
+            assert.strictEqual(screen.state.picking.state, "cancel");
 
-        shouldFail = false;
-        await PickingScreen.prototype.backToDraft.call(screen);
-        await dialogs[1].props.confirm();
+            shouldFail = false;
+            await PickingScreen.prototype.backToDraft.call(screen);
+            await dialogs[1].props.confirm();
 
-        expect(calls.length).toBe(2);
-        expect(notifications).toEqual([
-            {
-                message: "An error occurred while calling the server.",
-                options: {type: "danger"},
-            },
-            {message: "Picking returned to draft.", options: {type: "success"}},
-        ]);
-        expect(navigations).toEqual([
-            ["picking_list", {warehouseId: 7}, {clearHistory: true}],
-        ]);
-    });
+            assert.strictEqual(calls.length, 2);
+            assert.deepEqual(notifications, [
+                {
+                    message: "An error occurred while calling the server.",
+                    options: {type: "danger"},
+                },
+                {message: "Picking returned to draft.", options: {type: "success"}},
+            ]);
+            assert.deepEqual(navigations, [
+                ["picking_list", {warehouseId: 7}, {clearHistory: true}],
+            ]);
+        }
+    );
 
-    test("does not ask nor call the action for a non-canceled picking", async () => {
-        const calls = [];
-        const dialogs = [];
-        const screen = {
-            state: {picking: {id: 42, state: "assigned"}},
-            pickingId: 42,
-            inventory: {call: async (...args) => calls.push(args)},
-            store: {navigate: (...args) => args},
-            dialog: {add: (dialogClass, props) => dialogs.push({dialogClass, props})},
-        };
+    QUnit.test(
+        "does not ask nor call the action for a non-canceled picking",
+        async (assert) => {
+            const calls = [];
+            const dialogs = [];
+            const screen = {
+                state: {picking: {id: 42, state: "assigned"}},
+                pickingId: 42,
+                inventory: {call: async (...args) => calls.push(args)},
+                store: {navigate: (...args) => args},
+                dialog: {
+                    add: (dialogClass, props) => dialogs.push({dialogClass, props}),
+                },
+            };
 
-        await PickingScreen.prototype.backToDraft.call(screen);
+            await PickingScreen.prototype.backToDraft.call(screen);
 
-        expect(dialogs).toEqual([]);
-        expect(calls).toEqual([]);
-    });
+            assert.deepEqual(dialogs, []);
+            assert.deepEqual(calls, []);
+        }
+    );
 
-    test("lists canceled pickings from the bridge patch", async () => {
+    QUnit.test("lists canceled pickings from the bridge patch", async (assert) => {
         const searches = [];
         const screen = makePickingListScreen();
         screen.inventory = {
@@ -167,99 +174,124 @@ describe("BarcodeStockPickingBack2Draft", () => {
 
         await PickingListScreen.prototype.loadPickings.call(screen);
 
-        expect(searches.length).toBe(2);
-        expect(searches[0].domain).toEqual([
+        assert.strictEqual(searches.length, 2);
+        assert.deepEqual(searches[0].domain, [
             ["picking_type_id.warehouse_id", "=", 7],
             ["picking_type_id.code", "=", "outgoing"],
             ["state", "not in", ["done", "cancel"]],
         ]);
-        expect(searches[1].domain).toEqual([
+        assert.deepEqual(searches[1].domain, [
             ["picking_type_id.warehouse_id", "=", 7],
             ["picking_type_id.code", "=", "outgoing"],
             ["state", "=", "cancel"],
         ]);
-        expect(screen.state.pickings.map((picking) => picking.name)).toEqual([
-            "OUT/001",
-            "OUT/099",
-        ]);
-        expect(screen.getMatchingPickings().map((picking) => picking.name)).toEqual([
-            "OUT/001",
-        ]);
+        assert.deepEqual(
+            screen.state.pickings.map((picking) => picking.name),
+            ["OUT/001", "OUT/099"]
+        );
+        assert.deepEqual(
+            screen.getMatchingPickings().map((picking) => picking.name),
+            ["OUT/001"]
+        );
     });
 
-    test("shows canceled pickings only for the explicit Cancelled filter", () => {
-        const screen = makePickingListScreen([
-            {id: 1, name: "OUT/001", state: "assigned"},
-            {id: 2, name: "OUT/002", state: "cancel"},
-        ]);
-        screen.state.groupByLevels = ["state"];
+    QUnit.test(
+        "shows canceled pickings only for the explicit Cancelled filter",
+        (assert) => {
+            const screen = makePickingListScreen([
+                {id: 1, name: "OUT/001", state: "assigned"},
+                {id: 2, name: "OUT/002", state: "cancel"},
+            ]);
+            screen.state.groupByLevels = ["state"];
 
-        screen.computeGroups();
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([1]);
-        expect(Object.keys(screen.state.groupedPickings)).toEqual(["Assigned"]);
+            screen.computeGroups();
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [1]
+            );
+            assert.deepEqual(Object.keys(screen.state.groupedPickings), ["Assigned"]);
 
-        screen.state.activeFilters = ["state"];
-        screen.state.filterValues.state = "cancel";
-        screen.computeGroups();
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([2]);
-        expect(Object.keys(screen.state.groupedPickings)).toEqual(["Cancelled"]);
+            screen.state.activeFilters = ["state"];
+            screen.state.filterValues.state = "cancel";
+            screen.computeGroups();
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [2]
+            );
+            assert.deepEqual(Object.keys(screen.state.groupedPickings), ["Cancelled"]);
 
-        screen.state.filterValues.state = "all";
-        screen.computeGroups();
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([1]);
+            screen.state.filterValues.state = "all";
+            screen.computeGroups();
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [1]
+            );
 
-        screen.clearFilters();
-        expect(screen.state.groupByLevels).toEqual(["state"]);
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([1]);
-        expect(Object.keys(screen.state.groupedPickings)).toEqual(["Assigned"]);
-    });
+            screen.clearFilters();
+            assert.deepEqual(screen.state.groupByLevels, ["state"]);
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [1]
+            );
+            assert.deepEqual(Object.keys(screen.state.groupedPickings), ["Assigned"]);
+        }
+    );
 
-    test("keeps other active filters and grouping while hiding canceled records", () => {
-        const date = new Date();
-        const dateValue = [
-            date.getFullYear(),
-            String(date.getMonth() + 1).padStart(2, "0"),
-            String(date.getDate()).padStart(2, "0"),
-        ].join("-");
-        const nextDate = new Date(date);
-        nextDate.setDate(date.getDate() + 1);
-        const nextDateValue = [
-            nextDate.getFullYear(),
-            String(nextDate.getMonth() + 1).padStart(2, "0"),
-            String(nextDate.getDate()).padStart(2, "0"),
-        ].join("-");
-        const screen = makePickingListScreen([
-            {
-                id: 1,
-                name: "OUT/001",
-                state: "assigned",
-                scheduled_date: `${dateValue} 12:00:00`,
-            },
-            {
-                id: 2,
-                name: "OUT/002",
-                state: "assigned",
-                scheduled_date: `${nextDateValue} 12:00:00`,
-            },
-            {
-                id: 3,
-                name: "OUT/003",
-                state: "cancel",
-                scheduled_date: `${dateValue} 12:00:00`,
-            },
-        ]);
-        screen.state.activeFilters = ["date"];
-        screen.state.filterValues.date = `custom:${dateValue}`;
-        screen.state.groupByLevels = ["state"];
+    QUnit.test(
+        "keeps other active filters and grouping while hiding canceled records",
+        (assert) => {
+            const date = new Date();
+            const dateValue = [
+                date.getFullYear(),
+                String(date.getMonth() + 1).padStart(2, "0"),
+                String(date.getDate()).padStart(2, "0"),
+            ].join("-");
+            const nextDate = new Date(date);
+            nextDate.setDate(date.getDate() + 1);
+            const nextDateValue = [
+                nextDate.getFullYear(),
+                String(nextDate.getMonth() + 1).padStart(2, "0"),
+                String(nextDate.getDate()).padStart(2, "0"),
+            ].join("-");
+            const screen = makePickingListScreen([
+                {
+                    id: 1,
+                    name: "OUT/001",
+                    state: "assigned",
+                    scheduled_date: `${dateValue} 12:00:00`,
+                },
+                {
+                    id: 2,
+                    name: "OUT/002",
+                    state: "assigned",
+                    scheduled_date: `${nextDateValue} 12:00:00`,
+                },
+                {
+                    id: 3,
+                    name: "OUT/003",
+                    state: "cancel",
+                    scheduled_date: `${dateValue} 12:00:00`,
+                },
+            ]);
+            screen.state.activeFilters = ["date"];
+            screen.state.filterValues.date = `custom:${dateValue}`;
+            screen.state.groupByLevels = ["state"];
 
-        screen.computeGroups();
+            screen.computeGroups();
 
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([1]);
-        expect(Object.keys(screen.state.groupedPickings)).toEqual(["Assigned"]);
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [1]
+            );
+            assert.deepEqual(Object.keys(screen.state.groupedPickings), ["Assigned"]);
 
-        screen.state.activeFilters = ["state", "date"];
-        screen.state.filterValues.state = "cancel";
-        screen.computeGroups();
-        expect(screen.filteredPickings.map((picking) => picking.id)).toEqual([3]);
-    });
+            screen.state.activeFilters = ["state", "date"];
+            screen.state.filterValues.state = "cancel";
+            screen.computeGroups();
+            assert.deepEqual(
+                screen.filteredPickings.map((picking) => picking.id),
+                [3]
+            );
+        }
+    );
 });

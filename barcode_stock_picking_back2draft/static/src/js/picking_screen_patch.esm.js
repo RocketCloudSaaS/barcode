@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {ConfirmationDialog} from "@web/core/confirmation_dialog/confirmation_dialog";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
 import {_t} from "@web/core/l10n/translation";
@@ -17,7 +19,7 @@ patch(PickingScreen.prototype, {
                         [this.pickingId],
                     ]);
                 } catch {
-                    // barcodeApi.call already reports a safe danger notification.
+                    // BarcodeApi.call already reports a safe danger notification.
                     return;
                 }
                 this.inventory.notify(_t("Picking returned to draft."), {

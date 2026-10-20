@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {PickingListScreen} from "@barcode_stock/js/screens/picking_list_screen.esm";
 import {patch} from "@web/core/utils/patch";
 

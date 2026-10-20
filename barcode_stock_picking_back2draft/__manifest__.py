@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock Picking Back to Draft",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Logistics",
     "summary": "Return canceled pickings to draft from Barcode",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -17,7 +17,7 @@
             "barcode_stock_picking_back2draft/static/src/js/picking_screen_patch.esm.js",
             "barcode_stock_picking_back2draft/static/src/js/picking_list_screen_patch.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_stock_picking_back2draft/static/tests/**/*",
         ],
     },
