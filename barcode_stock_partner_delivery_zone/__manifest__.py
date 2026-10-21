@@ -1,6 +1,6 @@
 {
     "name": "Barcode Stock Partner Delivery Zone",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Inventory/Inventory",
     "summary": "Filter and group the warehouse app's operations by delivery zone",
     "author": "Binhex, Odoo Community Association (OCA)",
@@ -17,7 +17,7 @@
             "barcode_stock_partner_delivery_zone/static/src/js/picking_list_delivery_zone.esm.js",
             "barcode_stock_partner_delivery_zone/static/src/js/picking_info_delivery_zone.esm.js",
         ],
-        "web.assets_unit_tests": [
+        "web.qunit_suite_tests": [
             "barcode_stock_partner_delivery_zone/static/tests/**/*",
         ],
     },

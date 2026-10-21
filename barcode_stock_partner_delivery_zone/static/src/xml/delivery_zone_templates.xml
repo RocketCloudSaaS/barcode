@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    The screens are defined in barcode_stock with a ``barcode_scanner.`` name
+    prefix. 17.0 resolves t-inherit against the addon that owns the file, so
+    the parent is addressed as ``barcode_stock.barcode_scanner.<Template>``.
+-->
 <templates xml:space="preserve">
 
     <!-- Delivery Zone section in the operation list's Filters menu. -->
     <t
         t-name="barcode_stock_partner_delivery_zone.PickingListScreen"
-        t-inherit="barcode_scanner.PickingListScreen"
+        t-inherit="barcode_stock.barcode_scanner.PickingListScreen"
         t-inherit-mode="extension"
     >
         <xpath
@@ -38,7 +43,7 @@
     <!-- The operation's delivery zone on its card. -->
     <t
         t-name="barcode_stock_partner_delivery_zone.GroupRenderer"
-        t-inherit="barcode_scanner.GroupRenderer"
+        t-inherit="barcode_stock.barcode_scanner.GroupRenderer"
         t-inherit-mode="extension"
     >
         <!-- Zone groups are keyed by id: their header shows the zone's name. -->
@@ -59,7 +64,7 @@
     <!-- Delivery zone in the operation's Information tab, changeable. -->
     <t
         t-name="barcode_stock_partner_delivery_zone.PickingInfoTab"
-        t-inherit="barcode_scanner.PickingInfoTab"
+        t-inherit="barcode_stock.barcode_scanner.PickingInfoTab"
         t-inherit-mode="extension"
     >
         <xpath

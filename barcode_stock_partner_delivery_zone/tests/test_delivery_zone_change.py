@@ -20,7 +20,7 @@ class TestDeliveryZoneChange(TransactionCase):
             {"name": "Zone Customer", "delivery_zone_id": cls.north.id}
         )
         product = cls.env["product.product"].create(
-            {"name": "Zone Product", "is_storable": True}
+            {"name": "Zone Product", "type": "product"}
         )
         cls.order = cls.env["sale.order"].create(
             {

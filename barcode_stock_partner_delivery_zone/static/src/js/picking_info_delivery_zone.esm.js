@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 import {onWillStart, useState} from "@odoo/owl";
 import {PickingInfoTab} from "@barcode_stock/js/components/picking_info_tab.esm";
 import {_t} from "@web/core/l10n/translation";
