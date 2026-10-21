@@ -1,7 +1,9 @@
+/** @odoo-module **/
+
 import {Component, onWillStart, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
-import {user} from "@web/core/user";
+import {useService} from "@web/core/utils/hooks";
 
 /**
  * Quality tab of a reception: lists the quality inspections that the reception
@@ -18,6 +20,7 @@ import {user} from "@web/core/user";
 export class QualityTab extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
+        this.user = useService("user");
         this.answers = useState(this.props.answers || {});
         this.state = useState({
             inspections: [],
@@ -30,7 +33,7 @@ export class QualityTab extends Component {
     }
 
     async loadTab() {
-        this.state.canInspect = await user.hasGroup(
+        this.state.canInspect = await this.user.hasGroup(
             "quality_control_oca.group_quality_control_user"
         );
         if (this.state.canInspect) {

@@ -52,22 +52,24 @@ class TestBarcodeStockQuality(TransactionCase):
             {"name": "Elsewhere", "ok": True}
         )
         product = cls.env["product.product"].create(
-            {"name": "Chilled goods", "is_storable": True}
+            {"name": "Chilled goods", "type": "product"}
         )
         receipts = cls.env.ref("stock.picking_type_in")
+        supplier = cls.env.ref("stock.stock_location_suppliers")
+        stock = cls.env.ref("stock.stock_location_stock")
         cls.picking = cls.env["stock.picking"].create(
             {
                 "picking_type_id": receipts.id,
-                "location_id": receipts.default_location_src_id.id,
-                "location_dest_id": receipts.default_location_dest_id.id,
+                "location_id": supplier.id,
+                "location_dest_id": stock.id,
                 "move_ids": [
                     Command.create(
                         {
                             "name": product.name,
                             "product_id": product.id,
                             "product_uom_qty": 1,
-                            "location_id": receipts.default_location_src_id.id,
-                            "location_dest_id": receipts.default_location_dest_id.id,
+                            "location_id": supplier.id,
+                            "location_dest_id": stock.id,
                         }
                     )
                 ],
@@ -153,7 +155,9 @@ class TestBarcodeStockQuality(TransactionCase):
         self.assertEqual(result["state"], "success")
         self.assertTrue(result["success"])
         quantitative = self.inspection.inspection_lines[1]
-        self.assertEqual(quantitative.quantitative_value, 3.5)
+        # 17.0's Float cache conversion rounds through 1e-5, which leaves
+        # 3.5 as 3.5000000000000004: compare the stored measure as a float.
+        self.assertAlmostEqual(quantitative.quantitative_value, 3.5, places=5)
         self.assertEqual(quantitative.uom_id, quantitative.test_uom_id)
 
     def test_answers_that_fail_wait_for_a_supervisor(self):
@@ -264,7 +268,7 @@ class TestBarcodeStockQuality(TransactionCase):
         self.env["ir.attachment"].create(
             {
                 "name": "notes.txt",
-                "raw": b"not a photo",
+                "datas": base64.b64encode(b"not a photo"),
                 "res_model": "qc.inspection",
                 "res_id": self.inspection.id,
             }

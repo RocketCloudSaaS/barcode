@@ -5,7 +5,7 @@ import base64
 import binascii
 import math
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools.mimetypes import guess_mimetype
 
@@ -90,7 +90,7 @@ class QcInspection(models.Model):
     def _barcode_scanner_inspection(self, inspection_id):
         inspection = self.browse(inspection_id).exists()
         if not inspection:
-            raise UserError(self.env._("The inspection no longer exists."))
+            raise UserError(_("The inspection no longer exists."))
         return inspection
 
     def _barcode_scanner_answer(self, line, answer):
@@ -105,7 +105,7 @@ class QcInspection(models.Model):
             )
             if not value or value not in line.possible_ql_values:
                 raise UserError(
-                    self.env._(
+                    _(
                         "Choose one of the answers offered for %(question)s.",
                         question=line.name,
                     )
@@ -118,9 +118,7 @@ class QcInspection(models.Model):
             measure = math.nan
         if not math.isfinite(measure):
             raise UserError(
-                self.env._(
-                    "Enter the value measured for %(question)s.", question=line.name
-                )
+                _("Enter the value measured for %(question)s.", question=line.name)
             )
         line.uom_id = line.test_uom_id
         line.quantitative_value = measure
@@ -135,9 +133,7 @@ class QcInspection(models.Model):
         """
         inspection = self._barcode_scanner_inspection(inspection_id)
         if inspection.state != "ready":
-            raise UserError(
-                self.env._("This inspection cannot be edited in its current state.")
-            )
+            raise UserError(_("This inspection cannot be edited in its current state."))
 
         answers_by_line = {answer.get("line_id"): answer for answer in answers or []}
         for line in inspection.inspection_lines:
@@ -159,7 +155,7 @@ class QcInspection(models.Model):
         inspection = self._barcode_scanner_inspection(inspection_id)
         if not inspection._barcode_scanner_can_reset():
             raise UserError(
-                self.env._(
+                _(
                     "Only an inspection confirmed from the scanner, not yet "
                     "decided by a supervisor, on a reception still open, can be "
                     "put back to draft here."
@@ -182,13 +178,13 @@ class QcInspection(models.Model):
         try:
             content = base64.b64decode(datas or "", validate=True)
         except (binascii.Error, ValueError) as err:
-            raise UserError(self.env._("The photo could not be read.")) from err
+            raise UserError(_("The photo could not be read.")) from err
         if not guess_mimetype(content).startswith("image/"):
-            raise UserError(self.env._("Only a photo can be attached as evidence."))
+            raise UserError(_("Only a photo can be attached as evidence."))
         try:
             self.env["ir.attachment"].create(
                 {
-                    "name": filename or self.env._("Quality evidence"),
+                    "name": filename or _("Quality evidence"),
                     "datas": datas,
                     "res_model": inspection._name,
                     "res_id": inspection.id,
@@ -196,7 +192,7 @@ class QcInspection(models.Model):
             )
         except OSError as err:
             # A truncated or corrupt image trips Odoo's image post-processing.
-            raise UserError(self.env._("The photo could not be saved.")) from err
+            raise UserError(_("The photo could not be saved.")) from err
         return {
             "inspection_id": inspection.id,
             "photo_count": inspection._barcode_scanner_photo_count(),

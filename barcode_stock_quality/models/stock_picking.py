@@ -1,7 +1,7 @@
 # Copyright 2026 Binhex
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, models
+from odoo import _, api, models
 from odoo.exceptions import UserError
 
 
@@ -19,7 +19,7 @@ class StockPicking(models.Model):
         """
         picking = self.browse(picking_id).exists()
         if not picking:
-            raise UserError(self.env._("The picking is no longer valid."))
+            raise UserError(_("The picking is no longer valid."))
         inspections = picking.qc_inspections_ids.filtered(
             lambda i: i.state != "canceled"
         )
