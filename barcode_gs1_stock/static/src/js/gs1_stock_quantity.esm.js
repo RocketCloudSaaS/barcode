@@ -30,8 +30,15 @@ patch(BarcodeScannerState.prototype, {
                 [],
                 ["name", "category_id", "factor", "rounding"]
             ),
+            // The decimals of "Product Unit of Measure", as a quantity field
+            // that is stored with them states them. Not from precision_get over
+            // RPC: once `account` is installed it overrides that method without
+            // @api.model, and the call then takes the precision's name for ids.
             this.orm
-                .call("decimal.precision", "precision_get", ["Product Unit of Measure"])
+                .call("stock.move.line", "fields_get", [["quantity"]], {
+                    attributes: ["digits"],
+                })
+                .then((fields) => fields?.quantity?.digits?.[1])
                 .catch(() => null),
         ]);
         this.quantityDigits = Number.isInteger(digits) ? digits : null;

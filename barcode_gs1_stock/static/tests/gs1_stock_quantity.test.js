@@ -125,12 +125,12 @@ describe("Gs1StockQuantity loading", () => {
                 calls.push([model, fields]);
                 return UOMS;
             },
-            async call(model, method, args) {
-                calls.push([model, method, args]);
+            async call(model, method, args, kwargs) {
+                calls.push([model, method, args, kwargs]);
                 if (fail) {
                     throw new Error("No access");
                 }
-                return digits;
+                return {quantity: {digits: [16, digits]}};
             },
         };
     }
@@ -143,7 +143,7 @@ describe("Gs1StockQuantity loading", () => {
         expect(state.quantityDigits).toBe(3);
         expect(orm.calls).toEqual([
             ["uom.uom", ["name", "category_id", "factor", "rounding"]],
-            ["decimal.precision", "precision_get", ["Product Unit of Measure"]],
+            ["stock.move.line", "fields_get", [["quantity"]], {attributes: ["digits"]}],
         ]);
         await state.loadUoms();
         expect(orm.calls.length).toBe(2);
