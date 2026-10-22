@@ -17,6 +17,10 @@ const GS1_SYMBOLOGIES = ["]C1", "]e0", "]d2", "]Q3", "]J1"];
 // line of a label: "(01)", "(3103)".
 const PARENTHESISED_AI = /\(\d{2,4}\)/;
 
+// Logistic measures (AI 330n-349n: the gross weight, dimensions and volume of
+// the logistic unit) describe the pack, not the goods it holds.
+const LOGISTIC_MEASURE_AI = /^3[34]/;
+
 // The characters GS1 allows in an alphanumeric value, as Odoo's own rules
 // spell them out.
 const ALPHA = '[!"%-/0-9:-?A-Z_a-z]';
@@ -466,6 +470,16 @@ function parseRawGS1(barcode, rules) {
 }
 
 /**
+ * The measure that stands for the goods themselves: the first trade measure
+ * whose unit is known, otherwise the first trade measure. A logistic measure
+ * (the gross weight of the pack, say) never does.
+ */
+function goodsMeasure(measures) {
+    const trade = measures.filter((measure) => !LOGISTIC_MEASURE_AI.test(measure.ai));
+    return trade.find((measure) => measure.uom) || trade[0] || null;
+}
+
+/**
  * Decode a GS1 barcode into structured fields.
  *
  * The result follows the conventions the app already reads: `value`/`product`
@@ -476,9 +490,11 @@ function parseRawGS1(barcode, rules) {
  * tracking data. A GS1 scan therefore flows through the existing screens
  * without them knowing anything about GS1.
  *
- * A measure (a net weight, say) is kept in `weight`/`weightUom` and never
- * becomes the quantity here: whether it is one depends on the unit the product
- * is stocked in, which only the warehouse knows.
+ * Every measure the barcode carries is listed in `measures`, and the one that
+ * stands for the goods (a net weight, say, never the gross weight of the pack)
+ * is kept in `weight`/`weightUom`. None of them becomes the quantity here:
+ * whether one is depends on the unit the product is stocked in, which only the
+ * warehouse knows.
  *
  * What each application identifier means comes from Odoo's GS1 nomenclature
  * when one is configured, so a rule added in Settings is honoured here too.
@@ -511,6 +527,7 @@ export function parseGS1Barcode(barcode) {
         locationDest: null,
         weight: null,
         weightUom: null,
+        measures: [],
         count: null,
         price: null,
         currency: null,
@@ -563,8 +580,7 @@ export function parseGS1Barcode(barcode) {
                 break;
             case "quantity":
                 if (token.rule.decimalUsage) {
-                    parsed.weight = value;
-                    parsed.weightUom = token.rule.uom;
+                    parsed.measures.push({ai: token.ai, value, uom: token.rule.uom});
                 } else {
                     parsed.count = value;
                     parsed.qty = value;
@@ -574,8 +590,7 @@ export function parseGS1Barcode(barcode) {
             case "weight":
                 // A rule configured as a weighted product: a measure, exactly
                 // like a variable-weight one.
-                parsed.weight = value;
-                parsed.weightUom = token.rule.uom;
+                parsed.measures.push({ai: token.ai, value, uom: token.rule.uom});
                 break;
             case "price":
                 parsed.price = value;
@@ -608,6 +623,11 @@ export function parseGS1Barcode(barcode) {
         }
     }
 
+    const measure = goodsMeasure(parsed.measures);
+    if (measure) {
+        parsed.weight = measure.value;
+        parsed.weightUom = measure.uom;
+    }
     if (rest) {
         parsed.errors.push(`Unparsed GS1 data "${rest}"`);
     }
