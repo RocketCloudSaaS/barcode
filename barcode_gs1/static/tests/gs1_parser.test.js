@@ -79,6 +79,8 @@ const ODOO_RULES = [
     },
 ];
 
+const KG = [13, "kg"];
+
 function loadNomenclature(rules, separator = "(Alt029|#|\\x1D)") {
     setGs1Nomenclature(
         compileGs1Nomenclature(
@@ -202,6 +204,59 @@ describe("BarcodeGs1", () => {
             weight: 1.25,
             qty: 4,
         });
+    });
+
+    test("the gross weight of the pack never stands for the goods", () => {
+        // Odoo ships the net weight (310n) with its unit, and no rule for the
+        // gross weight (330n): the built-in identifier reads it, unitless.
+        loadNomenclature([ODOO_RULES[1], {...ODOO_RULES[7], associated_uom_id: KG}]);
+        const net = {ai: "3103", value: 2.497, uom: {id: 13, name: "kg"}};
+        const gross = {ai: "3303", value: 2.7, uom: null};
+        // Net and gross, in either order: the net weight is the goods'.
+        for (const label of [
+            "(01)09501101020917(3103)002497(3303)002700",
+            "(01)09501101020917(3303)002700(3103)002497",
+        ]) {
+            expect(parseGs1(label)).toMatchObject({
+                weight: 2.497,
+                weightUom: {id: 13, name: "kg"},
+            });
+        }
+        expect(parseGs1("(01)09501101020917(3103)002497(3303)002700").measures).toEqual(
+            [net, gross]
+        );
+        // A gross weight alone is listed, but is no measure of the goods.
+        expect(parseGs1("(01)09501101020917(3303)002700")).toMatchObject({
+            weight: null,
+            weightUom: null,
+            measures: [gross],
+        });
+    });
+
+    test("every measure is listed, the first one with a unit stands for the goods", () => {
+        loadNomenclature([
+            ODOO_RULES[1],
+            {...ODOO_RULES[7], associated_uom_id: KG},
+            {
+                name: "Net volume, litres",
+                sequence: 25,
+                pattern: "(315[0-5])(\\d{6})",
+                type: "quantity",
+                gs1_content_type: "measure",
+                gs1_decimal_usage: true,
+                associated_uom_id: [11, "L"],
+            },
+        ]);
+        // A width with no rule (so no unit), a net weight and a net volume.
+        const parsed = parseGs1(
+            "(01)09501101020917(3122)000300(3103)002497(3152)000250"
+        );
+        expect(parsed.measures).toEqual([
+            {ai: "3122", value: 3, uom: null},
+            {ai: "3103", value: 2.497, uom: {id: 13, name: "kg"}},
+            {ai: "3152", value: 2.5, uom: {id: 11, name: "L"}},
+        ]);
+        expect(parsed).toMatchObject({weight: 2.497, weightUom: {id: 13, name: "kg"}});
     });
 
     test("DD=00 in a date means the last day of the month", () => {
