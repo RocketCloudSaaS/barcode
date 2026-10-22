@@ -35,10 +35,13 @@ class TestBarcodeGs1StockUserAccess(HttpCase):
             kilogram.rounding,
             [uom["rounding"] for uom in uoms if uom["id"] == kilogram.id],
         )
-        digits = self.call_kw(
-            "decimal.precision", "precision_get", ["Product Unit of Measure"]
+        # The decimals come from a quantity field stored with them, not from
+        # decimal.precision.precision_get: `account` overrides that method
+        # without @api.model, which breaks it over RPC.
+        fields = self.call_kw(
+            "stock.move.line", "fields_get", [["quantity"]], {"attributes": ["digits"]}
         )
         self.assertEqual(
-            digits,
+            fields["quantity"]["digits"][1],
             self.env["decimal.precision"].precision_get("Product Unit of Measure"),
         )
