@@ -1,5 +1,6 @@
-import {describe, expect, test} from "@odoo/hoot";
+import {beforeEach, describe, expect, test} from "@odoo/hoot";
 import {MoveWizardScreen} from "@barcode_stock/js/screens/move_wizard_screen.esm";
+import {patchTranslations} from "@web/../tests/web_test_helpers";
 
 const LOT_A = {id: 21, name: "6077102", product_id: [7, "Duck confit"], product_qty: 4};
 const LOT_B = {id: 22, name: "6077103", product_id: [7, "Duck confit"], product_qty: 9};
@@ -15,6 +16,7 @@ function moveWizard({
     lines = [],
     defaultLot = null,
     tracking = "lot",
+    remaining = 4,
 } = {}) {
     const wizard = Object.create(MoveWizardScreen.prototype);
     wizard.props = {
@@ -47,8 +49,9 @@ function moveWizard({
         getProduct: () => ({id: 7, tracking}),
         getMoveLinesForMove: () => lines,
         getLotsForProduct: () => [LOT_B],
-        getRemainingQty: () => 4,
+        getRemainingQty: () => remaining,
     };
+    wizard.feedback = {success: () => undefined};
     return wizard;
 }
 
@@ -63,6 +66,9 @@ function line(lotId, quantity, qtyPicked = 0) {
 }
 
 describe("BarcodeStock", () => {
+    // `_t()` texts become strings only once translations are loaded.
+    beforeEach(() => patchTranslations());
+
     test("a move reserved against a lot opens with that lot chosen", async () => {
         const wizard = moveWizard({lines: [line(21, 4)]});
         await wizard.loadData();
@@ -94,5 +100,40 @@ describe("BarcodeStock", () => {
         const noLot = moveWizard({lines: [line(null, 4)]});
         await noLot.loadData();
         expect(noLot.state.selectedLotId).toBe(null);
+    });
+
+    test("Fulfill completes the chosen lot's reservation, not the whole move", async () => {
+        // 4 reserved over two lots, 2 each.
+        const wizard = moveWizard({lines: [line(21, 2), line(22, 2)]});
+        await wizard.loadData();
+        expect(wizard.state.selectedLotId).toBe("21");
+        expect(wizard.pickableQty).toBe(2);
+        expect(wizard.fulfillIncrement).toBe(1);
+        expect(wizard.quantityHelper).toBe("2 remaining to process");
+        wizard.fulfillRemaining();
+        expect(wizard.state.qtyPicked).toBe(2);
+        expect(wizard.canFulfill).toBe(false);
+        // Lot A picked, the wizard opens on lot B with what is left of it.
+        const next = moveWizard({lines: [line(21, 2, 2), line(22, 2)], remaining: 2});
+        await next.loadData();
+        expect(next.state.selectedLotId).toBe("22");
+        next.fulfillRemaining();
+        expect(next.state.qtyPicked).toBe(2);
+    });
+
+    test("a lot with nothing reserved left fulfils what the move lacks", async () => {
+        // The operator picks lot A again, its reservation already picked.
+        const wizard = moveWizard({
+            lines: [line(21, 2, 2), line(22, 2)],
+            defaultLot: 21,
+            remaining: 2,
+        });
+        await wizard.loadData();
+        expect(wizard.state.selectedLotId).toBe("21");
+        expect(wizard.pickableQty).toBe(2);
+        // No lot chosen at all: the move's remaining, as before.
+        const none = moveWizard({tracking: "none", remaining: 3});
+        await none.loadData();
+        expect(none.pickableQty).toBe(3);
     });
 });
