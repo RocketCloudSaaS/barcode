@@ -1,0 +1,11 @@
+/* barcode_camera — camera scan floating action button */
+
+/* Above the bottom nav bar (80px), respecting device safe areas. */
+.barcode-camera-fab {
+    position: fixed;
+    right: 1.25rem;
+    right: calc(env(safe-area-inset-right) + 1.25rem);
+    bottom: calc(env(safe-area-inset-bottom) + 80px + 1rem);
+    z-index: 1100;
+    border: 0;
+}
