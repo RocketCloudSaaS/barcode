@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, test} from "@odoo/hoot";
 import {MoveWizardScreen} from "@barcode_stock/js/screens/move_wizard_screen.esm";
+import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
 import {patchTranslations} from "@web/../tests/web_test_helpers";
 
 const LOT_A = {id: 21, name: "6077102", product_id: [7, "Duck confit"], product_qty: 4};
@@ -8,23 +9,31 @@ const LOT_B = {id: 22, name: "6077103", product_id: [7, "Duck confit"], product_
 /**
  * A move wizard on move 5 of picking 3, without mounting it.
  *
- * @param {Object} [options] the operation, the move's lines and the lot given
+ * @param {Object} [options] the operation, the move's lines and the lot and
+ *   quantity given
  * @returns {MoveWizardScreen} the wizard
  */
 function moveWizard({
     type = "outgoing",
     lines = [],
     defaultLot = null,
+    defaultQty = null,
     tracking = "lot",
     remaining = 4,
 } = {}) {
     const wizard = Object.create(MoveWizardScreen.prototype);
     wizard.props = {
-        params: {moveId: 5, pickingId: 3, pickingTypeCode: type, defaultLot},
+        params: {
+            moveId: 5,
+            pickingId: 3,
+            pickingTypeCode: type,
+            defaultLot,
+            defaultQty,
+        },
     };
     wizard.state = {
         selectedLotId: defaultLot ? String(defaultLot) : null,
-        qtyPicked: 1,
+        qtyPicked: defaultQty || 1,
         tracking: "none",
         mode: "pick",
         lots: [],
@@ -135,5 +144,65 @@ describe("BarcodeStock", () => {
         const none = moveWizard({tracking: "none", remaining: 3});
         await none.loadData();
         expect(none.pickableQty).toBe(3);
+    });
+
+    test("a lot is done with once its reservation is picked, on whichever line", async () => {
+        // 5 reserved: lot A over two lines (2 + 2), lot B on one.
+        const wizard = moveWizard({
+            lines: [line(21, 2), line(21, 2), line(22, 1)],
+            remaining: 5,
+        });
+        await wizard.loadData();
+        expect(wizard.state.selectedLotId).toBe("21");
+        expect(wizard.pickableQty).toBe(4);
+        // The 4 of lot A land on its first line, its second one left untouched:
+        // lot A is done with, the wizard opens on lot B.
+        const next = moveWizard({
+            lines: [line(21, 2, 4), line(21, 2), line(22, 1)],
+            remaining: 1,
+        });
+        await next.loadData();
+        expect(next.state.selectedLotId).toBe("22");
+        expect(next.pickableQty).toBe(1);
+    });
+
+    test("a tapped move starts at no more than its lot's reservation holds", async () => {
+        const tapped = moveWizard({lines: [line(21, 0.5)]});
+        await tapped.loadData();
+        expect(tapped.state.selectedLotId).toBe("21");
+        expect(tapped.state.qtyPicked).toBe(0.5);
+        // Still one unit when the lot holds more.
+        const more = moveWizard({lines: [line(21, 3)]});
+        await more.loadData();
+        expect(more.state.qtyPicked).toBe(1);
+        // A scan's quantity stands.
+        const scanned = moveWizard({lines: [line(21, 0.5)], defaultQty: 1});
+        await scanned.loadData();
+        expect(scanned.state.qtyPicked).toBe(1);
+    });
+
+    test("only a scan hands the wizard a quantity", () => {
+        const screen = Object.create(PickingScreen.prototype);
+        const opened = [];
+        screen.props = {};
+        screen.state = {picking: {id: 3}, pickingTypeCode: "outgoing"};
+        screen.store = {navigate: (name, params) => opened.push(params.defaultQty)};
+        const move = {id: 5, quantity: 4};
+        screen.openMoveWizard(move);
+        screen.openMoveWizard(move, {qty: 6});
+        expect(opened).toEqual([null, 6]);
+    });
+
+    test("a reception fulfils what the move lacks, whatever its lot's lines hold", async () => {
+        const receipt = moveWizard({
+            type: "incoming",
+            lines: [line(21, 1)],
+            defaultLot: 21,
+            remaining: 4,
+        });
+        await receipt.loadData();
+        expect(receipt.pickableQty).toBe(4);
+        receipt.fulfillRemaining();
+        expect(receipt.state.qtyPicked).toBe(4);
     });
 });

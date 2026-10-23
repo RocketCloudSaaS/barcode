@@ -142,6 +142,12 @@ export class MoveWizardScreen extends Component {
             return lots;
         }
         this.state.selectedLotId = String(reservedLotId);
+        // Opened without a quantity (tapped, not scanned): no more than what the
+        // reservation still holds of the lot.
+        const left = this.pickableQty;
+        if (!this.props.params?.defaultQty && left > 0) {
+            this.state.qtyPicked = Math.min(this.state.qtyPicked, left);
+        }
         const reservedLot = this.barcodeScannerState.lotsById[reservedLotId];
         if (reservedLot && !lots.some((lot) => lot.id === reservedLotId)) {
             return [reservedLot, ...lots];
@@ -151,23 +157,51 @@ export class MoveWizardScreen extends Component {
 
     /**
      * The lot the move's reservation says goes next: that of its first line
-     * reserved against a lot that still has something to pick. Outside
-     * receptions only, where Odoo reserves stock lot by lot, and only when the
-     * operation picks from existing lots.
+     * reserved against a lot of which something is still to pick.
      *
      * @param {Object[]} moveLines the move's lines
      * @returns {Number|null} the lot's id, if any
      */
     reservedLotId(moveLines) {
-        if (this.isIncoming || !this.isTracked || !this.state.useExistingLots) {
+        if (!this.followsReservation) {
             return null;
         }
         const line = moveLines.find(
             (moveLine) =>
                 moveLine.lot_id?.[0] &&
-                (Number(moveLine.quantity) || 0) > (Number(moveLine.qty_picked) || 0)
+                this.reservedLeft(moveLines, moveLine.lot_id[0]) > 0
         );
         return line ? line.lot_id[0] : null;
+    }
+
+    /**
+     * Whether the move is picked lot by lot as reserved: outside receptions,
+     * where Odoo reserves stock against lots, for a tracked product, when the
+     * operation picks from existing lots.
+     *
+     * @returns {Boolean}
+     */
+    get followsReservation() {
+        return !this.isIncoming && this.isTracked && this.state.useExistingLots;
+    }
+
+    /**
+     * What the reservation still holds of a lot: what the move's lines reserve
+     * of it, less what was picked of it. Summed over all of them, since a pick
+     * lands on one of the lot's lines whatever that line reserves.
+     *
+     * @param {Object[]} moveLines the move's lines
+     * @param {Number} lotId the lot's id
+     * @returns {Number} the quantity still to pick of it
+     */
+    reservedLeft(moveLines, lotId) {
+        return moveLines
+            .filter((line) => line.lot_id?.[0] === lotId)
+            .reduce(
+                (sum, line) =>
+                    sum + (Number(line.quantity) || 0) - (Number(line.qty_picked) || 0),
+                0
+            );
     }
 
     get isOutgoing() {
@@ -225,19 +259,16 @@ export class MoveWizardScreen extends Component {
     /**
      * What is left to pick here: of the lot chosen, while the reservation still
      * holds some of it, so that a move reserved over several lots is completed
-     * lot by lot; otherwise of the whole move.
+     * lot by lot; otherwise, and always in receptions, of the whole move.
      *
      * @returns {Number} the quantity left to pick
      */
     get pickableQty() {
         const lotId = this.selectedLotIdNumber;
-        const lotLeft = (this.state.moveLines || [])
-            .filter((line) => lotId && line.lot_id?.[0] === lotId)
-            .reduce(
-                (sum, line) =>
-                    sum + (Number(line.quantity) || 0) - (Number(line.qty_picked) || 0),
-                0
-            );
+        const lotLeft =
+            lotId && this.followsReservation
+                ? this.reservedLeft(this.state.moveLines || [], lotId)
+                : 0;
         if (lotLeft > 0) {
             return Math.min(lotLeft, this.remainingQty);
         }
