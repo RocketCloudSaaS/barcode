@@ -127,6 +127,49 @@ export class MoveWizardScreen extends Component {
         return this.props.params?.pickingTypeCode === "incoming";
     }
 
+    /**
+     * The lot the move's reservation says goes next: that of its first line
+     * reserved against a lot that still has something to pick. Outside
+     * receptions only, where Odoo reserves stock lot by lot, and only when the
+     * operation picks from existing lots.
+     *
+     * @param {Object[]} moveLines the move's lines
+     * @returns {Number|null} the lot's id, if any
+     */
+    /**
+     * Open a move reserved against a lot with that lot chosen, as Odoo's own
+     * barcode app does: the reservation already says which lot goes. A lot the
+     * scan carried, or the operator chose, still wins.
+     *
+     * @param {Object[]} moveLines the move's lines
+     * @param {Object[]} lots the lots offered
+     * @returns {Object[]} the lots offered, the reserved one among them
+     */
+    preselectReservedLot(moveLines, lots) {
+        const reservedLotId = this.reservedLotId(moveLines);
+        if (this.selectedLotIdNumber || !reservedLotId) {
+            return lots;
+        }
+        this.state.selectedLotId = String(reservedLotId);
+        const reservedLot = this.barcodeScannerState.lotsById[reservedLotId];
+        if (reservedLot && !lots.some((lot) => lot.id === reservedLotId)) {
+            return [reservedLot, ...lots];
+        }
+        return lots;
+    }
+
+    reservedLotId(moveLines) {
+        if (this.isIncoming || !this.isTracked || !this.state.useExistingLots) {
+            return null;
+        }
+        const line = moveLines.find(
+            (moveLine) =>
+                moveLine.lot_id?.[0] &&
+                (Number(moveLine.quantity) || 0) > (Number(moveLine.qty_picked) || 0)
+        );
+        return line ? line.lot_id[0] : null;
+    }
+
     get isOutgoing() {
         return this.props.params?.pickingTypeCode === "outgoing";
     }
@@ -498,6 +541,7 @@ export class MoveWizardScreen extends Component {
         this.state.move = move;
         this.state.moveLines = moveLines;
         this.state.tracking = product.tracking;
+        lots = this.preselectReservedLot(moveLines, lots);
 
         // Seed the editable locations from the move unless the operator already
         // picked one (preserved across the location-picker round-trip).
