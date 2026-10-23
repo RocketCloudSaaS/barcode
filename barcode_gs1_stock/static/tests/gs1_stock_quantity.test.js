@@ -16,6 +16,7 @@ const UOMS = [
     {id: 13, name: "kg", category_id: [3, "Weight"], factor: 1.0, rounding: 0.01},
     {id: 14, name: "g", category_id: [3, "Weight"], factor: 1000.0, rounding: 0.01},
     {id: 16, name: "lb", category_id: [3, "Weight"], factor: 2.20462, rounding: 0.01},
+    {id: 11, name: "L", category_id: [5, "Volume"], factor: 1.0, rounding: 0.01},
     {
         id: 6,
         name: "m",
@@ -119,6 +120,61 @@ QUnit.module("Gs1StockQuantity", () => {
         assert.strictEqual(state.scannedQuantity(length, 13), 3);
     });
 
+    QUnit.test(
+        "of several measures, the one in the product's kind of unit is taken",
+        (assert) => {
+            // A net weight and a net volume, as barcode_gs1 lists them.
+            const kilograms = {ai: "3103", value: 2.497, uom: {id: 13, name: "kg"}};
+            const litres = {ai: "3152", value: 2.5, uom: {id: 11, name: "L"}};
+            const both = {
+                qty: null,
+                weight: 2.497,
+                weightUom: {id: 13, name: "kg"},
+                measures: [kilograms, litres],
+            };
+            const state = stateReadingGrams();
+            assert.strictEqual(state.scannedQuantity(both, 11), 2.5);
+            assert.strictEqual(state.scannedQuantity(both, 13), 2.497);
+            assert.strictEqual(state.scannedQuantity(both, 1), 1);
+        }
+    );
+
+    QUnit.test("the gross weight of the pack is never the quantity", (assert) => {
+        // Even with a unit configured on its rule, AI 330n weighs the pack.
+        const gross = {ai: "3303", value: 2.7, uom: {id: 13, name: "kg"}};
+        const net = {ai: "3103", value: 2.497, uom: {id: 13, name: "kg"}};
+        const state = stateReadingGrams();
+        assert.strictEqual(
+            state.scannedQuantity({qty: null, measures: [gross, net]}, 13),
+            2.497
+        );
+        assert.strictEqual(
+            state.scannedQuantity({qty: null, measures: [gross]}, 13),
+            1
+        );
+    });
+
+    QUnit.test(
+        "a measure that rounds to nothing reads as a scan without one",
+        (assert) => {
+            // 4 g of a product stocked in kilograms rounded to 0.01: a quantity
+            // of zero would pick nothing, so the base reading stands.
+            const pinch = {weight: 0.004, weightUom: {id: 13, name: "kg"}};
+            const state = stateWithUoms();
+            assert.strictEqual(state.scannedQuantity({...pinch, qty: null}, 13), 1);
+            assert.strictEqual(
+                state.scannedQuantity({...pinch, qty: 3, count: 3}, 13),
+                3
+            );
+            assert.strictEqual(
+                state.scannedQuantity({...pinch, weight: 0, qty: null}, 13),
+                1
+            );
+            // The same 4 g is read when kilograms keep three decimals.
+            assert.strictEqual(stateReadingGrams().scannedQuantity(pinch, 13), 0.004);
+        }
+    );
+
     QUnit.test("without a measure, the base reading stands", (assert) => {
         const state = stateWithUoms();
         assert.strictEqual(state.scannedQuantity({qty: 7, count: 7}, 13), 7);
@@ -138,12 +194,12 @@ QUnit.module("Gs1StockQuantity loading", () => {
                 calls.push([model, fields]);
                 return UOMS;
             },
-            async call(model, method, args) {
-                calls.push([model, method, args]);
+            async call(model, method, args, kwargs) {
+                calls.push([model, method, args, kwargs]);
                 if (fail) {
                     throw new Error("No access");
                 }
-                return digits;
+                return {quantity: {digits: [16, digits]}};
             },
         };
     }
@@ -156,7 +212,7 @@ QUnit.module("Gs1StockQuantity loading", () => {
         assert.strictEqual(state.quantityDigits, 3);
         assert.deepEqual(orm.calls, [
             ["uom.uom", ["name", "category_id", "factor", "rounding"]],
-            ["decimal.precision", "precision_get", ["Product Unit of Measure"]],
+            ["stock.move.line", "fields_get", [["quantity"]], {attributes: ["digits"]}],
         ]);
         await state.loadUoms();
         assert.strictEqual(orm.calls.length, 2);
@@ -171,6 +227,45 @@ QUnit.module("Gs1StockQuantity loading", () => {
             assert.strictEqual(state.quantityDigits, null);
         }
     );
+
+    QUnit.test(
+        "units that failed to load are loaded again by the next measure",
+        async (assert) => {
+            // The connection drops when the app opens, then comes back twice later.
+            const outcomes = ["offline", "offline", "online"];
+            const attempts = [];
+            const orm = {
+                async searchRead() {
+                    const outcome = outcomes[attempts.length];
+                    attempts.push(outcome);
+                    if (outcome === "offline") {
+                        throw new Error("offline");
+                    }
+                    return UOMS;
+                },
+                async call() {
+                    return 2;
+                },
+            };
+            const state = new BarcodeScannerState(orm);
+            await state.loadUoms().catch(() => null);
+            const weighed = {qty: null, weight: 2.497, weightUom: {id: 13, name: "kg"}};
+            // A scan without a measure does not need the units.
+            assert.strictEqual(state.scannedQuantity({qty: 2, count: 2}, 13), 2);
+            assert.strictEqual(attempts.length, 1);
+            // One with a measure keeps the base reading and loads them again, once
+            // however often it is read meanwhile.
+            assert.strictEqual(state.scannedQuantity(weighed, 13), 1);
+            assert.strictEqual(state.scannedQuantity(weighed, 13), 1);
+            await state.uomsRetry;
+            assert.strictEqual(attempts.length, 2);
+            // Still offline: the next measure tries again, and that one succeeds.
+            assert.strictEqual(state.scannedQuantity(weighed, 13), 1);
+            await state.uomsRetry;
+            assert.deepEqual(attempts, ["offline", "offline", "online"]);
+            assert.strictEqual(state.scannedQuantity(weighed, 13), 2.5);
+        }
+    );
 });
 
 QUnit.module("Gs1StockQuantity packaging", (hooks) => {
@@ -179,8 +274,8 @@ QUnit.module("Gs1StockQuantity packaging", (hooks) => {
 
     hooks.afterEach(() => setGs1Nomenclature(null));
 
-    // The two rules of Odoo's GS1 nomenclature these labels need, with the unit
-    // AI 3103 is expressed in.
+    // The rules of Odoo's GS1 nomenclature these labels need, with the unit each
+    // measure is expressed in.
     function loadNomenclature() {
         setGs1Nomenclature(
             compileGs1Nomenclature({id: 1, name: "Default GS1 Nomenclature"}, [
@@ -207,6 +302,15 @@ QUnit.module("Gs1StockQuantity packaging", (hooks) => {
                     gs1_content_type: "measure",
                     gs1_decimal_usage: true,
                     associated_uom_id: [13, "kg"],
+                },
+                {
+                    name: "Net volume, litres",
+                    sequence: 25,
+                    pattern: "(315[0-5])(\\d{6})",
+                    type: "quantity",
+                    gs1_content_type: "measure",
+                    gs1_decimal_usage: true,
+                    associated_uom_id: [11, "L"],
                 },
             ])
         );
@@ -263,6 +367,27 @@ QUnit.module("Gs1StockQuantity packaging", (hooks) => {
             // 4.324 kg, stored with Odoo's two decimals: not the pack's 12.
             const result = scan(pickingState(13), `(01)${CARTON}(3103)004324`);
             assert.strictEqual(result.quantity, 4.32);
+        }
+    );
+
+    QUnit.test(
+        "a carton labelled by weight and volume fits a product in litres",
+        (assert) => {
+            loadNomenclature();
+            const label = `(01)${CARTON}(3103)004324(3152)000450`;
+            assert.strictEqual(scan(pickingState(11), label).quantity, 4.5);
+            assert.strictEqual(scan(pickingState(13), label).quantity, 4.32);
+        }
+    );
+
+    QUnit.test(
+        "a carton weight that rounds to nothing leaves the pack's quantity",
+        (assert) => {
+            loadNomenclature();
+            assert.strictEqual(
+                scan(pickingState(13), `(01)${CARTON}(3103)000004`).quantity,
+                12
+            );
         }
     );
 });

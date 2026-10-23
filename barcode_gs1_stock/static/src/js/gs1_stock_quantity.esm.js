@@ -5,6 +5,27 @@ import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_st
 import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
 import {patch} from "@web/core/utils/patch";
 
+// Logistic measures (AI 330n-349n: the gross weight, dimensions and volume of
+// the logistic unit) describe the pack, never the goods picked.
+const LOGISTIC_MEASURE_AI = /^3[34]/;
+
+/**
+ * The measures of the goods a scan carries, in the order the label states them:
+ * every one `barcode_gs1` lists in `measures`, or the single `weight`/`weightUom`
+ * pair a scan without that list carries.
+ */
+function goodsMeasures(scan) {
+    if (Array.isArray(scan?.measures)) {
+        return scan.measures.filter(
+            (measure) => !LOGISTIC_MEASURE_AI.test(measure.ai || "")
+        );
+    }
+    if (scan?.weight === null || scan?.weight === undefined) {
+        return [];
+    }
+    return [{value: scan.weight, uom: scan.weightUom}];
+}
+
 /**
  * Read the quantity of a GS1 scan the way the warehouse means it.
  *
@@ -32,8 +53,15 @@ patch(BarcodeScannerState.prototype, {
                 [],
                 ["name", "category_id", "factor", "rounding"]
             ),
+            // The decimals of "Product Unit of Measure", as a quantity field
+            // that is stored with them states them. Not from precision_get over
+            // RPC: once `account` is installed it overrides that method without
+            // @api.model, and the call then takes the precision's name for ids.
             this.orm
-                .call("decimal.precision", "precision_get", ["Product Unit of Measure"])
+                .call("stock.move.line", "fields_get", [["quantity"]], {
+                    attributes: ["digits"],
+                })
+                .then((fields) => fields?.quantity?.digits?.[1])
                 .catch(() => null),
         ]);
         this.quantityDigits = Number.isInteger(digits) ? digits : null;
@@ -42,29 +70,65 @@ patch(BarcodeScannerState.prototype, {
     },
 
     /**
+     * Load the units again, in the background, when loading them at startup
+     * failed (a dropped connection, say) and a scan carries a measure. That scan
+     * keeps the base reading; the next ones read their measure.
+     */
+    retryLoadUoms(scan) {
+        if (this.uomsById || this.uomsRetry || !goodsMeasures(scan).length) {
+            return;
+        }
+        this.uomsRetry = this.loadUoms()
+            .catch(() => null)
+            .finally(() => {
+                this.uomsRetry = null;
+            });
+    },
+
+    /**
+     * The first measure of the goods whose unit is the kind the product is
+     * stocked in, with that unit: a net volume for a product in litres, even when
+     * the label states a net weight first.
+     */
+    matchingMeasure(scan, productUom) {
+        for (const measure of goodsMeasures(scan)) {
+            const value = parseFloat(measure.value);
+            const uom = this.uomsById[measure.uom?.id];
+            if (
+                Number.isFinite(value) &&
+                uom?.category_id?.[0] === productUom.category_id?.[0]
+            ) {
+                return {value, uom};
+            }
+        }
+        return null;
+    },
+
+    /**
      * The measure a GS1 label carries, as a quantity of the product: converted
      * into the unit the product is stocked in, and rounded the way the server
-     * will store it. Null when there is no measure, when its unit is not the
-     * kind the product is stocked in (a weight for a product counted in units),
-     * or when the units could not be read.
+     * will store it. Null when the label has no measure of the kind the product
+     * is stocked in (a weight for a product counted in units), when the units
+     * could not be read, or when the measure rounds to nothing: a quantity of
+     * zero picks nothing, so the scan reads as one without a measure.
      */
     measureQuantity(scan, productUomId) {
-        const measure = parseFloat(scan?.weight);
-        const measureUom = this.uomsById?.[scan?.weightUom?.id];
-        const productUom = this.uomsById?.[productUomId];
-        if (
-            !Number.isFinite(measure) ||
-            !measureUom ||
-            !productUom ||
-            measureUom.category_id?.[0] !== productUom.category_id?.[0]
-        ) {
+        if (!this.uomsById) {
+            this.retryLoadUoms(scan);
+            return null;
+        }
+        const productUom = this.uomsById[productUomId];
+        const measure = productUom && this.matchingMeasure(scan, productUom);
+        if (!measure) {
             return null;
         }
         // Odoo's factor is how many of a unit make one unit of its category's
         // reference, so converting is a ratio of the two.
-        const quantity =
-            (measure / (measureUom.factor || 1)) * (productUom.factor || 1);
-        return this.roundAsStored(quantity, productUom);
+        const quantity = this.roundAsStored(
+            (measure.value / (measure.uom.factor || 1)) * (productUom.factor || 1),
+            productUom
+        );
+        return quantity > 0 ? quantity : null;
     },
 
     /**
