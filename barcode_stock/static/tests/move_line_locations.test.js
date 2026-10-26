@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, test} from "@odoo/hoot";
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
+import {BarcodeScannerSync} from "@barcode_stock/js/services/barcode_scanner_sync.esm";
 import {MoveWizardScreen} from "@barcode_stock/js/screens/move_wizard_screen.esm";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
 import {patchTranslations} from "@web/../tests/web_test_helpers";
@@ -36,8 +37,8 @@ function line({quantity, picked = 0, lot = false, from = SHELF_1, to = OUTPUT}) 
 
 /**
  * A move wizard on move 5 of picking 3, without mounting it. What it confirms
- * lands in `confirmed`, and the lots it looks up in `lookedUp`, found at
- * `lotAt`.
+ * lands in `confirmed`, what it tells the operator in `notes`, and the lots it
+ * looks up in `lookedUp`, found at `lotAt`.
  *
  * @param {Object} [options] the operation, the product's tracking, the move's
  *   lines, what the move still lacks, the lot scanned and where lots lie
@@ -64,6 +65,7 @@ function moveWizard({
             params: {moveId: 5, pickingId: 3, pickingTypeCode: type, defaultLot},
         },
         lookedUp: [],
+        notes: [],
         state: {
             selectedLotId: defaultLot ? String(defaultLot) : null,
             qtyPicked: 1,
@@ -86,8 +88,8 @@ function moveWizard({
             getMoveLinesForMove: () => lines,
             getLotsForProduct: () => [LOT_A, LOT_B],
             getRemainingQty: () => remaining,
-            lotSourceLocation: async (lotId, locationId) => {
-                wizard.lookedUp.push([lotId, locationId]);
+            lotSourceLocation: async (productId, lotId, locationId) => {
+                wizard.lookedUp.push([productId, lotId, locationId]);
                 return lotAt;
             },
         },
@@ -99,7 +101,7 @@ function moveWizard({
         },
         feedback: {success: () => undefined},
         store: {navigate: () => undefined},
-        inventory: {notify: () => undefined},
+        inventory: {notify: (message) => wizard.notes.push(String(message))},
     });
     return wizard;
 }
@@ -210,7 +212,7 @@ describe("BarcodeStock", () => {
         await wizard.loadData();
         expect(wizard.lookedUp).toEqual([]);
         await wizard.onLotChange({target: {value: "22"}});
-        expect(wizard.lookedUp).toEqual([[22, 8]]);
+        expect(wizard.lookedUp).toEqual([[7, 22, 8]]);
         expect(wizard.shownSourceLocation.display_name).toBe("WH/Stock/Shelf 2");
         await wizard.confirmPick();
         expect(wizard.confirmed).toMatchObject({lotId: 22, locationId: 12});
@@ -234,40 +236,95 @@ describe("BarcodeStock", () => {
         wizard.state.sourceLocation = {id: 8, display_name: "WH/Stock"};
         await wizard.confirmPick();
         expect(wizard.confirmed).toMatchObject({locationId: 8});
-        // A lot with no stock under the move's source keeps the line's.
+    });
+
+    test("a lot with no stock under the move's source is not picked", async () => {
         const nowhere = moveWizard({
             tracking: "lot",
             lines: [line({quantity: 2, lot: LOT_A})],
             defaultLot: 22,
         });
         await nowhere.loadData();
+        const message = "Lot 6077103 has no stock in WH/Stock.";
+        expect(nowhere.missingLotMessage).toBe(message);
         await nowhere.confirmPick();
-        expect(nowhere.confirmed).toMatchObject({locationId: false});
+        expect(nowhere.confirmed).toBe(undefined);
+        expect(nowhere.notes).toEqual([message]);
+        // Choosing where it comes from is the operator's way past it.
+        nowhere.state.sourceLocation = {id: 12, display_name: "WH/Stock/Shelf 2"};
+        expect(nowhere.missingLotMessage).toBe("");
+        await nowhere.confirmPick();
+        expect(nowhere.confirmed).toMatchObject({lotId: 22, locationId: 12});
+        // A reserved lot is never looked up, nor held back.
+        await nowhere.onLotChange({target: {value: "21"}});
+        expect(nowhere.state.lotMissing).toBe(false);
+        expect(nowhere.lookedUp).toEqual([[7, 22, 8]]);
     });
 
-    test("where a lot lies is its oldest quant with stock under the source", async () => {
+    test("where a lot lies is asked to the server, which knows the removal strategy", async () => {
         const asked = [];
         const state = new BarcodeScannerState({
-            searchRead: async (...args) => {
+            call: async (...args) => {
                 asked.push(args);
-                return [{id: 3, location_id: SHELF_2}];
+                return SHELF_2;
             },
         });
-        expect(await state.lotSourceLocation(22, 8)).toEqual(SHELF_2);
-        expect(asked).toEqual([
-            [
-                "stock.quant",
-                [
-                    ["lot_id", "=", 22],
-                    ["location_id", "child_of", 8],
-                    ["quantity", ">", 0],
-                ],
-                ["location_id"],
-                {limit: 1, order: "in_date, id"},
-            ],
-        ]);
-        const empty = new BarcodeScannerState({searchRead: async () => []});
-        expect(await empty.lotSourceLocation(22, 8)).toBe(false);
+        expect(await state.lotSourceLocation(7, 22, 8)).toEqual(SHELF_2);
+        expect(asked).toEqual([["stock.quant", "barcode_lot_location", [7, 22, 8]]]);
+    });
+
+    test("the picking's lines are read with their locations", async () => {
+        const read = {};
+        const state = new BarcodeScannerState({
+            searchRead: async (model, domain, fields) => {
+                read[model] = fields;
+                return model === "stock.picking"
+                    ? [{id: 3, name: "WH/INT/003", picking_type_id: [2, "Internal"]}]
+                    : [];
+            },
+            read: async () => [{code: "internal"}],
+            call: async () => ({}),
+        });
+        await state.preloadPicking(3);
+        expect(read["stock.move.line"]).toInclude("location_id");
+        expect(read["stock.move.line"]).toInclude("location_dest_id");
+    });
+
+    test("a pick is spread over the reserved lines, each up to what it holds", () => {
+        const state = new BarcodeScannerState({});
+        const first = line({quantity: 2});
+        const second = line({quantity: 3, from: SHELF_2});
+        state.pickingTypeCode = "outgoing";
+        state.moveLines = [first, second];
+        const pick = {moveId: 5, pickingId: 3, productId: 7};
+        // A scan of 5 (a GS1 count, say) takes 2 from Shelf 1 and 3 from Shelf 2.
+        state.stagePick({...pick, qtyPicked: 5});
+        expect([first.qty_picked, second.qty_picked]).toEqual([2, 3]);
+        // What is over goes on the last of them.
+        state.stagePick({...pick, qtyPicked: 1});
+        expect([first.qty_picked, second.qty_picked]).toEqual([2, 4]);
+        // A reception is not spread.
+        const receipt = new BarcodeScannerState({});
+        const only = line({quantity: 3});
+        receipt.pickingTypeCode = "incoming";
+        receipt.moveLines = [only, line({quantity: 2})];
+        receipt.stagePick({...pick, qtyPicked: 5});
+        expect(only.qty_picked).toBe(5);
+    });
+
+    test("a confirmation is spread the same way", async () => {
+        const state = new BarcodeScannerState({});
+        const first = line({quantity: 2});
+        const second = line({quantity: 3, from: SHELF_2});
+        state.pickingTypeCode = "internal";
+        state.moveLines = [first, second];
+        const sync = new BarcodeScannerSync({}, state);
+        sync.schedule = () => undefined;
+        await sync.confirmMove(
+            {moveId: 5, pickingId: 3, productId: 7, qtyPicked: 5, moveLineId: first.id},
+            {immediate: false}
+        );
+        expect([first.qty_picked, second.qty_picked]).toEqual([2, 3]);
     });
 
     test("a reception shows its line's putaway shelf and keeps it", async () => {

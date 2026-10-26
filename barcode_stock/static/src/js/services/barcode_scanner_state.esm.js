@@ -17,6 +17,13 @@ function sameLotId(left, right) {
     return (left || false) === (right || false);
 }
 
+function lineLeft(line) {
+    return normalizeQty(line.quantity) - normalizeQty(line.qty_picked);
+}
+
+// What is left of a pick spread over lines once float arithmetic is done with.
+const QTY_EPSILON = 1e-9;
+
 export class BarcodeScannerState extends Reactive {
     constructor(orm) {
         super();
@@ -122,6 +129,8 @@ export class BarcodeScannerState extends Reactive {
                     "lot_name",
                     "qty_picked",
                     "quantity",
+                    "location_id",
+                    "location_dest_id",
                 ]
             );
 
@@ -569,25 +578,81 @@ export class BarcodeScannerState extends Reactive {
     }
 
     /**
-     * Where a lot lies under a location: that of its oldest quant there with
-     * stock, as Odoo's own removal takes it.
+     * Where a lot would be picked from under a location, as Odoo's own
+     * reservation takes it (stock.quant.barcode_lot_location).
      *
+     * @param {Number} productId the product
      * @param {Number} lotId the lot
      * @param {Number} locationId the location it is picked under
      * @returns {Promise<Array|false>} the location, as [id, name], if any
      */
-    async lotSourceLocation(lotId, locationId) {
-        const [quant] = await this.orm.searchRead(
-            "stock.quant",
-            [
-                ["lot_id", "=", lotId],
-                ["location_id", "child_of", locationId],
-                ["quantity", ">", 0],
-            ],
-            ["location_id"],
-            {limit: 1, order: "in_date, id"}
-        );
-        return quant?.location_id || false;
+    lotSourceLocation(productId, lotId, locationId) {
+        return this.orm.call("stock.quant", "barcode_lot_location", [
+            productId,
+            lotId,
+            locationId,
+        ]);
+    }
+
+    /**
+     * The move's lines of a lot (or, by its name, of a lot not resolved yet).
+     *
+     * @param {Object} pick the move, product and lot picked
+     * @returns {Object[]} the lines
+     */
+    linesOfLot({moveId, productId, lotId = false, lotName = false}) {
+        const wantedLotName = (lotName || "").trim().toUpperCase();
+        return this.moveLines.filter((line) => {
+            if (line.move_id?.[0] !== moveId || line.product_id?.[0] !== productId) {
+                return false;
+            }
+            if (sameLotId(line.lot_id?.[0], lotId)) {
+                return true;
+            }
+            // Fall back to the lot NAME so a re-scan lands on the existing line
+            // even when the lot resolved to a different record, instead of
+            // spawning a duplicate line for the same lot.
+            const lineLotName = (line.lot_name || line.lot_id?.[1] || "")
+                .trim()
+                .toUpperCase();
+            return Boolean(wantedLotName) && lineLotName === wantedLotName;
+        });
+    }
+
+    /**
+     * Stage a pick. Outside receptions it is spread over the move's lines of
+     * its lot that still hold something, in turn, each taking what it holds,
+     * so the stock leaves every shelf it was reserved on; what is over goes on
+     * the last of them, as Odoo lets a move be over-picked.
+     *
+     * @param {Object} pick what stageMoveLine takes
+     * @returns {Object} the last line staged
+     */
+    stagePick(pick) {
+        if (this.pickingTypeCode === "incoming" || pick.mode === "set") {
+            return this.stageMoveLine(pick);
+        }
+        const lines = this.linesOfLot(pick);
+        const reserved = lines.filter((line) => lineLeft(line) > 0);
+        if (!reserved.length) {
+            // Every line of the lot picked already: what is over goes on the
+            // last of them too.
+            return this.stageMoveLine(
+                lines.length ? {...pick, moveLineId: lines.at(-1).id} : pick
+            );
+        }
+        let rest = normalizeQty(pick.qtyPicked);
+        let staged = null;
+        for (const [index, line] of reserved.entries()) {
+            const qty =
+                index === reserved.length - 1 ? rest : Math.min(rest, lineLeft(line));
+            staged = this.stageMoveLine({...pick, moveLineId: line.id, qtyPicked: qty});
+            rest -= qty;
+            if (rest <= QTY_EPSILON) {
+                break;
+            }
+        }
+        return staged;
     }
 
     /**
@@ -609,9 +674,7 @@ export class BarcodeScannerState extends Reactive {
             );
         const reserved =
             this.pickingTypeCode !== "incoming" &&
-            matchingLines.find(
-                (line) => normalizeQty(line.quantity) > normalizeQty(line.qty_picked)
-            );
+            matchingLines.find((line) => lineLeft(line) > 0);
         return (
             named ||
             reserved ||
@@ -633,21 +696,7 @@ export class BarcodeScannerState extends Reactive {
         extraValues = {},
     }) {
         const wantedLotName = (lotName || "").trim().toUpperCase();
-        const matchingLines = this.moveLines.filter((line) => {
-            if (line.move_id?.[0] !== moveId || line.product_id?.[0] !== productId) {
-                return false;
-            }
-            if (sameLotId(line.lot_id?.[0], lotId)) {
-                return true;
-            }
-            // Fall back to the lot NAME so a re-scan lands on the existing line
-            // even when the lot resolved to a different record, instead of
-            // spawning a duplicate line for the same lot.
-            const lineLotName = (line.lot_name || line.lot_id?.[1] || "")
-                .trim()
-                .toUpperCase();
-            return Boolean(wantedLotName) && lineLotName === wantedLotName;
-        });
+        const matchingLines = this.linesOfLot({moveId, productId, lotId, lotName});
         let targetLine = this.firstPickLine(moveId, moveLineId, matchingLines);
         if (!targetLine && matchingLines.length) {
             [targetLine] = matchingLines;

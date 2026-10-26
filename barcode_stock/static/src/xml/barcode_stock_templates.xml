@@ -787,6 +787,14 @@
                                         </t>
                                     </select>
                                 </div>
+                                <div
+                                    t-if="missingLotMessage"
+                                    class="text-danger small mt-1"
+                                    role="alert"
+                                >
+                                    <i class="fa fa-exclamation-triangle me-1" />
+                                    <t t-esc="missingLotMessage" />
+                                </div>
                             </t>
                             <t t-if="canCreateLot and state.mode === 'create_lot'">
                                 <div class="ilx-mw-v2-input-box mb-2">

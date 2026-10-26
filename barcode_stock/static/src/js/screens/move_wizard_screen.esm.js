@@ -49,8 +49,10 @@ export class MoveWizardScreen extends Component {
             // return). None chosen, the line keeps its own.
             sourceLocation: this.props.params?.moveSourceLocation || null,
             destLocation: this.props.params?.moveDestLocation || null,
-            // Where a lot the reservation does not carry lies, looked up.
+            // Where a lot the reservation does not carry lies, looked up, and
+            // whether it lies nowhere under the move's source.
             lotLocation: null,
+            lotMissing: false,
         });
 
         useBarcodeHandler({
@@ -258,6 +260,7 @@ export class MoveWizardScreen extends Component {
     async locateLot() {
         const lotId = this.selectedLotIdNumber;
         this.state.lotLocation = null;
+        this.state.lotMissing = false;
         if (
             !lotId ||
             !this.isTracked ||
@@ -267,13 +270,36 @@ export class MoveWizardScreen extends Component {
             return;
         }
         const location = await this.barcodeScannerState.lotSourceLocation(
+            this.state.move.product_id[0],
             lotId,
             this.state.move.location_id[0]
         );
         // The operator may have chosen another lot meanwhile.
-        if (location && this.selectedLotIdNumber === lotId) {
-            this.state.lotLocation = {id: location[0], display_name: location[1]};
+        if (this.selectedLotIdNumber !== lotId) {
+            return;
         }
+        if (location) {
+            this.state.lotLocation = {id: location[0], display_name: location[1]};
+        } else {
+            this.state.lotMissing = true;
+        }
+    }
+
+    /**
+     * Why the lot chosen cannot be picked: the reservation does not carry it and
+     * it has no stock under the move's source. Choosing where it comes from (in
+     * an internal transfer) is the operator's way past it.
+     *
+     * @returns {String} the reason, empty when there is none
+     */
+    get missingLotMessage() {
+        if (!this.state.lotMissing || this.state.sourceLocation) {
+            return "";
+        }
+        return _t("Lot %(lot)s has no stock in %(location)s.", {
+            lot: this.selectedLot?.name || "",
+            location: this.state.move?.location_id?.[1] || "",
+        });
     }
 
     /**
@@ -799,6 +825,11 @@ export class MoveWizardScreen extends Component {
             this.state.mode !== "create_lot"
         ) {
             this.inventory.notify(_t("Please select a lot"), {type: "danger"});
+            return;
+        }
+        const missingLot = this.missingLotMessage;
+        if (missingLot) {
+            this.inventory.notify(missingLot, {type: "danger"});
             return;
         }
 
