@@ -569,6 +569,28 @@ export class BarcodeScannerState extends Reactive {
     }
 
     /**
+     * Where a lot lies under a location: that of its oldest quant there with
+     * stock, as Odoo's own removal takes it.
+     *
+     * @param {Number} lotId the lot
+     * @param {Number} locationId the location it is picked under
+     * @returns {Promise<Array|false>} the location, as [id, name], if any
+     */
+    async lotSourceLocation(lotId, locationId) {
+        const [quant] = await this.orm.searchRead(
+            "stock.quant",
+            [
+                ["lot_id", "=", lotId],
+                ["location_id", "child_of", locationId],
+                ["quantity", ">", 0],
+            ],
+            ["location_id"],
+            {limit: 1, order: "in_date, id"}
+        );
+        return quant?.location_id || false;
+    }
+
+    /**
      * The line a pick goes on first: the one a screen working on a reserved
      * line names; outside receptions, the first line of its lot that still has
      * something to pick, so a reservation is filled line by line where Odoo

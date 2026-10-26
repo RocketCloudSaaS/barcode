@@ -49,6 +49,8 @@ export class MoveWizardScreen extends Component {
             // return). None chosen, the line keeps its own.
             sourceLocation: this.props.params?.moveSourceLocation || null,
             destLocation: this.props.params?.moveDestLocation || null,
+            // Where a lot the reservation does not carry lies, looked up.
+            lotLocation: null,
         });
 
         useBarcodeHandler({
@@ -92,7 +94,7 @@ export class MoveWizardScreen extends Component {
             this.onProductScanned(product);
             return;
         }
-        this.applyScannedLot(normalized);
+        await this.applyScannedLot(normalized);
         this.adjustQty(normalized.quantity);
         this.feedback.success();
     }
@@ -101,7 +103,7 @@ export class MoveWizardScreen extends Component {
      * Apply the lot or serial a scan carries: select it when it already exists,
      * otherwise prefill the create-lot form where creating one is allowed.
      */
-    applyScannedLot({lot, lotName, expiration}) {
+    async applyScannedLot({lot, lotName, expiration}) {
         const name = lot?.name || lotName;
         if (!name || !this.isTracked) {
             return;
@@ -111,6 +113,7 @@ export class MoveWizardScreen extends Component {
                 this.state.lots = [lot, ...this.state.lots];
             }
             this.state.selectedLotId = String(lot.id);
+            await this.locateLot();
             return;
         }
         if (!this.canCreateLot) {
@@ -223,12 +226,54 @@ export class MoveWizardScreen extends Component {
 
     /**
      * Where the pick comes from, as shown: the location the operator chose,
-     * otherwise that of the line it goes on.
+     * otherwise where a lot the reservation does not carry lies, otherwise that
+     * of the line it goes on.
      *
      * @returns {Object|null} the location, as id and display_name
      */
     get shownSourceLocation() {
-        return this.state.sourceLocation || this.lineLocation("location_id");
+        return (
+            this.state.sourceLocation ||
+            this.state.lotLocation ||
+            this.lineLocation("location_id")
+        );
+    }
+
+    /**
+     * The source to write on the line: the one the operator chose, or where a
+     * lot the reservation does not carry lies. Otherwise none, and the line
+     * keeps where Odoo reserved its stock.
+     *
+     * @returns {Number|false} the location's id
+     */
+    get sourceLocationId() {
+        return (this.state.sourceLocation || this.state.lotLocation)?.id || false;
+    }
+
+    /**
+     * A lot the move's reservation does not carry takes over a reserved line of
+     * another lot, on that lot's shelf: look up where it lies under the move's
+     * source, so it is picked from there.
+     */
+    async locateLot() {
+        const lotId = this.selectedLotIdNumber;
+        this.state.lotLocation = null;
+        if (
+            !lotId ||
+            !this.isTracked ||
+            !this.followsReservation ||
+            (this.state.moveLines || []).some((line) => lineLotId(line) === lotId)
+        ) {
+            return;
+        }
+        const location = await this.barcodeScannerState.lotSourceLocation(
+            lotId,
+            this.state.move.location_id[0]
+        );
+        // The operator may have chosen another lot meanwhile.
+        if (location && this.selectedLotIdNumber === lotId) {
+            this.state.lotLocation = {id: location[0], display_name: location[1]};
+        }
     }
 
     /**
@@ -580,6 +625,7 @@ export class MoveWizardScreen extends Component {
 
     onLotChange(ev) {
         this.state.selectedLotId = ev.target.value || null;
+        return this.locateLot();
     }
 
     /**
@@ -676,6 +722,7 @@ export class MoveWizardScreen extends Component {
         this.state.tracking = product.tracking;
         lots = this.preselectReservedLot(moveLines, lots);
         this.fitStartToLine();
+        await this.locateLot();
 
         if (this.isTracked && this.isIncoming) {
             if (this.state.useCreateLots && !this.state.useExistingLots) {
@@ -788,9 +835,10 @@ export class MoveWizardScreen extends Component {
             lotName: lot ? lot.name : this.state.newLotName || false,
             createLot: this.state.mode === "create_lot",
             expirationDate: this.state.newLotExpirationDate || false,
-            // Only a location the operator chose: otherwise the line keeps
-            // where Odoo reserved its stock, and its putaway shelf.
-            locationId: this.state.sourceLocation?.id || false,
+            // Only a location the operator chose, or where a lot the reservation
+            // does not carry lies: otherwise the line keeps where Odoo reserved
+            // its stock, and its putaway shelf.
+            locationId: this.sourceLocationId,
             locationDestId: this.state.destLocation?.id || false,
         });
         // Hand the move back so the picking screen opens on the tab that
