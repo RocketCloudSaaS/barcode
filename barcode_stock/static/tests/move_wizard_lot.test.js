@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, test} from "@odoo/hoot";
+import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 import {MoveWizardScreen} from "@barcode_stock/js/screens/move_wizard_screen.esm";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
 import {patchTranslations} from "@web/../tests/web_test_helpers";
@@ -7,7 +8,8 @@ const LOT_A = {id: 21, name: "6077102", product_id: [7, "Duck confit"], product_
 const LOT_B = {id: 22, name: "6077103", product_id: [7, "Duck confit"], product_qty: 9};
 
 /**
- * A move wizard on move 5 of picking 3, without mounting it.
+ * A move wizard on move 5 of picking 3, without mounting it. What it confirms
+ * lands in `confirmed`.
  *
  * @param {Object} [options] the operation, the move's lines and the lot and
  *   quantity given
@@ -60,14 +62,28 @@ function moveWizard({
         getLotsForProduct: () => [LOT_B],
         getRemainingQty: () => remaining,
     };
-    wizard.feedback = {success: () => undefined};
+    Object.assign(wizard, {
+        feedback: {success: () => undefined},
+        barcodeScannerSync: {
+            validateConfirmMovePayload: () => null,
+            confirmMove: async (payload) => {
+                wizard.confirmed = payload;
+            },
+        },
+        store: {navigate: () => undefined},
+        inventory: {notify: () => undefined},
+    });
     return wizard;
 }
 
+let lineId = 0;
+
 function line(lotId, quantity, qtyPicked = 0) {
+    lineId += 1;
     return {
-        id: lotId * 10,
+        id: lineId,
         move_id: [5, "Duck confit"],
+        product_id: [7, "Duck confit"],
         lot_id: lotId ? [lotId, lotId === 21 ? "6077102" : "6077103"] : false,
         quantity,
         qty_picked: qtyPicked,
@@ -146,24 +162,52 @@ describe("BarcodeStock", () => {
         expect(none.pickableQty).toBe(3);
     });
 
-    test("a lot is done with once its reservation is picked, on whichever line", async () => {
-        // 5 reserved: lot A over two lines (2 + 2), lot B on one.
-        const wizard = moveWizard({
-            lines: [line(21, 2), line(21, 2), line(22, 1)],
-            remaining: 5,
-        });
+    test("a lot reserved over several lines is picked line by line", async () => {
+        // 9 reserved: lot A over two lines (2 + 3), lot B on one.
+        const [a1, a2, b] = [line(21, 2), line(21, 3), line(22, 4)];
+        const wizard = moveWizard({lines: [a1, a2, b], remaining: 9});
         await wizard.loadData();
         expect(wizard.state.selectedLotId).toBe("21");
-        expect(wizard.pickableQty).toBe(4);
-        // The 4 of lot A land on its first line, its second one left untouched:
-        // lot A is done with, the wizard opens on lot B.
-        const next = moveWizard({
-            lines: [line(21, 2, 4), line(21, 2), line(22, 1)],
-            remaining: 1,
+        expect(wizard.targetLine).toBe(a1);
+        wizard.fulfillRemaining();
+        expect(wizard.state.qtyPicked).toBe(2);
+        // Confirmed on that very line.
+        await wizard.confirmPick();
+        expect(wizard.confirmed).toMatchObject({
+            moveLineId: a1.id,
+            lotId: 21,
+            qtyPicked: 2,
         });
+        // Its first line picked, lot A goes on with its second one.
+        a1.qty_picked = 2;
+        const next = moveWizard({lines: [a1, a2, b], remaining: 7});
         await next.loadData();
-        expect(next.state.selectedLotId).toBe("22");
-        expect(next.pickableQty).toBe(1);
+        expect(next.state.selectedLotId).toBe("21");
+        expect(next.targetLine).toBe(a2);
+        expect(next.pickableQty).toBe(3);
+        // Lot A covered, even if over-picked on its first line: on to lot B.
+        a1.qty_picked = 5;
+        const last = moveWizard({lines: [a1, a2, b], remaining: 4});
+        await last.loadData();
+        expect(last.state.selectedLotId).toBe("22");
+        expect(last.targetLine).toBe(b);
+        expect(last.pickableQty).toBe(4);
+    });
+
+    test("a pick goes on the reserved line named", () => {
+        const state = new BarcodeScannerState({});
+        const [a1, a2] = [line(21, 2), line(21, 3)];
+        state.moveLines = [a1, a2];
+        const pick = {moveId: 5, pickingId: 3, productId: 7, lotId: 21};
+        state.stageMoveLine({...pick, qtyPicked: 3, moveLineId: a2.id});
+        expect(a2.qty_picked).toBe(3);
+        expect(a1.qty_picked).toBe(0);
+        // None named: on the lot's line with nothing picked yet, as before.
+        state.stageMoveLine({...pick, qtyPicked: 1});
+        expect(a1.qty_picked).toBe(1);
+        // One of another move is not taken.
+        state.stageMoveLine({...pick, moveId: 6, qtyPicked: 1, moveLineId: a1.id});
+        expect(a1.qty_picked).toBe(1);
     });
 
     test("a tapped move starts at no more than its lot's reservation holds", async () => {
