@@ -570,7 +570,9 @@ export class BarcodeScannerState extends Reactive {
 
     /**
      * The line a pick goes on first: the one a screen working on a reserved
-     * line names, otherwise a line of its lot with nothing picked yet.
+     * line names; outside receptions, the first line of its lot that still has
+     * something to pick, so a reservation is filled line by line where Odoo
+     * made it; otherwise a line of its lot with nothing picked yet.
      *
      * @param {Number} moveId the move picked
      * @param {Number} [moveLineId] the line named, if any
@@ -583,8 +585,15 @@ export class BarcodeScannerState extends Reactive {
             this.moveLines.find(
                 (line) => line.id === moveLineId && line.move_id?.[0] === moveId
             );
+        const reserved =
+            this.pickingTypeCode !== "incoming" &&
+            matchingLines.find(
+                (line) => normalizeQty(line.quantity) > normalizeQty(line.qty_picked)
+            );
         return (
-            named || matchingLines.find((line) => normalizeQty(line.qty_picked) === 0)
+            named ||
+            reserved ||
+            matchingLines.find((line) => normalizeQty(line.qty_picked) === 0)
         );
     }
 
@@ -665,8 +674,12 @@ export class BarcodeScannerState extends Reactive {
             picked: true,
             lot_id: lotId || false,
             lot_name: lotName || false,
-            location_id: locationId || false,
-            location_dest_id: locationDestId || false,
+            // Where the stock comes from and goes to only when the screen says
+            // so (the operator chose it). Otherwise the line keeps the
+            // locations Odoo gave it -- where its stock was reserved, a putaway
+            // shelf -- and a new line takes its move's.
+            ...(locationId ? {location_id: locationId} : {}),
+            ...(locationDestId ? {location_dest_id: locationDestId} : {}),
             ...(productUomId ? {product_uom_id: productUomId} : {}),
             ...extraValues,
         };

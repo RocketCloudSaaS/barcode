@@ -6,6 +6,10 @@ import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
 import {user} from "@web/core/user";
 
+function lineLotId(line) {
+    return line.lot_id?.[0] || false;
+}
+
 export class MoveWizardScreen extends Component {
     setup() {
         this.inventory = useBarcodeScanner();
@@ -40,9 +44,9 @@ export class MoveWizardScreen extends Component {
             lots: [],
             useExistingLots: true,
             useCreateLots: true,
-            // Editable source/destination. Carried across the location-picker
-            // round-trip via params (the wizard remounts on return); otherwise
-            // seeded from the move in loadData.
+            // The source/destination the operator chose, carried across the
+            // location-picker round-trip via params (the wizard remounts on
+            // return). None chosen, the line keeps its own.
             sourceLocation: this.props.params?.moveSourceLocation || null,
             destLocation: this.props.params?.moveDestLocation || null,
         });
@@ -142,12 +146,6 @@ export class MoveWizardScreen extends Component {
             return lots;
         }
         this.state.selectedLotId = String(reservedLotId);
-        // Opened without a quantity (tapped, not scanned): no more than what the
-        // reserved line still holds.
-        const left = this.pickableQty;
-        if (!this.props.params?.defaultQty && left > 0) {
-            this.state.qtyPicked = Math.min(this.state.qtyPicked, left);
-        }
         const reservedLot = this.barcodeScannerState.lotsById[reservedLotId];
         if (reservedLot && !lots.some((lot) => lot.id === reservedLotId)) {
             return [reservedLot, ...lots];
@@ -163,7 +161,7 @@ export class MoveWizardScreen extends Component {
      * @returns {Object|null} the line, if any
      */
     reservedLine(moveLines) {
-        if (!this.followsReservation) {
+        if (!this.isTracked || !this.followsReservation) {
             return null;
         }
         return (
@@ -178,38 +176,87 @@ export class MoveWizardScreen extends Component {
 
     /**
      * The reserved line a confirmation goes on: the first line of the lot
-     * chosen that still has something to pick, while the lot is not covered.
-     * A lot reserved over several lines is so picked line by line, as Odoo
-     * reserved it.
+     * chosen (of the move, for a product without lots) that still has
+     * something to pick, while that lot is not covered. A move reserved over
+     * several lines is so picked line by line, each where Odoo reserved it.
      *
      * @returns {Object|null} the line, if any
      */
     get targetLine() {
-        const lotId = this.selectedLotIdNumber;
+        const lotId = this.isTracked ? this.selectedLotIdNumber : false;
         const lines = this.state.moveLines || [];
         if (
-            !lotId ||
             !this.followsReservation ||
+            (this.isTracked && !lotId) ||
             this.reservedLeft(lines, lotId) <= 0
         ) {
             return null;
         }
         return (
             lines.find(
-                (line) => line.lot_id?.[0] === lotId && this.lineLeft(line) > 0
+                (line) => lineLotId(line) === lotId && this.lineLeft(line) > 0
             ) || null
         );
     }
 
     /**
-     * Whether the move is picked lot by lot as reserved: outside receptions,
-     * where Odoo reserves stock against lots, for a tracked product, when the
-     * operation picks from existing lots.
+     * Whether the move is picked line by line as reserved: outside receptions,
+     * where Odoo reserves the stock where it lies, unless a tracked product's
+     * operation does not pick from existing lots.
      *
      * @returns {Boolean}
      */
     get followsReservation() {
-        return !this.isIncoming && this.isTracked && this.state.useExistingLots;
+        return !this.isIncoming && (!this.isTracked || this.state.useExistingLots);
+    }
+
+    /**
+     * Opened without a quantity (tapped, not scanned), the pick starts at no
+     * more than what the reserved line worked on still holds.
+     */
+    fitStartToLine() {
+        const left = this.pickableQty;
+        if (!this.props.params?.defaultQty && this.targetLine && left > 0) {
+            this.state.qtyPicked = Math.min(this.state.qtyPicked, left);
+        }
+    }
+
+    /**
+     * Where the pick comes from, as shown: the location the operator chose,
+     * otherwise that of the line it goes on.
+     *
+     * @returns {Object|null} the location, as id and display_name
+     */
+    get shownSourceLocation() {
+        return this.state.sourceLocation || this.lineLocation("location_id");
+    }
+
+    /**
+     * Where the pick goes to, as shown: the location the operator chose,
+     * otherwise that of the line it goes on (a putaway shelf, say).
+     *
+     * @returns {Object|null} the location, as id and display_name
+     */
+    get shownDestLocation() {
+        return this.state.destLocation || this.lineLocation("location_dest_id");
+    }
+
+    /**
+     * A location of the line the pick goes on: the reserved line worked on,
+     * otherwise the move's first line with nothing picked yet; the move's when
+     * it has none.
+     *
+     * @param {String} field location_id or location_dest_id
+     * @returns {Object|null} the location, as id and display_name
+     */
+    lineLocation(field) {
+        const line =
+            this.targetLine ||
+            (this.state.moveLines || []).find(
+                (moveLine) => !(Number(moveLine.qty_picked) > 0)
+            );
+        const location = [line?.[field], this.state.move?.[field]].find(Array.isArray);
+        return location ? {id: location[0], display_name: location[1]} : null;
     }
 
     /**
@@ -218,12 +265,12 @@ export class MoveWizardScreen extends Component {
      * one line is covered, whatever its other lines still reserve.
      *
      * @param {Object[]} moveLines the move's lines
-     * @param {Number} lotId the lot's id
+     * @param {Number|false} lotId the lot's id, false for no lot
      * @returns {Number} the quantity still to pick of it
      */
     reservedLeft(moveLines, lotId) {
         return moveLines
-            .filter((line) => line.lot_id?.[0] === lotId)
+            .filter((line) => lineLotId(line) === lotId)
             .reduce((sum, line) => sum + this.lineLeft(line), 0);
     }
 
@@ -628,21 +675,7 @@ export class MoveWizardScreen extends Component {
         this.state.moveLines = moveLines;
         this.state.tracking = product.tracking;
         lots = this.preselectReservedLot(moveLines, lots);
-
-        // Seed the editable locations from the move unless the operator already
-        // picked one (preserved across the location-picker round-trip).
-        if (!this.state.sourceLocation && move.location_id) {
-            this.state.sourceLocation = {
-                id: move.location_id[0],
-                display_name: move.location_id[1],
-            };
-        }
-        if (!this.state.destLocation && move.location_dest_id) {
-            this.state.destLocation = {
-                id: move.location_dest_id[0],
-                display_name: move.location_dest_id[1],
-            };
-        }
+        this.fitStartToLine();
 
         if (this.isTracked && this.isIncoming) {
             if (this.state.useCreateLots && !this.state.useExistingLots) {
@@ -755,9 +788,10 @@ export class MoveWizardScreen extends Component {
             lotName: lot ? lot.name : this.state.newLotName || false,
             createLot: this.state.mode === "create_lot",
             expirationDate: this.state.newLotExpirationDate || false,
-            locationId: this.state.sourceLocation?.id || this.state.move.location_id[0],
-            locationDestId:
-                this.state.destLocation?.id || this.state.move.location_dest_id[0],
+            // Only a location the operator chose: otherwise the line keeps
+            // where Odoo reserved its stock, and its putaway shelf.
+            locationId: this.state.sourceLocation?.id || false,
+            locationDestId: this.state.destLocation?.id || false,
         });
         // Hand the move back so the picking screen opens on the tab that
         // now holds it: still "To Do" while quantity is missing, "Done" once
