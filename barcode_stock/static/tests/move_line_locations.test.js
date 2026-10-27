@@ -37,11 +37,13 @@ function line({quantity, picked = 0, lot = false, from = SHELF_1, to = OUTPUT}) 
 
 /**
  * A move wizard on move 5 of picking 3, without mounting it. What it confirms
- * lands in `confirmed`, what it tells the operator in `notes`, and the lots it
- * looks up in `lookedUp`, found at `lotAt`.
+ * on the lines lands in `confirmed`, what it asks the server in `called`, what
+ * it tells the operator in `notes`, and the lots it looks up in `lookedUp`,
+ * found at `lotAt`.
  *
  * @param {Object} [options] the operation, the product's tracking, the move's
- *   lines, what the move still lacks, the lot scanned and where lots lie
+ *   lines, what the move still lacks, the lot scanned, where lots lie and
+ *   whether the server refuses
  * @returns {MoveWizardScreen} the wizard
  */
 function moveWizard({
@@ -51,6 +53,7 @@ function moveWizard({
     remaining = 5,
     defaultLot = null,
     lotAt = false,
+    refused = false,
 } = {}) {
     const wizard = Object.create(MoveWizardScreen.prototype);
     const move = {
@@ -66,6 +69,9 @@ function moveWizard({
         },
         lookedUp: [],
         notes: [],
+        called: [],
+        flushed: 0,
+        navigated: false,
         state: {
             selectedLotId: defaultLot ? String(defaultLot) : null,
             qtyPicked: 1,
@@ -98,10 +104,26 @@ function moveWizard({
             confirmMove: async (payload) => {
                 wizard.confirmed = payload;
             },
+            flush: async () => {
+                wizard.flushed += 1;
+            },
         },
         feedback: {success: () => undefined},
-        store: {navigate: () => undefined},
-        inventory: {notify: (message) => wizard.notes.push(String(message))},
+        store: {
+            navigate: () => {
+                wizard.navigated = true;
+            },
+        },
+        inventory: {
+            notify: (message) => wizard.notes.push(String(message)),
+            call: async (model, method, args) => {
+                wizard.called.push([model, method, args]);
+                if (refused) {
+                    throw new Error("refused");
+                }
+                return true;
+            },
+        },
     });
     return wizard;
 }
@@ -201,7 +223,7 @@ describe("BarcodeStock", () => {
         expect(wizard.shownSourceLocation.display_name).toBe("WH/Stock/Shelf 2");
     });
 
-    test("a lot the reservation does not carry is picked from where it lies", async () => {
+    test("a lot the reservation does not carry is picked by Odoo", async () => {
         // A delivery reserved lot A on Shelf 1; lot B lies on Shelf 2.
         const wizard = moveWizard({
             type: "outgoing",
@@ -215,12 +237,50 @@ describe("BarcodeStock", () => {
         expect(wizard.lookedUp).toEqual([[7, 22, 8]]);
         expect(wizard.shownSourceLocation.display_name).toBe("WH/Stock/Shelf 2");
         await wizard.confirmPick();
-        expect(wizard.confirmed).toMatchObject({lotId: 22, locationId: 12});
+        // Staged work first, then Odoo reserves and picks the lot where it lies.
+        expect(wizard.flushed).toBe(1);
+        expect(wizard.called).toEqual([
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false]],
+        ]);
+        expect(wizard.confirmed).toBe(undefined);
+        expect(wizard.navigated).toBe(true);
         // Back on the reserved lot, its line's shelf again, and none written.
         await wizard.onLotChange({target: {value: "21"}});
         expect(wizard.shownSourceLocation.display_name).toBe("WH/Stock/Shelf 1");
         await wizard.confirmPick();
         expect(wizard.confirmed).toMatchObject({lotId: 21, locationId: false});
+        expect(wizard.called.length).toBe(1);
+    });
+
+    test("confirming while the lot is still being looked up", async () => {
+        // The lookup has not answered yet: the server picks the lot anyway.
+        const wizard = moveWizard({
+            tracking: "lot",
+            lines: [line({quantity: 2, lot: LOT_A})],
+            lotAt: new Promise(() => undefined),
+        });
+        await wizard.loadData();
+        wizard.onLotChange({target: {value: "22"}});
+        expect(wizard.state.lotLocation).toBe(null);
+        await wizard.confirmPick();
+        expect(wizard.called).toEqual([
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false]],
+        ]);
+        expect(wizard.confirmed).toBe(undefined);
+    });
+
+    test("a pick Odoo refuses keeps the wizard open", async () => {
+        const wizard = moveWizard({
+            tracking: "lot",
+            lines: [line({quantity: 2, lot: LOT_A})],
+            defaultLot: 22,
+            lotAt: SHELF_2,
+            refused: true,
+        });
+        await wizard.loadData();
+        await wizard.confirmPick();
+        expect(wizard.called.length).toBe(1);
+        expect(wizard.navigated).toBe(false);
     });
 
     test("a scanned lot the reservation does not carry is looked up too", async () => {
@@ -235,7 +295,9 @@ describe("BarcodeStock", () => {
         // One the operator chose still wins.
         wizard.state.sourceLocation = {id: 8, display_name: "WH/Stock"};
         await wizard.confirmPick();
-        expect(wizard.confirmed).toMatchObject({locationId: 8});
+        expect(wizard.called).toEqual([
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 8]],
+        ]);
     });
 
     test("a lot with no stock under the move's source is not picked", async () => {
@@ -248,13 +310,15 @@ describe("BarcodeStock", () => {
         const message = "Lot 6077103 has no stock in WH/Stock.";
         expect(nowhere.missingLotMessage).toBe(message);
         await nowhere.confirmPick();
-        expect(nowhere.confirmed).toBe(undefined);
+        expect(nowhere.called).toEqual([]);
         expect(nowhere.notes).toEqual([message]);
         // Choosing where it comes from is the operator's way past it.
         nowhere.state.sourceLocation = {id: 12, display_name: "WH/Stock/Shelf 2"};
         expect(nowhere.missingLotMessage).toBe("");
         await nowhere.confirmPick();
-        expect(nowhere.confirmed).toMatchObject({lotId: 22, locationId: 12});
+        expect(nowhere.called).toEqual([
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 12]],
+        ]);
         // A reserved lot is never looked up, nor held back.
         await nowhere.onLotChange({target: {value: "21"}});
         expect(nowhere.state.lotMissing).toBe(false);
@@ -325,6 +389,39 @@ describe("BarcodeStock", () => {
             {immediate: false}
         );
         expect([first.qty_picked, second.qty_picked]).toEqual([2, 3]);
+    });
+
+    test("outside receptions, a lot the reservation lacks takes no other lot's line", () => {
+        const state = new BarcodeScannerState({});
+        const reserved = line({quantity: 2, lot: LOT_A});
+        state.pickingTypeCode = "outgoing";
+        state.moveLines = [reserved];
+        state.stageMoveLine({
+            moveId: 5,
+            pickingId: 3,
+            productId: 7,
+            qtyPicked: 2,
+            lotId: 22,
+            lotName: "6077103",
+        });
+        expect(reserved.lot_id).toEqual([21, "6077102"]);
+        expect(reserved.qty_picked).toBe(0);
+        expect(state.moveLines.length).toBe(2);
+        // A reception's lotless reserved line is still taken over.
+        const receipt = new BarcodeScannerState({});
+        const lotless = line({quantity: 3});
+        receipt.pickingTypeCode = "incoming";
+        receipt.moveLines = [lotless];
+        receipt.stageMoveLine({
+            moveId: 5,
+            pickingId: 3,
+            productId: 7,
+            qtyPicked: 3,
+            lotId: 22,
+            lotName: "6077103",
+        });
+        expect(lotless.lot_id).toBe(22);
+        expect(receipt.moveLines.length).toBe(1);
     });
 
     test("a reception shows its line's putaway shelf and keeps it", async () => {

@@ -242,14 +242,54 @@ export class MoveWizardScreen extends Component {
     }
 
     /**
-     * The source to write on the line: the one the operator chose, or where a
-     * lot the reservation does not carry lies. Otherwise none, and the line
-     * keeps where Odoo reserved its stock.
+     * The source to write on the line: the one the operator chose. Otherwise
+     * none, and the line keeps where Odoo reserved its stock.
      *
      * @returns {Number|false} the location's id
      */
     get sourceLocationId() {
-        return (this.state.sourceLocation || this.state.lotLocation)?.id || false;
+        return this.state.sourceLocation?.id || false;
+    }
+
+    /**
+     * Whether the lot chosen is one the move's reservation does not carry:
+     * Odoo reserves it then, where it lies (see pickUnreservedLot).
+     *
+     * @returns {Boolean}
+     */
+    get unreservedLot() {
+        const lotId = this.selectedLotIdNumber;
+        return Boolean(
+            lotId &&
+                this.isTracked &&
+                this.followsReservation &&
+                this.state.mode === "pick" &&
+                !(this.state.moveLines || []).some((line) => lineLotId(line) === lotId)
+        );
+    }
+
+    /**
+     * Have Odoo pick a lot the reservation does not carry: it reserves it under
+     * the move's source (or the one the operator chose) as it would any lot,
+     * one line per shelf, package and owner it lies in, and marks it picked.
+     * What the wizard staged so far is sent first.
+     *
+     * @returns {Promise<Boolean>} whether it was picked
+     */
+    async pickUnreservedLot() {
+        await this.barcodeScannerSync.flush();
+        try {
+            await this.inventory.call("stock.move", "barcode_pick_lot", [
+                [this.moveId],
+                this.selectedLotIdNumber,
+                this.state.qtyPicked,
+                this.sourceLocationId,
+            ]);
+        } catch {
+            // The API wrapper already told the operator why.
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -261,12 +301,7 @@ export class MoveWizardScreen extends Component {
         const lotId = this.selectedLotIdNumber;
         this.state.lotLocation = null;
         this.state.lotMissing = false;
-        if (
-            !lotId ||
-            !this.isTracked ||
-            !this.followsReservation ||
-            (this.state.moveLines || []).some((line) => lineLotId(line) === lotId)
-        ) {
+        if (!this.unreservedLot) {
             return;
         }
         const location = await this.barcodeScannerState.lotSourceLocation(
@@ -856,22 +891,13 @@ export class MoveWizardScreen extends Component {
             return;
         }
 
-        await this.barcodeScannerSync.confirmMove({
-            moveId: this.moveId,
-            moveLineId: this.targetLineId,
-            pickingId: this.pickingId,
-            productId: this.state.move.product_id[0],
-            qtyPicked: this.state.qtyPicked,
-            lotId: this.selectedLotIdNumber || false,
-            lotName: lot ? lot.name : this.state.newLotName || false,
-            createLot: this.state.mode === "create_lot",
-            expirationDate: this.state.newLotExpirationDate || false,
-            // Only a location the operator chose, or where a lot the reservation
-            // does not carry lies: otherwise the line keeps where Odoo reserved
-            // its stock, and its putaway shelf.
-            locationId: this.sourceLocationId,
-            locationDestId: this.state.destLocation?.id || false,
-        });
+        if (this.unreservedLot) {
+            if (!(await this.pickUnreservedLot())) {
+                return;
+            }
+        } else {
+            await this.confirmOnLine(lot);
+        }
         // Hand the move back so the picking screen opens on the tab that
         // now holds it: still "To Do" while quantity is missing, "Done" once
         // this confirmation completed it.
@@ -885,6 +911,30 @@ export class MoveWizardScreen extends Component {
             },
             {replace: true}
         );
+    }
+
+    /**
+     * Stage the pick on the move's lines: the reserved one the wizard works on
+     * and those after it, or a line of the lot.
+     *
+     * @param {Object|null} lot the lot chosen
+     */
+    async confirmOnLine(lot) {
+        await this.barcodeScannerSync.confirmMove({
+            moveId: this.moveId,
+            moveLineId: this.targetLineId,
+            pickingId: this.pickingId,
+            productId: this.state.move.product_id[0],
+            qtyPicked: this.state.qtyPicked,
+            lotId: this.selectedLotIdNumber || false,
+            lotName: lot ? lot.name : this.state.newLotName || false,
+            createLot: this.state.mode === "create_lot",
+            expirationDate: this.state.newLotExpirationDate || false,
+            // Only a location the operator chose: otherwise the line keeps
+            // where Odoo reserved its stock, and its putaway shelf.
+            locationId: this.sourceLocationId,
+            locationDestId: this.state.destLocation?.id || false,
+        });
     }
 
     async goBack() {

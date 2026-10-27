@@ -701,32 +701,23 @@ export class BarcodeScannerState extends Reactive {
         if (!targetLine && matchingLines.length) {
             [targetLine] = matchingLines;
         }
-        // No line carries this lot yet: take over an already-reserved line
-        // (same move and product, nothing picked on it) instead of spawning a
-        // new line beside the untouched reservation. The scan then fills the
+        // No line carries this lot yet: take over a lotless reserved line (a
+        // reception's, nothing picked on it) instead of spawning a new line
+        // beside the untouched reservation. The scan then fills the
         // reservation — "534343: 2.5 / 10" — rather than leaving a reserved
         // line dangling next to a fresh lot line that reserves nothing.
+        // Outside receptions, a lot the reservation does not carry is reserved
+        // by Odoo itself (stock.move.barcode_pick_lot), not written over
+        // another lot's line.
         if (!targetLine && (lotId || wantedLotName)) {
-            const untouched = this.moveLines.filter(
+            targetLine = this.moveLines.find(
                 (line) =>
                     line.move_id?.[0] === moveId &&
                     line.product_id?.[0] === productId &&
-                    normalizeQty(line.qty_picked) === 0
+                    normalizeQty(line.qty_picked) === 0 &&
+                    !line.lot_id?.[0] &&
+                    !(line.lot_name || "").trim()
             );
-            // Prefer a lotless reserved line (the reception case).
-            targetLine = untouched.find(
-                (line) => !line.lot_id?.[0] && !(line.lot_name || "").trim()
-            );
-            // Outside receptions, internal/outgoing pickings reserve against a
-            // specific lot, so a fresh line for the scanned lot would reserve
-            // nothing (its quantity stays 0 and _pick_qty won't raise it once
-            // the move is fully reserved). Take over such a reserved line and
-            // reassign it to the scanned lot instead: writing lot_id makes Odoo
-            // move the quant reservation onto it (see stock.move.line.write),
-            // which is what "I'm moving THIS lot" means.
-            if (!targetLine && this.pickingTypeCode !== "incoming") {
-                targetLine = untouched.find((line) => normalizeQty(line.quantity) > 0);
-            }
         }
 
         const nextQty = targetLine
