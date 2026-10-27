@@ -52,18 +52,23 @@ class StockMove(models.Model):
             move.qty_remaining = move.product_uom_qty - done
             move.is_fully_picked = move.qty_remaining <= 0
 
-    def barcode_pick_lot(self, lot_id, quantity, location_id=False):
+    def barcode_pick_lot(
+        self, lot_id, quantity, location_id=False, location_dest_id=False
+    ):
         """Pick a lot the move's reservation does not carry, the way Odoo
-        reserves it rather than by rewriting another lot's line: under the
-        move's source (or the one the operator chose), following the removal
-        strategy, one line per shelf, package and owner the lot lies in. As
-        much of the other lots' reservation as the lot replaces is released
-        first, and the lines are marked picked.
+        reserves stock rather than by rewriting another lot's line. As much of
+        the other lots' reservation as the lot replaces is released first. The
+        lot is then taken from its own quants under the move's source (or the
+        one the operator chose), in the order of the removal strategy: stock
+        nothing holds first, then stock other moves hold, whose reservation
+        Odoo frees on validation. Each quant gives a line, with its shelf,
+        package and owner, marked picked and sent to the destination the
+        operator chose, if any.
 
-        Stock of the lot other moves hold is picked too, from where it lies:
-        Odoo frees their reservation on validation. What is over the lot's
-        stock goes on the last line; with no stock at all, the lot is only
-        picked from a source the operator chose.
+        Picking more than the lot holds there is allowed, as Odoo allows it:
+        what is over goes on the last line, and validating leaves a negative
+        quant that shows the gap. With no stock at all, the lot is only picked
+        from a source the operator chose.
         """
         self.ensure_one()
         lot = self.env["stock.lot"].browse(lot_id)
@@ -73,87 +78,96 @@ class StockMove(models.Model):
             else self.location_id
         )
         self._barcode_release_other_lots(lot, quantity)
-        held_before = {line: line.quantity_product_uom for line in self.move_line_ids}
-        picked_before = {line: line.qty_picked for line in self.move_line_ids}
-        taken = self._update_reserved_quantity(
-            quantity, source, lot_id=lot, strict=False
-        )
-        # What this reservation put on each line, new or not.
+        takes = self._barcode_lot_takes(lot, quantity, source)
+        vals_list = [
+            self._prepare_move_line_vals(quantity=taken, reserved_quant=quant)
+            for quant, taken in takes.items()
+        ]
+        if not vals_list:
+            vals_list = [
+                self._barcode_chosen_source_vals(lot, quantity, source, location_id)
+            ]
+        if location_dest_id:
+            for vals in vals_list:
+                vals["location_dest_id"] = location_dest_id
+        lines = self.env["stock.move.line"].create(vals_list)
         uom = self.product_id.uom_id
-        picks = {}
-        for line in self.move_line_ids.filtered(lambda line: line.lot_id == lot):
-            reserved = line.quantity_product_uom - held_before.get(line, 0)
-            if float_compare(reserved, 0, precision_rounding=uom.rounding) > 0:
-                picks[line] = reserved
-        lines = self.env["stock.move.line"].concat(*picks)
-        for line in self._barcode_held_lot_lines(lot, quantity - taken, source, lines):
-            picks[line] = line.quantity_product_uom
-        if not picks:
-            line = self._barcode_chosen_source_line(lot, quantity, source, location_id)
-            picks[line] = quantity
-        last = list(picks)[-1]
-        over = quantity - sum(picks.values())
-        for line, picked in picks.items():
-            picked += over if line == last else 0
-            line.qty_picked = picked_before.get(line, 0) + uom._compute_quantity(
-                picked, line.product_uom_id
+        over = quantity - sum(takes.values()) if takes else 0
+        for line in lines:
+            extra = over if line == lines[-1] else 0
+            line.qty_picked = line.quantity + uom._compute_quantity(
+                extra, line.product_uom_id
             )
         self._recompute_state()
         return True
 
     def _barcode_release_other_lots(self, lot, quantity):
-        """Release, from the other lots' lines nothing was picked on, what the
-        move would hold over its demand once ``quantity`` of ``lot`` is
-        reserved, the last lines first."""
-        rounding = self.product_id.uom_id.rounding
+        """Release, from the other lots' lines, what the move would hold over
+        its demand once ``quantity`` of ``lot`` is taken: from the lines
+        nothing was picked on first, the last ones first, then what partly
+        picked lines hold beyond what was picked on them."""
+        uom = self.product_id.uom_id
         excess = (
             sum(self.move_line_ids.mapped("quantity_product_uom"))
             + quantity
             - self.product_qty
         )
-        others = self.move_line_ids.filtered(
-            lambda line: line.lot_id != lot and not line.picked
-        ).sorted("id", reverse=True)
-        for line in others:
-            if float_compare(excess, 0, precision_rounding=rounding) <= 0:
+        others = self.move_line_ids.filtered(lambda line: line.lot_id != lot)
+        untouched = others.filtered(lambda line: not line.picked).sorted(
+            "id", reverse=True
+        )
+        started = (others - untouched).sorted("id", reverse=True)
+        for line in untouched + started:
+            if float_compare(excess, 0, precision_rounding=uom.rounding) <= 0:
                 break
             held = line.quantity_product_uom
-            release = min(held, excess)
+            picked = line.product_uom_id._compute_quantity(line.qty_picked, uom)
+            release = min(held - picked, excess)
+            if float_compare(release, 0, precision_rounding=uom.rounding) <= 0:
+                continue
             excess -= release
-            if float_is_zero(held - release, precision_rounding=rounding):
+            if float_is_zero(held - release, precision_rounding=uom.rounding):
                 line.unlink()
             else:
-                line.quantity = self.product_id.uom_id._compute_quantity(
+                line.quantity = uom._compute_quantity(
                     held - release, line.product_uom_id
                 )
 
-    def _barcode_held_lot_lines(self, lot, rest, source, lines):
-        """Lines for what is left to pick of a lot whose stock other moves
-        hold: from its quants under the source, in the order of the removal
-        strategy, up to what each holds beyond what ``lines`` already take."""
-        rounding = self.product_id.uom_id.rounding
-        if float_compare(rest, 0, precision_rounding=rounding) <= 0:
-            return self.env["stock.move.line"]
-        ours = {}
-        for line in lines:
-            key = (line.location_id, line.package_id, line.owner_id)
-            ours[key] = ours.get(key, 0) + line.quantity_product_uom
-        vals_list = []
-        quants = self.env["stock.quant"]._gather(self.product_id, source, lot_id=lot)
-        for quant in quants.filtered(lambda quant: quant.lot_id == lot):
-            key = (quant.location_id, quant.package_id, quant.owner_id)
-            take = min(rest, quant.quantity - ours.get(key, 0))
-            if float_compare(take, 0, precision_rounding=rounding) <= 0:
-                continue
-            vals_list.append(
-                self._prepare_move_line_vals(quantity=take, reserved_quant=quant)
-            )
-            rest -= take
-            if float_is_zero(rest, precision_rounding=rounding):
-                break
-        return self.env["stock.move.line"].create(vals_list)
+    def _barcode_lot_takes(self, lot, quantity, source):
+        """How much to take from each quant of the lot under the source, in the
+        order of the removal strategy: stock nothing holds first, then stock
+        other moves hold. Quants without a lot, which Odoo's own reservation
+        of a lot may also take, are left alone.
 
-    def _barcode_chosen_source_line(self, lot, quantity, source, chosen):
+        :return: the quantity taken, by quant
+        """
+        rounding = self.product_id.uom_id.rounding
+        quants = (
+            self.env["stock.quant"]
+            ._gather(self.product_id, source, lot_id=lot)
+            .filtered(
+                lambda quant: quant.lot_id == lot
+                and float_compare(quant.quantity, 0, precision_rounding=rounding) > 0
+            )
+        )
+        takes = dict.fromkeys(quants, 0.0)
+        rest = quantity
+        for room in (
+            lambda quant: quant.quantity - quant.reserved_quantity,
+            lambda quant: quant.quantity - takes[quant],
+        ):
+            for quant in quants:
+                take = min(rest, room(quant))
+                if float_compare(take, 0, precision_rounding=rounding) > 0:
+                    takes[quant] += take
+                    rest -= take
+        return {
+            quant: taken
+            for quant, taken in takes.items()
+            if float_compare(taken, 0, precision_rounding=rounding) > 0
+        }
+
+    def _barcode_chosen_source_vals(self, lot, quantity, source, chosen):
         """A line for a lot with no stock under the source: only from a source
         the operator chose."""
         if not chosen:
@@ -166,4 +180,4 @@ class StockMove(models.Model):
             )
         vals = self._prepare_move_line_vals(quantity=quantity)
         vals.update(lot_id=lot.id, location_id=source.id)
-        return self.env["stock.move.line"].create(vals)
+        return vals

@@ -269,10 +269,11 @@ export class MoveWizardScreen extends Component {
     }
 
     /**
-     * Have Odoo pick a lot the reservation does not carry: it reserves it under
-     * the move's source (or the one the operator chose) as it would any lot,
-     * one line per shelf, package and owner it lies in, and marks it picked.
-     * What the wizard staged so far is sent first.
+     * Have Odoo pick a lot the reservation does not carry: it takes it from its
+     * own quants under the move's source (or the one the operator chose), one
+     * line per shelf, package and owner it lies in, marked picked and sent to
+     * the destination the operator chose. What the wizard staged so far is
+     * sent first.
      *
      * @returns {Promise<Boolean>} whether it was picked
      */
@@ -284,6 +285,7 @@ export class MoveWizardScreen extends Component {
                 this.selectedLotIdNumber,
                 this.state.qtyPicked,
                 this.sourceLocationId,
+                this.state.destLocation?.id || false,
             ]);
         } catch {
             // The API wrapper already told the operator why.

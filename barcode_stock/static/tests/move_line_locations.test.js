@@ -240,7 +240,7 @@ describe("BarcodeStock", () => {
         // Staged work first, then Odoo reserves and picks the lot where it lies.
         expect(wizard.flushed).toBe(1);
         expect(wizard.called).toEqual([
-            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false]],
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false, false]],
         ]);
         expect(wizard.confirmed).toBe(undefined);
         expect(wizard.navigated).toBe(true);
@@ -264,7 +264,7 @@ describe("BarcodeStock", () => {
         expect(wizard.state.lotLocation).toBe(null);
         await wizard.confirmPick();
         expect(wizard.called).toEqual([
-            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false]],
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, false, false]],
         ]);
         expect(wizard.confirmed).toBe(undefined);
     });
@@ -292,11 +292,12 @@ describe("BarcodeStock", () => {
         });
         await wizard.loadData();
         expect(wizard.shownSourceLocation.display_name).toBe("WH/Stock/Shelf 2");
-        // One the operator chose still wins.
+        // A source and a destination the operator chose are Odoo's to use.
         wizard.state.sourceLocation = {id: 8, display_name: "WH/Stock"};
+        wizard.state.destLocation = {id: 12, display_name: "WH/Stock/Shelf 2"};
         await wizard.confirmPick();
         expect(wizard.called).toEqual([
-            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 8]],
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 8, 12]],
         ]);
     });
 
@@ -317,7 +318,7 @@ describe("BarcodeStock", () => {
         expect(nowhere.missingLotMessage).toBe("");
         await nowhere.confirmPick();
         expect(nowhere.called).toEqual([
-            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 12]],
+            ["stock.move", "barcode_pick_lot", [[5], 22, 1, 12, false]],
         ]);
         // A reserved lot is never looked up, nor held back.
         await nowhere.onLotChange({target: {value: "21"}});

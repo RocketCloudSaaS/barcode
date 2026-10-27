@@ -131,15 +131,59 @@ class TestBarcodePickLot(TransactionCase):
             ],
         )
 
-    def test_only_what_it_reserves_is_picked(self):
+    def test_only_what_it_takes_is_picked(self):
         # Lot B already has two lines, Shelf 2's holding 2 of its 3.
         picking = self._delivery(9)
         picking.move_ids.barcode_pick_lot(self.lot_b.id, 1)
-        # The third unit joins Shelf 2's line, and only it is picked.
+        # The third unit gets a line of its own, the only one picked.
         self.assertEqual(
             self._lines(picking),
-            [("X", "Shelf 1", 4, 0), ("B", "Shelf 1", 2, 0), ("B", "Shelf 2", 3, 1)],
+            [
+                ("X", "Shelf 1", 4, 0),
+                ("B", "Shelf 1", 2, 0),
+                ("B", "Shelf 2", 2, 0),
+                ("B", "Shelf 2", 1, 1),
+            ],
         )
+
+    def test_what_a_partly_picked_lot_still_holds_is_released(self):
+        picking = self._delivery(5)
+        picking.move_line_ids.qty_picked = 2
+        picking.move_ids.barcode_pick_lot(self.lot_b.id, 3)
+        # Lot X keeps the 2 picked, its other 3 make room for lot B.
+        self.assertEqual(
+            self._lines(picking),
+            [("X", "Shelf 1", 2, 2), ("B", "Shelf 1", 2, 2), ("B", "Shelf 2", 1, 1)],
+        )
+        # A line fully picked gives nothing back.
+        picking.move_line_ids[0].qty_picked = 2
+        lot_c = self.env["stock.lot"].create(
+            {"name": "C", "product_id": self.product.id}
+        )
+        self.Quant._update_available_quantity(
+            self.product, self.shelf_2, 1, lot_id=lot_c
+        )
+        picking.move_ids.barcode_pick_lot(lot_c.id, 1)
+        self.assertEqual(self._lines(picking)[0], ("X", "Shelf 1", 2, 2))
+
+    def test_stock_without_a_lot_is_left_alone(self):
+        lot_d = self.env["stock.lot"].create(
+            {"name": "D", "product_id": self.product.id}
+        )
+        self.Quant._update_available_quantity(
+            self.product, self.shelf_2, 2, lot_id=lot_d
+        )
+        self.Quant._update_available_quantity(self.product, self.shelf_2, 3)
+        picking = self._delivery(5)
+        picking.move_ids.barcode_pick_lot(lot_d.id, 3)
+        lines = picking.move_line_ids.filtered("picked")
+        self.assertEqual(lines.lot_id, lot_d)
+        self.assertEqual(lines.mapped("quantity"), [2])
+        self.assertEqual(lines.mapped("qty_picked"), [3])
+        lotless = self.Quant.search(
+            [("product_id", "=", self.product.id), ("lot_id", "=", False)]
+        )
+        self.assertEqual(lotless.reserved_quantity, 0)
 
     def test_packaged_and_consigned_stock(self):
         package = self.env["stock.quant.package"].create({"name": "PK1"})
@@ -174,6 +218,17 @@ class TestBarcodePickLot(TransactionCase):
         self.assertEqual(
             self._lines(picking), [("B", "Shelf 1", 2, 2), ("B", "Shelf 2", 3, 4)]
         )
+        # As Odoo allows it: validating leaves a negative quant on that shelf,
+        # which shows the gap.
+        picking.button_validate()
+        stock = self._stock()
+        self.assertEqual(stock["Shelf 1", "B", False, False], 0)
+        self.assertEqual(stock["Shelf 2", "B", False, False], -1)
+
+    def test_a_destination_the_operator_chose(self):
+        picking = self._delivery(5)
+        picking.move_ids.barcode_pick_lot(self.lot_b.id, 5, False, self.shelf_2.id)
+        self.assertEqual(picking.move_line_ids.mapped("location_dest_id"), self.shelf_2)
 
     def test_stock_another_move_holds(self):
         first = self._delivery(5)
