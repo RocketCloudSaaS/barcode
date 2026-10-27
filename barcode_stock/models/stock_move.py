@@ -135,28 +135,39 @@ class StockMove(models.Model):
 
     def _barcode_lot_takes(self, lot, quantity, source):
         """How much to take from each quant of the lot under the source, in the
-        order of the removal strategy: stock nothing holds first, then stock
-        other moves hold. Quants without a lot, which Odoo's own reservation
-        of a lot may also take, are left alone.
+        order of the removal strategy: stock nothing holds first, out of the
+        packages the strategy picks for the quantity (least packages) and then
+        the rest, then stock other moves hold. Quants without a lot, which
+        Odoo's own reservation of a lot may also take, are left alone.
 
         :return: the quantity taken, by quant
         """
         rounding = self.product_id.uom_id.rounding
-        quants = (
-            self.env["stock.quant"]
-            ._gather(self.product_id, source, lot_id=lot)
-            .filtered(
+
+        def lot_quants(qty=0):
+            quants = self.env["stock.quant"]._gather(
+                self.product_id, source, lot_id=lot, qty=qty
+            )
+            return quants.filtered(
                 lambda quant: quant.lot_id == lot
                 and float_compare(quant.quantity, 0, precision_rounding=rounding) > 0
             )
-        )
+
+        def free(quant):
+            return quant.quantity - quant.reserved_quantity - takes[quant]
+
+        quants = lot_quants()
         takes = dict.fromkeys(quants, 0.0)
         rest = quantity
-        for room in (
-            lambda quant: quant.quantity - quant.reserved_quantity,
-            lambda quant: quant.quantity - takes[quant],
+        # Given the quantity, least packages narrows the quants to the packages
+        # it picks out of the free stock, so the free stock elsewhere and the
+        # stock other moves hold are gathered without it.
+        for group, room in (
+            (lot_quants(quantity), free),
+            (quants, free),
+            (quants, lambda quant: quant.quantity - takes[quant]),
         ):
-            for quant in quants:
+            for quant in group:
                 take = min(rest, room(quant))
                 if float_compare(take, 0, precision_rounding=rounding) > 0:
                     takes[quant] += take

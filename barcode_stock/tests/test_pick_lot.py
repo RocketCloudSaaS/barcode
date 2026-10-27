@@ -248,6 +248,60 @@ class TestBarcodePickLot(TransactionCase):
         # lot X the first one gave up.
         self.assertEqual(self._lines(second), [("X", "Shelf 1", 5, 0)])
 
+    def _lot_in_packages(self, *packages):
+        """Lot P in packages on Shelf 2, the first the oldest."""
+        lot_p = self.env["stock.lot"].create(
+            {"name": "P", "product_id": self.product.id}
+        )
+        now = fields.Datetime.now()
+        for days, (name, quantity) in enumerate(packages):
+            self.Quant._update_available_quantity(
+                self.product,
+                self.shelf_2,
+                quantity,
+                lot_id=lot_p,
+                package_id=self.env["stock.quant.package"].create({"name": name}),
+                in_date=now - timedelta(days=7 - days),
+            )
+        return lot_p
+
+    def _least_packages(self):
+        self.product.categ_id = self.env["product.category"].create(
+            {
+                "name": "Least packages",
+                "removal_strategy_id": self.env.ref("stock.removal_least_packages").id,
+            }
+        )
+
+    def _packages(self, picking):
+        return sorted(
+            (line.package_id.name, line.qty_picked) for line in picking.move_line_ids
+        )
+
+    def test_the_fewest_packages(self):
+        lot_p = self._lot_in_packages(("PK1", 3), ("PK2", 2), ("PK3", 5))
+        picking = self._delivery(5)
+        self._least_packages()
+        picking.move_ids.barcode_pick_lot(lot_p.id, 5)
+        # The package that holds it all rather than the two oldest.
+        self.assertEqual(self._packages(picking), [("PK3", 5)])
+
+    def test_the_fewest_packages_and_stock_another_move_holds(self):
+        lot_p = self._lot_in_packages(("PK1", 5), ("PK2", 3))
+        first = self._delivery(5)
+        self._least_packages()
+        # The second delivery holds the package that holds it all.
+        second = self._delivery(5)
+        self.assertEqual(self._packages(second), [("PK1", 0)])
+        first.move_ids.barcode_pick_lot(lot_p.id, 5)
+        # The free package first, the rest from the held one.
+        self.assertEqual(self._packages(first), [("PK1", 2), ("PK2", 3)])
+        first.button_validate()
+        stock = self._stock()
+        self.assertEqual(stock["Shelf 2", "P", "PK1", False], 3)
+        self.assertEqual(stock["Shelf 2", "P", "PK2", False], 0)
+        self.assertFalse([key for key, qty in stock.items() if qty < 0])
+
     def test_a_source_the_operator_chose(self):
         picking = self._delivery(3)
         picking.move_ids.barcode_pick_lot(self.lot_b.id, 3, self.shelf_2.id)
