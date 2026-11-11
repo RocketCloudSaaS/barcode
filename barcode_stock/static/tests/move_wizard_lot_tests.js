@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import {translatedTerms, translationLoaded} from "@web/core/l10n/translation";
 import {BarcodeScannerState} from "@barcode_stock/js/services/barcode_scanner_state.esm";
 import {MoveWizardScreen} from "@barcode_stock/js/screens/move_wizard_screen.esm";
 import {PickingScreen} from "@barcode_stock/js/screens/picking_screen.esm";
@@ -22,6 +23,7 @@ function moveWizard({
     defaultQty = null,
     tracking = "lot",
     remaining = 4,
+    lotName = null,
 } = {}) {
     const wizard = Object.create(MoveWizardScreen.prototype);
     wizard.props = {
@@ -31,6 +33,7 @@ function moveWizard({
             pickingTypeCode: type,
             defaultLot,
             defaultQty,
+            lotName,
         },
     };
     wizard.state = {
@@ -43,6 +46,8 @@ function moveWizard({
         useCreateLots: false,
         sourceLocation: null,
         destLocation: null,
+        newLotName: lotName || "",
+        lotRead: Boolean(lotName),
     };
     wizard.barcodeScannerState = {
         ready: true,
@@ -62,9 +67,17 @@ function moveWizard({
         getLotsForProduct: () => [LOT_B],
         getRemainingQty: () => remaining,
         lotSourceLocation: async () => false,
+        // A scan as the parsers hand it over, read as is.
+        applyScanResult: ({barcode, ...scan}) => ({product: barcode, ...scan}),
+        getProductByBarcode: () => ({id: 7, display_name: "Duck confit"}),
     };
     Object.assign(wizard, {
-        feedback: {success: () => undefined},
+        warnings: [],
+        successes: 0,
+        feedback: {
+            success: () => (wizard.successes += 1),
+            warning: ({message}) => wizard.warnings.push(message),
+        },
         barcodeScannerSync: {
             validateConfirmMovePayload: () => null,
             confirmMove: async (payload) => {
@@ -104,7 +117,16 @@ function assertContains(assert, actual, expected) {
     }
 }
 
-QUnit.module("BarcodeStock", () => {
+QUnit.module("BarcodeStock", (hooks) => {
+    // `_t()` texts become strings only once translations are loaded.
+    let translationsWereLoaded = false;
+    hooks.beforeEach(() => {
+        translationsWereLoaded = translatedTerms[translationLoaded];
+        translatedTerms[translationLoaded] = true;
+    });
+    hooks.afterEach(() => {
+        translatedTerms[translationLoaded] = translationsWereLoaded;
+    });
     QUnit.test(
         "a move reserved against a lot opens with that lot chosen",
         async (assert) => {
@@ -289,4 +311,145 @@ QUnit.module("BarcodeStock", () => {
             assert.strictEqual(receipt.state.qtyPicked, 4);
         }
     );
+
+    QUnit.test(
+        "a label of another lot than the one read is left out",
+        async (assert) => {
+            // Opened by a label of lot A carrying 2 units.
+            const wizard = moveWizard({
+                lines: [line(21, 4)],
+                defaultLot: 21,
+                defaultQty: 2,
+                lotName: LOT_A.name,
+                remaining: 10,
+            });
+            await wizard.loadData();
+            // Another label of lot A adds its quantity.
+            await wizard.onBarcodeScanned("A", {quantity: 3, lot: LOT_A});
+            assert.strictEqual(wizard.state.selectedLotId, "21");
+            assert.strictEqual(wizard.state.qtyPicked, 5);
+            assert.deepEqual(wizard.warnings, []);
+            // One of lot B changes neither the lot nor the quantity, and says so.
+            await wizard.onBarcodeScanned("B", {quantity: 3, lot: LOT_B});
+            assert.strictEqual(wizard.state.selectedLotId, "21");
+            assert.strictEqual(wizard.state.qtyPicked, 5);
+            assert.deepEqual(wizard.warnings, [
+                "Lot 6077103 is not the selected lot (6077102). The lot and the quantity are left unchanged.",
+            ]);
+            // A barcode without a lot still adds its unit.
+            await wizard.onBarcodeScanned("P", {quantity: 1});
+            assert.strictEqual(wizard.state.qtyPicked, 6);
+            // Read again after the location picker's round-trip.
+            let params = null;
+            wizard.store = {navigate: (name, values) => (params = values)};
+            wizard.selectSourceLocation();
+            assert.strictEqual(params.lotRead, true);
+            // Lot B chosen by hand keeps the quantity and becomes the lot held.
+            await wizard.onLotChange({target: {value: "22"}});
+            assert.strictEqual(wizard.state.qtyPicked, 6);
+            await wizard.onBarcodeScanned("A", {quantity: 3, lot: LOT_A});
+            assert.strictEqual(wizard.state.selectedLotId, "22");
+            assert.strictEqual(wizard.state.qtyPicked, 6);
+            assert.strictEqual(
+                wizard.warnings[1],
+                "Lot 6077102 is not the selected lot (6077103). The lot and the quantity are left unchanged."
+            );
+        }
+    );
+
+    QUnit.test(
+        "a lot no scan read is still replaced by the lot scanned",
+        async (assert) => {
+            // Tapped: the reserved lot A is chosen, but nothing was read.
+            const wizard = moveWizard({lines: [line(21, 4)], remaining: 10});
+            await wizard.loadData();
+            assert.strictEqual(wizard.state.selectedLotId, "21");
+            await wizard.onBarcodeScanned("B", {quantity: 3, lot: LOT_B});
+            assert.strictEqual(wizard.state.selectedLotId, "22");
+            assert.strictEqual(wizard.state.qtyPicked, 4);
+            assert.deepEqual(wizard.warnings, []);
+            // Lot B is the one read now.
+            await wizard.onBarcodeScanned("A", {quantity: 3, lot: LOT_A});
+            assert.strictEqual(wizard.state.selectedLotId, "22");
+            assert.strictEqual(wizard.state.qtyPicked, 4);
+            assert.strictEqual(wizard.warnings.length, 1);
+        }
+    );
+
+    QUnit.test(
+        "a label of the lot preselected adds its quantity and reads it",
+        async (assert) => {
+            // Tapped: the reserved lot A is chosen, but nothing was read.
+            const wizard = moveWizard({lines: [line(21, 4)], remaining: 10});
+            await wizard.loadData();
+            await wizard.onBarcodeScanned("A", {quantity: 3, lot: LOT_A});
+            assert.strictEqual(wizard.state.selectedLotId, "21");
+            assert.strictEqual(wizard.state.qtyPicked, 4);
+            assert.strictEqual(wizard.state.lotRead, true);
+            // Lot A is the one read now.
+            await wizard.onBarcodeScanned("B", {quantity: 3, lot: LOT_B});
+            assert.strictEqual(wizard.state.selectedLotId, "21");
+            assert.strictEqual(wizard.state.qtyPicked, 4);
+            assert.strictEqual(wizard.warnings.length, 1);
+        }
+    );
+
+    QUnit.test("a label of a lot that can't be used adds nothing", async (assert) => {
+        // Tapped on a delivery: the reserved lot A is chosen, nothing read.
+        const wizard = moveWizard({lines: [line(21, 4)], remaining: 10});
+        await wizard.loadData();
+        // A lot the database lacks, which a delivery can't create.
+        await wizard.onBarcodeScanned("X", {quantity: 3, lotName: "6077999"});
+        assert.strictEqual(wizard.state.selectedLotId, "21");
+        assert.strictEqual(wizard.state.qtyPicked, 1);
+        assert.strictEqual(wizard.state.lotRead, false);
+        assert.strictEqual(wizard.successes, 0);
+        assert.deepEqual(wizard.warnings, [
+            "Lot 6077999 is not available for this product.",
+        ]);
+    });
+
+    QUnit.test("a lot being created takes no label of another lot", async (assert) => {
+        const wizard = moveWizard({
+            type: "incoming",
+            defaultQty: 2,
+            lotName: "L-001",
+            remaining: 10,
+        });
+        await wizard.loadData();
+        wizard.state.mode = "create_lot";
+        // The same lot, spaced and cased otherwise, adds its quantity and
+        // leaves the name as it is.
+        await wizard.onBarcodeScanned("A", {quantity: 2, lotName: " l-001"});
+        assert.strictEqual(wizard.state.newLotName, "L-001");
+        assert.strictEqual(wizard.state.qtyPicked, 4);
+        await wizard.onBarcodeScanned("B", {quantity: 2, lotName: "L-002"});
+        assert.strictEqual(wizard.state.newLotName, "L-001");
+        assert.strictEqual(wizard.state.qtyPicked, 4);
+        assert.strictEqual(wizard.warnings.length, 1);
+        // A name typed by hand is the lot held from then on.
+        wizard.state.newLotName = "L-009";
+        await wizard.onBarcodeScanned("A", {quantity: 2, lotName: "L-001"});
+        assert.strictEqual(wizard.state.newLotName, "L-009");
+        assert.strictEqual(wizard.state.qtyPicked, 4);
+        assert.strictEqual(
+            wizard.warnings[1],
+            "Lot L-001 is not the selected lot (L-009). The lot and the quantity are left unchanged."
+        );
+    });
+
+    QUnit.test("a label of another serial number is left out", async (assert) => {
+        const wizard = moveWizard({
+            tracking: "serial",
+            defaultLot: 21,
+            lotName: LOT_A.name,
+        });
+        await wizard.loadData();
+        await wizard.onBarcodeScanned("B", {quantity: 1, lot: LOT_B});
+        assert.strictEqual(wizard.state.selectedLotId, "21");
+        assert.strictEqual(wizard.state.qtyPicked, 1);
+        assert.deepEqual(wizard.warnings, [
+            "Serial number 6077103 is not the selected one (6077102). The serial number and the quantity are left unchanged.",
+        ]);
+    });
 });
