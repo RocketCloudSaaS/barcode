@@ -1,6 +1,8 @@
 /** @odoo-module **/
 
+import {roundQty, setQuantityDecimals} from "@barcode_stock/js/utils/quantity.esm";
 import {Reactive} from "@web/core/utils/reactive";
+import {barcodeStartupTasks} from "@barcode_scanner/js/registries.esm";
 import {registry} from "@web/core/registry";
 
 function todayISO() {
@@ -71,6 +73,23 @@ export class BarcodeScannerState extends Reactive {
 
     clear() {
         this.reset();
+    }
+
+    /**
+     * Read the decimals a quantity is stored with, so that what the screens
+     * work out from quantities is rounded to them (see roundQty). They come
+     * from a quantity field that is stored with them, not from precision_get
+     * over RPC: once `account` is installed it overrides that method without
+     * @api.model, and the call then takes the precision's name for ids.
+     */
+    async loadQuantityDecimals() {
+        const fields = await this.orm.call(
+            "stock.move.line",
+            "fields_get",
+            [["quantity"]],
+            {attributes: ["digits"]}
+        );
+        setQuantityDecimals(fields?.quantity?.digits?.[1]);
     }
 
     async preloadPicking(pickingId) {
@@ -423,7 +442,7 @@ export class BarcodeScannerState extends Reactive {
             (sum, line) => sum + (parseFloat(line.qty_picked) || 0),
             0
         );
-        return Math.max((parseFloat(move.quantity) || 0) - picked, 0);
+        return Math.max(roundQty((parseFloat(move.quantity) || 0) - picked), 0);
     }
 
     getLotsForProduct(productId, {onlyAvailable = false, excludeExpired = false} = {}) {
@@ -682,11 +701,11 @@ export class BarcodeScannerState extends Reactive {
             }
         }
 
-        const nextQty = targetLine
-            ? mode === "set"
-                ? normalizeQty(qtyPicked)
-                : normalizeQty(targetLine.qty_picked) + normalizeQty(qtyPicked)
-            : normalizeQty(qtyPicked);
+        const nextQty = roundQty(
+            targetLine && mode !== "set"
+                ? normalizeQty(targetLine.qty_picked) + normalizeQty(qtyPicked)
+                : qtyPicked
+        );
         // Pin the line to the product's own unit of measure. Without it the
         // server falls back to its default (Units), so a product stocked in kg
         // -- whose scanned quantity a GS1 weight already converts to kg -- would
@@ -741,7 +760,7 @@ export class BarcodeScannerState extends Reactive {
             ],
             lot_id: lotId ? [lotId, lot?.name || lotName || ""] : false,
             lot_name: lot?.name || lotName || false,
-            quantity: normalizeQty(qtyPicked),
+            quantity: nextQty,
             ...values,
         };
         this.moveLines = [...this.moveLines, moveLine];
@@ -838,3 +857,7 @@ export const barcodeScannerStateService = {
 };
 
 registry.category("services").add("barcodeScannerState", barcodeScannerStateService);
+
+barcodeStartupTasks.add("stock_quantity_decimals", (env) =>
+    env.services.barcodeScannerState.loadQuantityDecimals()
+);
