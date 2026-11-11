@@ -1,6 +1,7 @@
 import {Component, onMounted, onWillStart, onWillUnmount, useState} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {barcodeScreens} from "@barcode_scanner/js/registries.esm";
+import {roundQty} from "@barcode_stock/js/utils/quantity.esm";
 import {useBarcodeHandler} from "@barcode_scanner/js/hooks/use_barcode_handler.esm";
 import {useBarcodeScanner} from "@barcode_scanner/js/hooks/use_inventory.esm";
 import {useService} from "@web/core/utils/hooks";
@@ -479,9 +480,11 @@ export class MoveWizardScreen extends Component {
      * @returns {Number} the quantity still to pick of it
      */
     reservedLeft(moveLines, lotId) {
-        return moveLines
-            .filter((line) => lineLotId(line) === lotId)
-            .reduce((sum, line) => sum + this.lineLeft(line), 0);
+        return roundQty(
+            moveLines
+                .filter((line) => lineLotId(line) === lotId)
+                .reduce((sum, line) => sum + this.lineLeft(line), 0)
+        );
     }
 
     /**
@@ -491,7 +494,7 @@ export class MoveWizardScreen extends Component {
      * @returns {Number} the quantity still to pick on it
      */
     lineLeft(line) {
-        return (Number(line.quantity) || 0) - (Number(line.qty_picked) || 0);
+        return roundQty((Number(line.quantity) || 0) - (Number(line.qty_picked) || 0));
     }
 
     get isOutgoing() {
@@ -525,7 +528,7 @@ export class MoveWizardScreen extends Component {
     }
 
     get doneQty() {
-        return Math.max(this.demandQty - this.remainingQty, 0);
+        return Math.max(roundQty(this.demandQty - this.remainingQty), 0);
     }
 
     get remainingQty() {
@@ -569,11 +572,11 @@ export class MoveWizardScreen extends Component {
         if (this.isSerial) return false;
         // Shown while anything is still missing, including the last unit: the
         // shortcut disappearing at 1 reads as "nothing left to pick".
-        return this.pickableQty - (this.state.qtyPicked || 0) > 0;
+        return this.fulfillIncrement > 0;
     }
 
     get fulfillIncrement() {
-        return Math.max(this.pickableQty - (this.state.qtyPicked || 0), 0);
+        return Math.max(roundQty(this.pickableQty - (this.state.qtyPicked || 0)), 0);
     }
 
     get isTracked() {
@@ -705,7 +708,7 @@ export class MoveWizardScreen extends Component {
 
     adjustQty(delta) {
         if (this.state.loading) return;
-        const next = (parseFloat(this.state.qtyPicked) || 0) + delta;
+        const next = roundQty((parseFloat(this.state.qtyPicked) || 0) + delta);
         if (this.isSerial) {
             this.state.qtyPicked = Math.max(0, Math.min(1, next));
         } else {
