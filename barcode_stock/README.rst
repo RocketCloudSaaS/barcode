@@ -92,6 +92,13 @@ taken instead, in the product's own unit of measure:
   when the label states no count. A weight never turns into a number of
   units.
 
+In the move wizard, once a label has read a lot, a label of another lot
+than the one selected is left out with a warning: neither the lot nor
+the quantity change. Confirm (or leave) that lot first, then scan the
+other one. A label of the selected lot adds its quantity, and a lot
+chosen by hand becomes the selected one. A label of a lot that can't be
+used on the operation adds nothing either.
+
 Quick Info
 ----------
 
